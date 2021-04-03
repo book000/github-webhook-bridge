@@ -29,4 +29,7 @@ $CONFIG = [
     // If not set, specify NULL.
     // List of Supported Timezones: https://www.php.net/manual/en/timezones.php
     "TIME_ZONE" => "UTC",
+
+    // Debug mode (BOOLEAN)
+    "DEBUG" => false,
 ];

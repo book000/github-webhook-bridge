@@ -1,5 +1,11 @@
 <?php
 require_once(__DIR__ . "/config.php");
+
+if ($CONFIG["DEBUG"]) {
+    ini_set('display_errors', 1);
+    error_reporting(-1);
+}
+
 $LOG_PATH = null;
 
 if ($CONFIG["TIME_ZONE"] != null && date_default_timezone_get() == $CONFIG["TIME_ZONE"]) {
@@ -83,6 +89,12 @@ if ($CONFIG["LOG_DIR"] != null) {
     $LOG_PATH = $LOG_REPO_DIR . "/" . date("Ymd") . ".log";
 }
 
+if ($_SERVER["REQUEST_METHOD"] != "POST") {
+    http_response_code(405);
+    writeLog("Method not allowed.");
+    exit;
+}
+
 $headers = getallheaders();
 
 // Secret check
@@ -113,6 +125,10 @@ if ($CONFIG["INCLUDE_REPOSITORYS"] != null && !in_array($repo_name, $CONFIG["INC
     exit;
 }
 
+if ($CONFIG["DEBUG"]) {
+    print_r($headers);
+}
+
 $curl = curl_init();
 curl_setopt($curl, CURLOPT_URL, $CONFIG["WEBHOOK_URL"]);
 curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
@@ -120,7 +136,16 @@ curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
 curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($curl, CURLOPT_HTTPHEADER, [
-    "Content-Type: application/json"
+    "Accept: */*",
+    "Content-Type: application/json",
+    "User-Agent: " . $headers["User-Agent"],
+    "X-Github-Delivery: " . $headers["X-Github-Delivery"],
+    "X-Github-Event: " . $headers["X-Github-Event"],
+    "X-Github-Hook-Id: " . $headers["X-Github-Hook-Id"],
+    "X-Github-Hook-Installation-Target-Id: " . $headers["X-Github-Hook-Installation-Target-Id"],
+    "X-Github-Hook-Installation-Target-Type: " . $headers["X-Github-Hook-Installation-Target-Type"],
+    "X-Hub-Signature: " . $headers["X-Hub-Signature"],
+    "X-Hub-Signature-256: " . $headers["X-Hub-Signature-256"]
 ]);
 curl_setopt($curl, CURLOPT_HEADER, true);
 $response = curl_exec($curl);
