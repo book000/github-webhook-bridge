@@ -119,6 +119,9 @@ curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
 curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
 curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($curl, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json"
+]);
 curl_setopt($curl, CURLOPT_HEADER, true);
 $response = curl_exec($curl);
 
