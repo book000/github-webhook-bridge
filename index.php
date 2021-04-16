@@ -129,6 +129,18 @@ if ($CONFIG["DEBUG"]) {
     print_r($headers);
 }
 
+if (isset($CONFIG["DISABLE_DEPENDABOT"]) && $CONFIG["DISABLE_DEPENDABOT"]) {
+    if (isset($payload["pull_request"]) && $payload["pull_request"]["user"]["id"] == "49699333") {
+        http_response_code(400);
+        writeLog("Dependabot disabled (pull_request).");
+        exit;
+    } elseif (isset($payload["issue"]) && $payload["issue"]["user"]["id"] == "49699333") {
+        http_response_code(400);
+        writeLog("Dependabot disabled (issue).");
+        exit;
+    }
+}
+
 $curl = curl_init();
 curl_setopt($curl, CURLOPT_URL, $CONFIG["WEBHOOK_URL"]);
 curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");

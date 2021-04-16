@@ -30,6 +30,9 @@ $CONFIG = [
     // List of Supported Timezones: https://www.php.net/manual/en/timezones.php
     "TIME_ZONE" => "UTC",
 
+    // Exclude Pull Request, Issue Notifications Creating Dependabot
+    "DISABLE_DEPENDABOT" => true,
+
     // Debug mode (BOOLEAN)
     "DEBUG" => false,
 ];
