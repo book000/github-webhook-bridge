@@ -129,6 +129,21 @@ if ($CONFIG["DEBUG"]) {
     print_r($headers);
 }
 
+if (isset($CONFIG["DISABLE_DEPENDABOT"]) && $CONFIG["AUTO_DEPENDABOT_MERGE"] &&
+    isset($payload["pull_request"]) && $payload["action"] == "opened") {
+    $full_name = $payload["repository"]["full_name"];
+    $issue_id = $payload["pull_request"]["number"];
+    $access_token = $CONFIG["PERSONAL_ACCESS_TOKEN"];
+
+    echo file_get_contents("https://api.github.com/repos/$full_name/issues/$issue_id/comments?access_token=$access_token", false, stream_context_create([
+        "http" => [
+            "method" => "POST",
+            "header" => "Content-type: application/json; charset=UTF-8",
+            "content" => json_encode(["body" => $message])
+        ]
+    ]));
+}
+
 if (isset($CONFIG["DISABLE_DEPENDABOT"]) && $CONFIG["DISABLE_DEPENDABOT"]) {
     if (isset($payload["pull_request"]) && $payload["pull_request"]["user"]["id"] == "49699333") {
         http_response_code(400);
@@ -137,6 +152,10 @@ if (isset($CONFIG["DISABLE_DEPENDABOT"]) && $CONFIG["DISABLE_DEPENDABOT"]) {
     } elseif (isset($payload["issue"]) && $payload["issue"]["user"]["id"] == "49699333") {
         http_response_code(400);
         writeLog("Dependabot disabled (issue).");
+        exit;
+    } elseif (isset($payload["sender"]) && $payload["sender"]["id"] == "49699333") {
+        http_response_code(400);
+        writeLog("Dependabot disabled (sender).");
         exit;
     }
 }

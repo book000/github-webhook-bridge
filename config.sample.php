@@ -33,6 +33,12 @@ $CONFIG = [
     // Exclude Pull Request, Issue Notifications Creating Dependabot
     "DISABLE_DEPENDABOT" => true,
 
+    // If dependabot pull request, auto merge
+    "AUTO_DEPENDABOT_MERGE" => true,
+
+    // Personal access token used to auto merge
+    "PERSONAL_ACCESS_TOKEN" => "",
+
     // Debug mode (BOOLEAN)
     "DEBUG" => false,
 ];
