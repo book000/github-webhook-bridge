@@ -130,7 +130,7 @@ if ($CONFIG["DEBUG"]) {
 }
 
 if (isset($CONFIG["AUTO_DEPENDABOT_MERGE"]) && $CONFIG["AUTO_DEPENDABOT_MERGE"] &&
-    isset($payload["pull_request"]) && $payload["action"] == "opened") {
+    isset($payload["pull_request"]) && $payload["pull_request"]["user"]["id"] == "49699333" && $payload["action"] == "opened") {
     writeLog("Pull request auto merging with Dependabot is enabled.");
 
     $full_name = $payload["repository"]["full_name"];
