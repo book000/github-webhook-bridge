@@ -129,19 +129,24 @@ if ($CONFIG["DEBUG"]) {
     print_r($headers);
 }
 
-if (isset($CONFIG["DISABLE_DEPENDABOT"]) && $CONFIG["AUTO_DEPENDABOT_MERGE"] &&
+if (isset($CONFIG["AUTO_DEPENDABOT_MERGE"]) && $CONFIG["AUTO_DEPENDABOT_MERGE"] &&
     isset($payload["pull_request"]) && $payload["action"] == "opened") {
+    writeLog("Pull request auto merging with Dependabot is enabled.");
+
     $full_name = $payload["repository"]["full_name"];
     $issue_id = $payload["pull_request"]["number"];
     $access_token = $CONFIG["PERSONAL_ACCESS_TOKEN"];
+    $message = "@dependabot merge";
 
-    echo file_get_contents("https://api.github.com/repos/$full_name/issues/$issue_id/comments?access_token=$access_token", false, stream_context_create([
+    echo file_get_contents("https://api.github.com/repos/$full_name/issues/$issue_id/comments", false, stream_context_create([
         "http" => [
             "method" => "POST",
-            "header" => "Content-type: application/json; charset=UTF-8",
-            "content" => json_encode(["body" => $message])
+            "header" => "Content-type: application/json; charset=UTF-8\r\nAuthorization: token $access_token\r\nUser-Agent: github-webhook-bridge",
+            "content" => json_encode(["body" => $message]),
+            "ignore_errors" => true
         ]
     ]));
+    print_r($http_response_header);
 }
 
 if (isset($CONFIG["DISABLE_DEPENDABOT"]) && $CONFIG["DISABLE_DEPENDABOT"]) {
