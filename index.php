@@ -165,6 +165,22 @@ if (isset($CONFIG["DISABLE_DEPENDABOT"]) && $CONFIG["DISABLE_DEPENDABOT"]) {
     }
 }
 
+if (isset($CONFIG["DISABLE_RENOVATE"]) && $CONFIG["DISABLE_RENOVATE"]) {
+    if (isset($payload["pull_request"]) && $payload["pull_request"]["user"]["id"] == "29139614") {
+        http_response_code(400);
+        writeLog("Renovate disabled (pull_request).");
+        exit;
+    } elseif (isset($payload["issue"]) && $payload["issue"]["user"]["id"] == "29139614") {
+        http_response_code(400);
+        writeLog("Renovate disabled (issue).");
+        exit;
+    } elseif (isset($payload["sender"]) && $payload["sender"]["id"] == "29139614") {
+        http_response_code(400);
+        writeLog("Renovate disabled (sender).");
+        exit;
+    }
+}
+
 $curl = curl_init();
 curl_setopt($curl, CURLOPT_URL, $CONFIG["WEBHOOK_URL"]);
 curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");

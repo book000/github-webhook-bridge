@@ -33,6 +33,9 @@ $CONFIG = [
     // Exclude Pull Request, Issue Notifications Creating Dependabot
     "DISABLE_DEPENDABOT" => true,
 
+    // Exclude Pull Request, Issue Notifications Creating renovate
+    "DISABLE_RENOVATE" => true,
+
     // If dependabot pull request, auto merge (Beta)
     "AUTO_DEPENDABOT_MERGE" => true,
 
