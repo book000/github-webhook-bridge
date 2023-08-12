@@ -1,0 +1,89 @@
+import fastify, { FastifyReply, FastifyRequest } from 'fastify'
+import cors from '@fastify/cors'
+import { Schema } from '@octokit/webhooks-types'
+import { Logger } from '@book000/node-utils'
+import { isSignatureValid } from './utils'
+import { GWBEnvironment } from './environments'
+import { getAction } from './actions'
+
+async function hook(
+  request: FastifyRequest<{
+    Body: Schema
+  }>,
+  reply: FastifyReply
+) {
+  const headers = request.headers
+  const secret = GWBEnvironment.get('GITHUB_WEBHOOK_SECRET')
+  if (!isSignatureValid(secret, headers)) {
+    reply.status(400).send({
+      message: 'Bad Request: Invalid X-Hub-Signature',
+    })
+    return
+  }
+  const eventName = headers['x-github-event']
+  if (!eventName || typeof eventName !== 'string') {
+    reply.status(400).send({
+      message: 'Bad Request: Invalid X-GitHub-Event',
+    })
+    return
+  }
+  const action = getAction(eventName, request.body)
+  if (!action) {
+    reply.status(400).send({
+      message: 'Bad Request: Invalid event',
+    })
+    return
+  }
+
+  try {
+    await action.run()
+  } catch (error) {
+    Logger.configure('hook').error('Error', error as Error)
+    reply.status(500).send({
+      message: 'An error occurred',
+    })
+  }
+}
+
+async function main() {
+  const logger = Logger.configure('main')
+  const app = fastify()
+  app.register(cors, {
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST'],
+  })
+
+  app.get('/', (_request, reply) => {
+    reply.status(400).send({
+      message: 'Bad Request: Please use POST method',
+    })
+  })
+  app.post('/', hook)
+
+  const port = GWBEnvironment.getNumber('API_PORT', 80)
+  app.listen(
+    {
+      host: '0.0.0.0',
+      port,
+    },
+    (error, address) => {
+      if (error) {
+        logger.error('Listen error', error)
+        // eslint-disable-next-line unicorn/no-process-exit
+        process.exit(1)
+      }
+      logger.info(`Server listening at ${address}`)
+    }
+  )
+}
+
+;(async () => {
+  try {
+    await main()
+  } catch (error) {
+    Logger.configure('main').error('Error', error as Error)
+    // eslint-disable-next-line unicorn/no-process-exit
+    process.exit(1)
+  }
+})()
