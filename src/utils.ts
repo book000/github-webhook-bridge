@@ -1,10 +1,11 @@
 import { IncomingHttpHeaders } from 'node:http'
-import crypto from 'node:crypto'
+import crypto, { BinaryLike, timingSafeEqual } from 'node:crypto'
 import { DiscordEmbed } from '@book000/node-utils'
 
 export function isSignatureValid(
   secret: string,
-  headers: IncomingHttpHeaders
+  headers: IncomingHttpHeaders,
+  payload: BinaryLike
 ): boolean {
   const signature = headers['x-hub-signature']
   if (!signature) {
@@ -17,11 +18,13 @@ export function isSignatureValid(
   if (!algorithm || !signatureHash) {
     return false
   }
-  const payload = JSON.stringify(headers)
   const hmac = crypto.createHmac(algorithm, secret)
   hmac.update(payload)
   const digest = hmac.digest('hex')
-  return signatureHash === digest
+  return timingSafeEqual(
+    Buffer.from(digest, 'ascii'),
+    Buffer.from(signatureHash, 'ascii')
+  )
 }
 
 export function createEmbed(
