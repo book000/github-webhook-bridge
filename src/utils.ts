@@ -22,7 +22,7 @@ export function isSignatureValid(
   hmac.update(payload)
   const digest = hmac.digest('hex')
   return timingSafeEqual(
-    Buffer.from(`${algorithm}=${digest}`, 'ascii'),
+    Buffer.from(digest, 'ascii'),
     Buffer.from(signatureHash, 'ascii')
   )
 }
