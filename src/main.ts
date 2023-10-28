@@ -4,7 +4,7 @@ import { Schema } from '@octokit/webhooks-types'
 import { Discord, Logger } from '@book000/node-utils'
 import { isSignatureValid } from './utils'
 import { GWBEnvironment } from './environments'
-import { getAction } from './actions'
+import { getAction } from './get-action'
 
 async function hook(
   request: FastifyRequest<{
@@ -66,7 +66,7 @@ async function main() {
   })
   app.post('/', hook)
 
-  const port = GWBEnvironment.getNumber('API_PORT', 80)
+  const port = GWBEnvironment.getNumber('API_PORT', 3000)
   app.listen(
     {
       host: '0.0.0.0',

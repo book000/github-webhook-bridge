@@ -14,7 +14,7 @@ export class GWBEnvironment {
   }
 
   public static getNumber(key: EnvironmentKey, defaultValue?: number): number {
-    const value = this.get(key)
+    const value = this.get(key, defaultValue?.toString())
     const number = Number(value)
     if (Number.isNaN(number)) {
       if (defaultValue === undefined) {
