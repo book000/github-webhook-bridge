@@ -2,6 +2,7 @@ type EnvironmentKey =
   | 'API_PORT'
   | 'GITHUB_WEBHOOK_SECRET'
   | 'DISCORD_WEBHOOK_URL'
+  | 'GITHUB_USER_MAP_FILE_PATH'
 
 export class GWBEnvironment {
   public static get(key: EnvironmentKey, defaultValue?: string): string {
