@@ -1,6 +1,10 @@
 import { IncomingHttpHeaders } from 'node:http'
 import crypto, { BinaryLike, timingSafeEqual } from 'node:crypto'
 import { DiscordEmbed } from '@book000/node-utils'
+import { EmbedColors } from './embed-colors'
+
+export type SomeRequired<T, K extends keyof T> = Omit<T, K> &
+  Required<Pick<T, K>>
 
 export function isSignatureValid(
   secret: string,
@@ -29,14 +33,19 @@ export function isSignatureValid(
 
 export function createEmbed(
   eventName: string,
-  extraEmbed: Omit<DiscordEmbed, 'footer' | 'timestamp'>
+  embedColor: (typeof EmbedColors)[keyof typeof EmbedColors],
+  extraEmbed: SomeRequired<
+    Omit<DiscordEmbed, 'footer' | 'timestamp' | 'color'>,
+    'title'
+  >
 ): DiscordEmbed {
   return {
     footer: {
-      text: `Powered by github-webhook-bot (${eventName} event)`,
+      text: `Powered by [book000/github-webhook-bridge](https://github.com/book000/github~webhook-bridge) (${eventName} event)`,
       icon_url: 'https://i.imgur.com/PdvExHP.png',
     },
     timestamp: new Date().toISOString(),
+    color: embedColor,
     ...extraEmbed,
   }
 }
