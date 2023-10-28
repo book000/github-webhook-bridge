@@ -1,4 +1,4 @@
-FROM node:20-alpine as runner
+FROM node:21-alpine as runner
 
 # hadolint ignore=DL3018
 RUN apk update && \
