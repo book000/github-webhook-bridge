@@ -7,7 +7,7 @@ export function isSignatureValid(
   headers: IncomingHttpHeaders,
   payload: BinaryLike
 ): boolean {
-  const signature = headers['x-hub-signature']
+  const signature = headers['x-hub-signature-256']
   if (!signature) {
     return false
   }
@@ -22,7 +22,7 @@ export function isSignatureValid(
   hmac.update(payload)
   const digest = hmac.digest('hex')
   return timingSafeEqual(
-    Buffer.from(digest, 'ascii'),
+    Buffer.from(`${algorithm}=${digest}`, 'ascii'),
     Buffer.from(signatureHash, 'ascii')
   )
 }
