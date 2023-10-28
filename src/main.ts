@@ -1,7 +1,7 @@
 import fastify, { FastifyReply, FastifyRequest } from 'fastify'
 import cors from '@fastify/cors'
 import { Schema } from '@octokit/webhooks-types'
-import { Logger } from '@book000/node-utils'
+import { Discord, Logger } from '@book000/node-utils'
 import { isSignatureValid } from './utils'
 import { GWBEnvironment } from './environments'
 import { getAction } from './actions'
@@ -27,7 +27,12 @@ async function hook(
     })
     return
   }
-  const action = getAction(eventName, request.body)
+
+  const discord = new Discord({
+    webhookUrl: GWBEnvironment.get('DISCORD_WEBHOOK_URL'),
+  })
+
+  const action = getAction(discord, eventName, request.body)
   if (!action) {
     reply.status(400).send({
       message: 'Bad Request: Invalid event',
@@ -40,7 +45,7 @@ async function hook(
   } catch (error) {
     Logger.configure('hook').error('Error', error as Error)
     reply.status(500).send({
-      message: 'An error occurred',
+      message: 'An error occurred: ' + (error as Error).message,
     })
   }
 }

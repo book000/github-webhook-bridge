@@ -117,202 +117,309 @@ import { WatchAction } from './watch'
 import { WorkflowDispatchAction } from './workflow-dispatch'
 import { WorkflowJobAction } from './workflow-job'
 import { WorkflowRunAction } from './workflow-run'
+import { Discord } from '@book000/node-utils'
 
 export abstract class BaseAction<T extends Schema> {
+  protected readonly discord: Discord
+  protected readonly eventName: string
   protected readonly event: T
 
-  public constructor(event: T) {
+  public constructor(discord: Discord, eventName: string, event: T) {
+    this.discord = discord
+    this.eventName = eventName
     this.event = event
   }
 
   public abstract run(): Promise<void>
 }
 
-export function getAction(eventName: string, event: Schema) {
+export function getAction(discord: Discord, eventName: string, event: Schema) {
   switch (eventName) {
     case 'branch_protection_rule': {
-      return new BranchProtectionRuleAction(event as BranchProtectionRuleEvent)
+      return new BranchProtectionRuleAction(
+        discord,
+        eventName,
+        event as BranchProtectionRuleEvent
+      )
     }
     case 'check_run': {
-      return new CheckRunAction(event as CheckRunEvent)
+      return new CheckRunAction(discord, eventName, event as CheckRunEvent)
     }
     case 'check_suite': {
-      return new CheckSuiteAction(event as CheckSuiteEvent)
+      return new CheckSuiteAction(discord, eventName, event as CheckSuiteEvent)
     }
     case 'code_scanning_alert': {
-      return new CodeScanningAlertAction(event as CodeScanningAlertEvent)
+      return new CodeScanningAlertAction(
+        discord,
+        eventName,
+        event as CodeScanningAlertEvent
+      )
     }
     case 'commit_comment': {
-      return new CommitCommentAction(event as CommitCommentEvent)
+      return new CommitCommentAction(
+        discord,
+        eventName,
+        event as CommitCommentEvent
+      )
     }
     case 'create': {
-      return new CreateAction(event as CreateEvent)
+      return new CreateAction(discord, eventName, event as CreateEvent)
     }
     case 'delete': {
-      return new DeleteAction(event as DeleteEvent)
+      return new DeleteAction(discord, eventName, event as DeleteEvent)
     }
     case 'dependabot_alert': {
-      return new DependabotAlertAction(event as DependabotAlertEvent)
+      return new DependabotAlertAction(
+        discord,
+        eventName,
+        event as DependabotAlertEvent
+      )
     }
     case 'deploy_key': {
-      return new DeployKeyAction(event as DeployKeyEvent)
+      return new DeployKeyAction(discord, eventName, event as DeployKeyEvent)
     }
     case 'deployment_review': {
-      return new DeploymentReviewAction(event as DeploymentReviewEvent)
+      return new DeploymentReviewAction(
+        discord,
+        eventName,
+        event as DeploymentReviewEvent
+      )
     }
     case 'deployment_status': {
-      return new DeploymentStatusAction(event as DeploymentStatusEvent)
+      return new DeploymentStatusAction(
+        discord,
+        eventName,
+        event as DeploymentStatusEvent
+      )
     }
     case 'deployment': {
-      return new DeploymentAction(event as DeploymentEvent)
+      return new DeploymentAction(discord, eventName, event as DeploymentEvent)
     }
     case 'discussion_comment': {
-      return new DiscussionCommentAction(event as DiscussionCommentEvent)
+      return new DiscussionCommentAction(
+        discord,
+        eventName,
+        event as DiscussionCommentEvent
+      )
     }
     case 'discussion': {
-      return new DiscussionAction(event as DiscussionEvent)
+      return new DiscussionAction(discord, eventName, event as DiscussionEvent)
     }
     case 'fork': {
-      return new ForkAction(event as ForkEvent)
+      return new ForkAction(discord, eventName, event as ForkEvent)
     }
     case 'github_app_authorization': {
       return new GithubAppAuthorizationAction(
+        discord,
+        eventName,
         event as GithubAppAuthorizationEvent
       )
     }
     case 'gollum': {
-      return new GollumAction(event as GollumEvent)
+      return new GollumAction(discord, eventName, event as GollumEvent)
     }
     case 'installation_repositories': {
       return new InstallationRepositoriesAction(
+        discord,
+        eventName,
         event as InstallationRepositoriesEvent
       )
     }
     case 'installation': {
-      return new InstallationAction(event as InstallationEvent)
+      return new InstallationAction(
+        discord,
+        eventName,
+        event as InstallationEvent
+      )
     }
     case 'issue_comment': {
-      return new IssueCommentAction(event as IssueCommentEvent)
+      return new IssueCommentAction(
+        discord,
+        eventName,
+        event as IssueCommentEvent
+      )
     }
     case 'issues': {
-      return new IssuesAction(event as IssuesEvent)
+      return new IssuesAction(discord, eventName, event as IssuesEvent)
     }
     case 'label': {
-      return new LabelAction(event as LabelEvent)
+      return new LabelAction(discord, eventName, event as LabelEvent)
     }
     case 'marketplace_purchase': {
-      return new MarketplacePurchaseAction(event as MarketplacePurchaseEvent)
+      return new MarketplacePurchaseAction(
+        discord,
+        eventName,
+        event as MarketplacePurchaseEvent
+      )
     }
     case 'member': {
-      return new MemberAction(event as MemberEvent)
+      return new MemberAction(discord, eventName, event as MemberEvent)
     }
     case 'membership': {
-      return new MembershipAction(event as MembershipEvent)
+      return new MembershipAction(discord, eventName, event as MembershipEvent)
     }
     case 'merge_group': {
-      return new MergeGroupAction(event as MergeGroupEvent)
+      return new MergeGroupAction(discord, eventName, event as MergeGroupEvent)
     }
     case 'meta': {
-      return new MetaAction(event as MetaEvent)
+      return new MetaAction(discord, eventName, event as MetaEvent)
     }
     case 'milestone': {
-      return new MilestoneAction(event as MilestoneEvent)
+      return new MilestoneAction(discord, eventName, event as MilestoneEvent)
     }
     case 'org_block': {
-      return new OrgBlockAction(event as OrgBlockEvent)
+      return new OrgBlockAction(discord, eventName, event as OrgBlockEvent)
     }
     case 'organization': {
-      return new OrganizationAction(event as OrganizationEvent)
+      return new OrganizationAction(
+        discord,
+        eventName,
+        event as OrganizationEvent
+      )
     }
     case 'package': {
-      return new PackageAction(event as PackageEvent)
+      return new PackageAction(discord, eventName, event as PackageEvent)
     }
     case 'page_build': {
-      return new PageBuildAction(event as PageBuildEvent)
+      return new PageBuildAction(discord, eventName, event as PageBuildEvent)
     }
     case 'ping': {
-      return new PingAction(event as PingEvent)
+      return new PingAction(discord, eventName, event as PingEvent)
     }
     case 'project_card': {
-      return new ProjectCardAction(event as ProjectCardEvent)
+      return new ProjectCardAction(
+        discord,
+        eventName,
+        event as ProjectCardEvent
+      )
     }
     case 'project_column': {
-      return new ProjectColumnAction(event as ProjectColumnEvent)
+      return new ProjectColumnAction(
+        discord,
+        eventName,
+        event as ProjectColumnEvent
+      )
     }
     case 'project': {
-      return new ProjectAction(event as ProjectEvent)
+      return new ProjectAction(discord, eventName, event as ProjectEvent)
     }
     case 'projects_v2_item': {
-      return new ProjectsV2ItemAction(event as ProjectsV2ItemEvent)
+      return new ProjectsV2ItemAction(
+        discord,
+        eventName,
+        event as ProjectsV2ItemEvent
+      )
     }
     case 'public': {
-      return new PublicAction(event as PublicEvent)
+      return new PublicAction(discord, eventName, event as PublicEvent)
     }
     case 'pull_request_review_comment': {
       return new PullRequestReviewCommentAction(
+        discord,
+        eventName,
         event as PullRequestReviewCommentEvent
       )
     }
     case 'pull_request_review_thread': {
       return new PullRequestReviewThreadAction(
+        discord,
+        eventName,
         event as PullRequestReviewThreadEvent
       )
     }
     case 'pull_request_review': {
-      return new PullRequestReviewAction(event as PullRequestReviewEvent)
+      return new PullRequestReviewAction(
+        discord,
+        eventName,
+        event as PullRequestReviewEvent
+      )
     }
     case 'pull_request': {
-      return new PullRequestAction(event as PullRequestEvent)
+      return new PullRequestAction(
+        discord,
+        eventName,
+        event as PullRequestEvent
+      )
     }
     case 'push': {
-      return new PushAction(event as PushEvent)
+      return new PushAction(discord, eventName, event as PushEvent)
     }
     case 'release': {
-      return new ReleaseAction(event as ReleaseEvent)
+      return new ReleaseAction(discord, eventName, event as ReleaseEvent)
     }
     case 'repository_dispatch': {
-      return new RepositoryDispatchAction(event as RepositoryDispatchEvent)
+      return new RepositoryDispatchAction(
+        discord,
+        eventName,
+        event as RepositoryDispatchEvent
+      )
     }
     case 'repository_import': {
-      return new RepositoryImportAction(event as RepositoryImportEvent)
+      return new RepositoryImportAction(
+        discord,
+        eventName,
+        event as RepositoryImportEvent
+      )
     }
     case 'repository_vulnerability_alert': {
       return new RepositoryVulnerabilityAlertAction(
+        discord,
+        eventName,
         event as RepositoryVulnerabilityAlertEvent
       )
     }
     case 'repository': {
-      return new RepositoryAction(event as RepositoryEvent)
+      return new RepositoryAction(discord, eventName, event as RepositoryEvent)
     }
     case 'security_advisory': {
-      return new SecurityAdvisoryAction(event as SecurityAdvisoryEvent)
+      return new SecurityAdvisoryAction(
+        discord,
+        eventName,
+        event as SecurityAdvisoryEvent
+      )
     }
     case 'sponsorship': {
-      return new SponsorshipAction(event as SponsorshipEvent)
+      return new SponsorshipAction(
+        discord,
+        eventName,
+        event as SponsorshipEvent
+      )
     }
     case 'star': {
-      return new StarAction(event as StarEvent)
+      return new StarAction(discord, eventName, event as StarEvent)
     }
     case 'status': {
-      return new StatusAction(event as StatusEvent)
+      return new StatusAction(discord, eventName, event as StatusEvent)
     }
     case 'team_add': {
-      return new TeamAddAction(event as TeamAddEvent)
+      return new TeamAddAction(discord, eventName, event as TeamAddEvent)
     }
     case 'team': {
-      return new TeamAction(event as TeamEvent)
+      return new TeamAction(discord, eventName, event as TeamEvent)
     }
     case 'watch': {
-      return new WatchAction(event as WatchEvent)
+      return new WatchAction(discord, eventName, event as WatchEvent)
     }
     case 'workflow_dispatch': {
-      return new WorkflowDispatchAction(event as WorkflowDispatchEvent)
+      return new WorkflowDispatchAction(
+        discord,
+        eventName,
+        event as WorkflowDispatchEvent
+      )
     }
     case 'workflow_job': {
-      return new WorkflowJobAction(event as WorkflowJobEvent)
+      return new WorkflowJobAction(
+        discord,
+        eventName,
+        event as WorkflowJobEvent
+      )
     }
     case 'workflow_run': {
-      return new WorkflowRunAction(event as WorkflowRunEvent)
+      return new WorkflowRunAction(
+        discord,
+        eventName,
+        event as WorkflowRunEvent
+      )
     }
     default: {
       throw new Error(`Unsupported event: ${eventName}`)

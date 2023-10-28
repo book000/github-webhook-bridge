@@ -1,5 +1,6 @@
 import { IncomingHttpHeaders } from 'node:http'
 import crypto from 'node:crypto'
+import { DiscordEmbed } from '@book000/node-utils'
 
 export function isSignatureValid(
   secret: string,
@@ -21,4 +22,18 @@ export function isSignatureValid(
   hmac.update(payload)
   const digest = hmac.digest('hex')
   return signatureHash === digest
+}
+
+export function createEmbed(
+  eventName: string,
+  extraEmbed: Omit<DiscordEmbed, 'footer' | 'timestamp'>
+): DiscordEmbed {
+  return {
+    footer: {
+      text: `Powered by github-webhook-bot (${eventName} event)`,
+      icon_url: 'https://i.imgur.com/PdvExHP.png',
+    },
+    timestamp: new Date().toISOString(),
+    ...extraEmbed,
+  }
 }
