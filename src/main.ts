@@ -14,7 +14,7 @@ async function hook(
 ) {
   const headers = request.headers
   const secret = GWBEnvironment.get('GITHUB_WEBHOOK_SECRET')
-  if (!isSignatureValid(secret, headers)) {
+  if (!isSignatureValid(secret, headers, JSON.stringify(request.body))) {
     reply.status(400).send({
       message: 'Bad Request: Invalid X-Hub-Signature',
     })
