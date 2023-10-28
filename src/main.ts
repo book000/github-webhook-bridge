@@ -5,6 +5,7 @@ import { Discord, Logger } from '@book000/node-utils'
 import { isSignatureValid } from './utils'
 import { GWBEnvironment } from './environments'
 import { getAction } from './get-action'
+import fastifyRawBody from 'fastify-raw-body'
 
 async function hook(
   request: FastifyRequest<{
@@ -14,7 +15,13 @@ async function hook(
 ) {
   const headers = request.headers
   const secret = GWBEnvironment.get('GITHUB_WEBHOOK_SECRET')
-  if (!isSignatureValid(secret, headers, JSON.stringify(request.body))) {
+  if (!request.rawBody) {
+    reply.status(400).send({
+      message: 'Bad Request: Invalid body',
+    })
+    return
+  }
+  if (!isSignatureValid(secret, headers, request.rawBody)) {
     reply.status(400).send({
       message: 'Bad Request: Invalid X-Hub-Signature',
     })
@@ -58,6 +65,7 @@ async function main() {
     credentials: true,
     methods: ['GET', 'POST'],
   })
+  await app.register(fastifyRawBody)
 
   app.get('/', (_request, reply) => {
     reply.status(400).send({
