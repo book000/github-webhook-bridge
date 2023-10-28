@@ -1,21 +1,24 @@
 import { PushEvent, Commit } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
 import { createEmbed } from '@/utils'
+import { EmbedColors } from '@/embed-colors'
 
 export class PushAction extends BaseAction<PushEvent> {
   public run(): Promise<void> {
     const { ref, commits, repository, sender } = this.event
 
-    const embed = createEmbed(this.eventName, {
+    const embed = createEmbed(this.eventName, EmbedColors.Push, {
       title: `[${repository.full_name}:${ref}] ${commits.length} new commit(s)`,
       description: this.getDescription(commits),
       author: {
         name: sender.name,
-        icon_url: `https://avatars.githubusercontent.com/u/${sender.id}`,
+        url: sender.html_url,
+        icon_url: sender.avatar_url,
       },
     })
 
-    return this.discord.sendMessage({
+    const key = `${repository.full_name}:${ref}`
+    return this.sendMessage(key, {
       embeds: [embed],
     })
   }
