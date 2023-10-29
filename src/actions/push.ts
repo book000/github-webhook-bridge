@@ -7,6 +7,8 @@ export class PushAction extends BaseAction<PushEvent> {
   public run(): Promise<void> {
     const { ref, commits, repository, sender } = this.event
 
+    if (commits.length === 0) return Promise.resolve()
+
     const embed = createEmbed(this.eventName, EmbedColors.Push, {
       title: `[${repository.full_name}:${ref}] ${commits.length} new commit(s)`,
       description: this.getDescription(commits),
