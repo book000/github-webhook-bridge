@@ -27,8 +27,14 @@ export class PushAction extends BaseAction<PushEvent> {
     return commits
       .map((commit) => {
         const { id, url, message, author } = commit
+        const firstLine = message.includes('\n')
+          ? message.split('\n')[0]
+          : message
+        const shortMessage =
+          firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine
+
         const { name } = author
-        return `[${id.slice(0, 7)}](${url}) ${message} - ${name}`
+        return `[${id.slice(0, 7)}](${url}) ${shortMessage} - ${name}`
       })
       .join('\n')
   }
