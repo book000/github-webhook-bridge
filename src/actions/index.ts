@@ -1,4 +1,8 @@
-import { Discord, DiscordMessage } from '@book000/node-utils'
+import {
+  Discord,
+  DiscordMessage,
+  DiscordMessageFlag,
+} from '@book000/node-utils'
 import { Schema } from '@octokit/webhooks-types'
 
 export abstract class BaseAction<T extends Schema> {
@@ -25,6 +29,11 @@ export abstract class BaseAction<T extends Schema> {
     key: string,
     message: DiscordMessage
   ): Promise<void> {
+    message = {
+      ...message,
+      flags: DiscordMessageFlag.SuppressNotifications,
+    }
+
     // メッセージキャッシュを整理する
     const cacheKeys = Object.keys(this.messageCache)
     for (const cacheKey of cacheKeys) {

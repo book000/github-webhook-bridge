@@ -1,4 +1,5 @@
 export const EmbedColors = {
+  Unknown: 0x00_00_00,
   PullRequestOpened: 0x2e_cc_71,
   PullRequestClosed: 0xe7_4c_3c,
   PullRequestReopened: 0x34_98_db,
@@ -8,7 +9,6 @@ export const EmbedColors = {
   PullRequestReviewRequestRemoved: 0x9b_59_b6,
   PullRequestLabeled: 0x9b_59_b6,
   PullRequestUnlabeled: 0x9b_59_b6,
-  PullRequestSynchronize: 0x9b_59_b6,
   PullRequestEdited: 0x9b_59_b6,
   PullRequestReadyForReview: 0x9b_59_b6,
   PullRequestLocked: 0x9b_59_b6,
