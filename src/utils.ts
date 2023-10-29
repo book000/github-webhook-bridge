@@ -41,7 +41,7 @@ export function createEmbed(
 ): DiscordEmbed {
   return {
     footer: {
-      text: `Powered by [book000/github-webhook-bridge](https://github.com/book000/github~webhook-bridge) (${eventName} event)`,
+      text: `Powered by book000/github-webhook-bridge (${eventName} event)`,
       icon_url: 'https://i.imgur.com/PdvExHP.png',
     },
     timestamp: new Date().toISOString(),
