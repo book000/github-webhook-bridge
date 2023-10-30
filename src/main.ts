@@ -6,6 +6,7 @@ import { isSignatureValid } from './utils'
 import { GWBEnvironment } from './environments'
 import { getAction } from './get-action'
 import fastifyRawBody from 'fastify-raw-body'
+import { MuteManager } from './manager/mute'
 
 async function hook(
   request: FastifyRequest<{
@@ -31,6 +32,18 @@ async function hook(
   if (!eventName || typeof eventName !== 'string') {
     reply.status(400).send({
       message: 'Bad Request: Invalid X-GitHub-Event',
+    })
+    return
+  }
+
+  const muteManager = new MuteManager()
+  if (
+    'sender' in request.body &&
+    request.body.sender?.id &&
+    muteManager.isMuted(request.body.sender.id)
+  ) {
+    reply.status(200).send({
+      message: 'Muted user',
     })
     return
   }
