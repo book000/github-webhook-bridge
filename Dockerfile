@@ -23,6 +23,7 @@ COPY tsconfig.json .
 ENV NODE_ENV production
 ENV API_PORT 80
 ENV GITHUB_USER_MAP_FILE_PATH /data/github-user-map.json
+ENV MUTE_USERS_FILE_PATH /data/mute-users.json
 
 VOLUME [ "/data" ]
 
