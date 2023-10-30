@@ -9,7 +9,10 @@ export class MuteManager {
   private readonly mutes: Set<number> = new Set()
 
   public constructor() {
-    this.path = GWBEnvironment.get('MUTE_USERS_FILE_PATH', 'data/mute-users.json')
+    this.path = GWBEnvironment.get(
+      'MUTE_USERS_FILE_PATH',
+      'data/mute-users.json'
+    )
 
     this.load()
   }
