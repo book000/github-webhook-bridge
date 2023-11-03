@@ -28,6 +28,7 @@ import { createEmbed } from '@/utils'
 import { GitHubUserMap } from '@/mapper/github-user'
 import { EmbedColors } from '@/embed-colors'
 import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
+import jsdiff from 'diff'
 
 export class PullRequestAction extends BaseAction<PullRequestEvent> {
   public run(): Promise<void> {
@@ -396,50 +397,50 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
 
     const fields: DiscordEmbedField[] = []
     if ('title' in changes && changes.title) {
-      fields.push(
-        {
-          name: 'Previous Title',
-          value: changes.title.from,
-          inline: true,
-        },
-        {
-          name: 'Current Title',
-          value: pullRequest.title,
-          inline: true,
-        }
+      const titleDiff = jsdiff.createPatch(
+        'title',
+        changes.title.from,
+        pullRequest.title,
+        'Previous Title',
+        'Current Title'
       )
+      fields.push({
+        name: 'Title',
+        value: '```diff\n' + titleDiff + '\n```',
+        inline: true,
+      })
     }
-    if ('body' in changes && changes.body) {
-      fields.push(
-        {
-          name: 'Previous Body',
-          value: changes.body.from.slice(0, 500),
-          inline: true,
-        },
-        {
-          name: 'Current Body',
-          value: pullRequest.body?.slice(0, 500) || '*No description provided*',
-          inline: true,
-        }
+    if ('body' in changes && changes.body && pullRequest.body) {
+      const bodyDiff = jsdiff.createPatch(
+        'body',
+        changes.body.from,
+        pullRequest.body,
+        'Previous Body',
+        'Current Body'
       )
+      fields.push({
+        name: 'Body',
+        value: '```diff\n' + bodyDiff + '\n```',
+        inline: true,
+      })
     }
     if (
       'base' in changes &&
       changes.base &&
       changes.base.ref.from !== pullRequest.base.ref
     ) {
-      fields.push(
-        {
-          name: 'Previous Base',
-          value: changes.base.ref.from,
-          inline: true,
-        },
-        {
-          name: 'Current Base',
-          value: pullRequest.base.ref,
-          inline: true,
-        }
+      const baseDiff = jsdiff.createPatch(
+        'base',
+        changes.base.ref.from,
+        pullRequest.base.ref,
+        'Previous Base',
+        'Current Base'
       )
+      fields.push({
+        name: 'Base',
+        value: '```diff\n' + baseDiff + '\n```',
+        inline: true,
+      })
     }
 
     if (fields.length === 0) {
