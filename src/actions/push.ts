@@ -9,8 +9,11 @@ export class PushAction extends BaseAction<PushEvent> {
 
     if (commits.length === 0) return Promise.resolve()
 
+    // eslint-disable-next-line unicorn/prevent-abbreviations
+    const shortRef = ref.replace('refs/heads/', '').replace('refs/tags/', '')
+
     const embed = createEmbed(this.eventName, EmbedColors.Push, {
-      title: `[${repository.full_name}:${ref}] ${commits.length} new commit(s)`,
+      title: `[${repository.full_name}:${shortRef}] ${commits.length} new commit(s)`,
       description: this.getDescription(commits),
       author: {
         name: sender.name,
