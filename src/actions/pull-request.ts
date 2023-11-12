@@ -24,9 +24,9 @@ import {
   PullRequestDequeuedEvent,
 } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
-import { createEmbed } from '@/utils'
-import { GitHubUserMapManager } from '@/manager/github-user'
-import { EmbedColors } from '@/embed-colors'
+import { createEmbed } from '../utils'
+import { GitHubUserMapManager } from '../manager/github-user'
+import { EmbedColors } from '../embed-colors'
 import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
 import jsdiff from 'diff'
 

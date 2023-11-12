@@ -11,6 +11,9 @@ import { MuteManager } from './manager/mute'
 async function hook(
   request: FastifyRequest<{
     Body: Schema
+    Querystring: {
+      url?: string
+    }
   }>,
   reply: FastifyReply
 ) {
@@ -49,8 +52,11 @@ async function hook(
     return
   }
 
+  const webhookUrl =
+    request.query.url ?? GWBEnvironment.get('DISCORD_WEBHOOK_URL')
+
   const discord = new Discord({
-    webhookUrl: GWBEnvironment.get('DISCORD_WEBHOOK_URL'),
+    webhookUrl,
   })
 
   const action = getAction(discord, eventName, request.body)

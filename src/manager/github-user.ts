@@ -1,4 +1,4 @@
-import { GWBEnvironment } from '@/environments'
+import { GWBEnvironment } from '../environments'
 import { BaseRecordManager } from './base-record'
 
 /**

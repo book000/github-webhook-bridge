@@ -1,7 +1,7 @@
 import { PingEvent } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
-import { createEmbed } from '@/utils'
-import { EmbedColors } from '@/embed-colors'
+import { createEmbed } from '../utils'
+import { EmbedColors } from '../embed-colors'
 
 export class PingAction extends BaseAction<PingEvent> {
   public run(): Promise<void> {

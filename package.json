@@ -10,7 +10,7 @@
     "start": "tsx ./src/main.ts",
     "dev": "tsx watch ./src/main.ts",
     "vercel": "vercel dev",
-    "build": "tsc -p .",
+    "build": "tsc -p tsconfig.json",
     "lint": "run-p -c lint:prettier lint:eslint lint:tsc",
     "lint:prettier": "prettier --check src",
     "lint:eslint": "eslint . --ext ts,tsx",
