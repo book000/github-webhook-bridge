@@ -28,5 +28,5 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*", "api/serverless.ts"]
+  "include": ["src/**/*"]
 }
