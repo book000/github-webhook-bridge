@@ -37,6 +37,7 @@ async function hook(
   }
 
   const muteManager = new MuteManager()
+  await muteManager.load()
   if (
     'sender' in request.body &&
     request.body.sender?.id &&
@@ -70,8 +71,7 @@ async function hook(
   }
 }
 
-async function main() {
-  const logger = Logger.configure('main')
+export async function getApp() {
   const app = fastify()
   app.register(cors, {
     origin: true,
@@ -86,6 +86,14 @@ async function main() {
     })
   })
   app.post('/', hook)
+
+  return app
+}
+
+async function main() {
+  const logger = Logger.configure('main')
+
+  const app = await getApp()
 
   const port = GWBEnvironment.getNumber('API_PORT', 3000)
   app.listen(
