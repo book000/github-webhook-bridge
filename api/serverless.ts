@@ -1,4 +1,4 @@
-import { getApp } from './main'
+import { getApp } from '../src/main'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 export default async function (
