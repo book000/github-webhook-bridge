@@ -1,4 +1,4 @@
-import { GWBEnvironment } from '@/environments'
+import { GWBEnvironment } from '../environments'
 import { BaseSetManager } from './base-set'
 
 /**
