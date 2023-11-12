@@ -25,74 +25,81 @@ import {
 } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
 import { createEmbed } from '@/utils'
-import { GitHubUserMap } from '@/mapper/github-user'
+import { GitHubUserMapManager } from '@/manager/github-user'
 import { EmbedColors } from '@/embed-colors'
 import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
 import jsdiff from 'diff'
 
 export class PullRequestAction extends BaseAction<PullRequestEvent> {
-  public run(): Promise<void> {
+  public async run(): Promise<void> {
     const action = this.event.action
 
     // synchronizeは無視
     if (action === 'synchronize') {
-      return Promise.resolve()
+      return
     }
 
     const methodMap: Record<
       Exclude<PullRequestEvent['action'], 'synchronize'>,
       () => Promise<void>
     > = {
-      opened: () => this.processOpened(this.event as PullRequestOpenedEvent),
-      closed: () => this.processClosed(this.event as PullRequestClosedEvent),
-      reopened: () =>
-        this.processOpened(this.event as PullRequestReopenedEvent),
-      assigned: () =>
-        this.processAssigned(this.event as PullRequestAssignedEvent),
-      unassigned: () =>
-        this.processUnassigned(this.event as PullRequestUnassignedEvent),
-      review_requested: () =>
-        this.processReviewRequested(
+      opened: async () =>
+        await this.processOpened(this.event as PullRequestOpenedEvent),
+      closed: async () =>
+        await this.processClosed(this.event as PullRequestClosedEvent),
+      reopened: async () =>
+        await this.processOpened(this.event as PullRequestReopenedEvent),
+      assigned: async () =>
+        await this.processAssigned(this.event as PullRequestAssignedEvent),
+      unassigned: async () =>
+        await this.processUnassigned(this.event as PullRequestUnassignedEvent),
+      review_requested: async () =>
+        await this.processReviewRequested(
           this.event as PullRequestReviewRequestedEvent
         ),
-      review_request_removed: () =>
-        this.processReviewRequestRemoved(
+      review_request_removed: async () =>
+        await this.processReviewRequestRemoved(
           this.event as PullRequestReviewRequestRemovedEvent
         ),
-      labeled: () => this.processLabeled(this.event as PullRequestLabeledEvent),
-      unlabeled: () =>
-        this.processUnlabeled(this.event as PullRequestUnlabeledEvent),
-      edited: () => this.processEdited(this.event as PullRequestEditedEvent),
-      ready_for_review: () =>
-        this.processReadyForReview(
+      labeled: async () =>
+        await this.processLabeled(this.event as PullRequestLabeledEvent),
+      unlabeled: async () =>
+        await this.processUnlabeled(this.event as PullRequestUnlabeledEvent),
+      edited: async () =>
+        await this.processEdited(this.event as PullRequestEditedEvent),
+      ready_for_review: async () =>
+        await this.processReadyForReview(
           this.event as PullRequestReadyForReviewEvent
         ),
-      locked: () => this.processLocked(this.event as PullRequestLockedEvent),
-      unlocked: () =>
-        this.processUnlocked(this.event as PullRequestUnlockedEvent),
-      auto_merge_enabled: () =>
-        this.processAutoMergeEnabled(
+      locked: async () =>
+        await this.processLocked(this.event as PullRequestLockedEvent),
+      unlocked: async () =>
+        await this.processUnlocked(this.event as PullRequestUnlockedEvent),
+      auto_merge_enabled: async () =>
+        await this.processAutoMergeEnabled(
           this.event as PullRequestAutoMergeEnabledEvent
         ),
-      auto_merge_disabled: () =>
-        this.processAutoMergeDisabled(
+      auto_merge_disabled: async () =>
+        await this.processAutoMergeDisabled(
           this.event as PullRequestAutoMergeDisabledEvent
         ),
-      converted_to_draft: () =>
-        this.processConvertedToDraft(
+      converted_to_draft: async () =>
+        await this.processConvertedToDraft(
           this.event as PullRequestConvertedToDraftEvent
         ),
-      milestoned: () =>
-        this.processMilestoned(this.event as PullRequestMilestonedEvent),
-      demilestoned: () =>
-        this.processDemilestoned(this.event as PullRequestDemilestonedEvent),
-      enqueued: () =>
-        this.processEnqueued(this.event as PullRequestEnqueuedEvent),
-      dequeued: () =>
-        this.processDequeued(this.event as PullRequestDequeuedEvent),
+      milestoned: async () =>
+        await this.processMilestoned(this.event as PullRequestMilestonedEvent),
+      demilestoned: async () =>
+        await this.processDemilestoned(
+          this.event as PullRequestDemilestonedEvent
+        ),
+      enqueued: async () =>
+        await this.processEnqueued(this.event as PullRequestEnqueuedEvent),
+      dequeued: async () =>
+        await this.processDequeued(this.event as PullRequestDequeuedEvent),
     }
 
-    return methodMap[action]()
+    return await methodMap[action]()
   }
 
   /**
@@ -104,7 +111,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
     const pullRequest = event.pull_request
     const color = this.getColor()
 
-    const mentions = this.getMentions()
+    const mentions = await this.getMentions()
 
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
     const assigneesText = this.getUsersText(pullRequest.assignees)
@@ -181,7 +188,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
     const pullRequest = event.pull_request
     const color = this.getColor()
 
-    const mentions = this.getUsersMentions([event.assignee])
+    const mentions = await this.getUsersMentions([event.assignee])
 
     const assigneesText = this.getUsersText(pullRequest.assignees)
 
@@ -261,7 +268,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
         ? event.requested_reviewer
         : event.requested_team
 
-    const mentions = this.getUsersMentions([requested])
+    const mentions = await this.getUsersMentions([requested])
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
 
     const embed = createEmbed(this.eventName, color, {
@@ -470,7 +477,9 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
     const pullRequest = event.pull_request
     const color = this.getColor()
 
-    const mentions = this.getUsersMentions(pullRequest.requested_reviewers)
+    const mentions = await this.getUsersMentions(
+      pullRequest.requested_reviewers
+    )
 
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
 
@@ -766,7 +775,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
    *
    * @returns メンション先
    */
-  private getMentions(): string {
+  private async getMentions(): Promise<Promise<string>> {
     const { action, pull_request: pullRequest } = this.event
 
     // レビュアー処理
@@ -779,7 +788,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       action === 'review_requested' ||
       action === 'ready_for_review'
     const reviewersMentions = isNeedReviewerMention
-      ? this.getUsersMentions(reviewers)
+      ? await this.getUsersMentions(reviewers)
       : ''
 
     // アサイン処理
@@ -790,7 +799,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       action === 'opened' || action === 'reopened' || action === 'assigned'
 
     const assigneesMentions = isNeedAssigneeMention
-      ? this.getUsersMentions(assignees)
+      ? await this.getUsersMentions(assignees)
       : ''
 
     return reviewersMentions + ' ' + assigneesMentions
@@ -824,8 +833,11 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
    * @param userOrTeams User と Team の配列
    * @returns Discordのメンション一覧
    */
-  private getUsersMentions(userOrTeams: (User | Team)[]): string {
-    const githubUserMap = new GitHubUserMap()
+  private async getUsersMentions(
+    userOrTeams: (User | Team)[]
+  ): Promise<string> {
+    const githubUserMap = new GitHubUserMapManager()
+    await githubUserMap.load()
     return userOrTeams
       .map((reviewer) => {
         if (!('login' in reviewer)) {
