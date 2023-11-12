@@ -746,8 +746,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   private getBody(): string {
     const { action, pull_request: pullRequest } = this.event
     switch (action) {
-      case 'opened':
-      case 'closed': {
+      case 'opened': {
         return pullRequest.body?.slice(0, 500) || '*No description provided*'
       }
       default: {
