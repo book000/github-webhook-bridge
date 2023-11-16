@@ -1824,10 +1824,10 @@ fastify-plugin@^4.0.0:
   resolved "https://registry.yarnpkg.com/fastify-plugin/-/fastify-plugin-4.5.1.tgz#44dc6a3cc2cce0988bc09e13f160120bbd91dbee"
   integrity sha512-stRHYGeuqpEZTL1Ef0Ovr2ltazUT9g844X5z/zEBFLG8RYlpDiOCIG+ATvYEp+/zmc7sN29mcIMp8gvYplYPIQ==
 
-fastify-raw-body@4.2.2:
-  version "4.2.2"
-  resolved "https://registry.yarnpkg.com/fastify-raw-body/-/fastify-raw-body-4.2.2.tgz#81c20f0a0b4cc1ad5af31de343ebda31b51d1ebc"
-  integrity sha512-6l4fXtxNn7WOQiylu5fv9/JfUTvWCg1ED4gF44hqnVesgttOXEUMnNkdV8ZxwufCstRyUYaYSBIN4VuRHDbJkw==
+fastify-raw-body@4.3.0:
+  version "4.3.0"
+  resolved "https://registry.yarnpkg.com/fastify-raw-body/-/fastify-raw-body-4.3.0.tgz#f56db8f143503cc947b77497e66695f7e886be89"
+  integrity sha512-F4o8ZIMVx4YoxGfwrZys6wyjl40gF3Yv6AWWRy62ozFAyZBSS831/uyyCAqKYw3tR73g180ryG98yih6To1PUQ==
   dependencies:
     fastify-plugin "^4.0.0"
     raw-body "^2.5.1"
