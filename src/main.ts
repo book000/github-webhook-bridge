@@ -59,6 +59,17 @@ async function hook(
     webhookUrl,
   })
 
+  const disabledEvents = GWBEnvironment.getOrNull('DESABLED_EVENTS')
+  if (disabledEvents) {
+    const disabledEventsArray = disabledEvents.split(',')
+    if (disabledEventsArray.includes(eventName)) {
+      reply.status(202).send({
+        message: 'Disabled event',
+      })
+      return
+    }
+  }
+
   const action = getAction(discord, eventName, request.body)
   if (!action) {
     reply.status(400).send({
