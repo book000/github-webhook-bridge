@@ -44,59 +44,59 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       () => Promise<void>
     > = {
       opened: async () =>
-        await this.processOpened(this.event as PullRequestOpenedEvent),
+        await this.onOpened(this.event as PullRequestOpenedEvent),
       closed: async () =>
-        await this.processClosed(this.event as PullRequestClosedEvent),
+        await this.onClosed(this.event as PullRequestClosedEvent),
       reopened: async () =>
-        await this.processOpened(this.event as PullRequestReopenedEvent),
+        await this.onOpened(this.event as PullRequestReopenedEvent),
       assigned: async () =>
-        await this.processAssigned(this.event as PullRequestAssignedEvent),
+        await this.onAssigned(this.event as PullRequestAssignedEvent),
       unassigned: async () =>
-        await this.processUnassigned(this.event as PullRequestUnassignedEvent),
+        await this.onUnassigned(this.event as PullRequestUnassignedEvent),
       review_requested: async () =>
-        await this.processReviewRequested(
+        await this.onReviewRequested(
           this.event as PullRequestReviewRequestedEvent
         ),
       review_request_removed: async () =>
-        await this.processReviewRequestRemoved(
+        await this.onReviewRequestRemoved(
           this.event as PullRequestReviewRequestRemovedEvent
         ),
       labeled: async () =>
-        await this.processLabeled(this.event as PullRequestLabeledEvent),
+        await this.onLabeled(this.event as PullRequestLabeledEvent),
       unlabeled: async () =>
-        await this.processUnlabeled(this.event as PullRequestUnlabeledEvent),
+        await this.onUnlabeled(this.event as PullRequestUnlabeledEvent),
       edited: async () =>
-        await this.processEdited(this.event as PullRequestEditedEvent),
+        await this.onEdited(this.event as PullRequestEditedEvent),
       ready_for_review: async () =>
-        await this.processReadyForReview(
+        await this.onReadyForReview(
           this.event as PullRequestReadyForReviewEvent
         ),
       locked: async () =>
-        await this.processLocked(this.event as PullRequestLockedEvent),
+        await this.onLocked(this.event as PullRequestLockedEvent),
       unlocked: async () =>
-        await this.processUnlocked(this.event as PullRequestUnlockedEvent),
+        await this.onUnlocked(this.event as PullRequestUnlockedEvent),
       auto_merge_enabled: async () =>
-        await this.processAutoMergeEnabled(
+        await this.onAutoMergeEnabled(
           this.event as PullRequestAutoMergeEnabledEvent
         ),
       auto_merge_disabled: async () =>
-        await this.processAutoMergeDisabled(
+        await this.onAutoMergeDisabled(
           this.event as PullRequestAutoMergeDisabledEvent
         ),
       converted_to_draft: async () =>
-        await this.processConvertedToDraft(
+        await this.onConvertedToDraft(
           this.event as PullRequestConvertedToDraftEvent
         ),
       milestoned: async () =>
-        await this.processMilestoned(this.event as PullRequestMilestonedEvent),
+        await this.onMilestoned(this.event as PullRequestMilestonedEvent),
       demilestoned: async () =>
-        await this.processDemilestoned(
+        await this.onDemilestoned(
           this.event as PullRequestDemilestonedEvent
         ),
       enqueued: async () =>
-        await this.processEnqueued(this.event as PullRequestEnqueuedEvent),
+        await this.onEnqueued(this.event as PullRequestEnqueuedEvent),
       dequeued: async () =>
-        await this.processDequeued(this.event as PullRequestDequeuedEvent),
+        await this.onDequeued(this.event as PullRequestDequeuedEvent),
     }
 
     return await methodMap[action]()
@@ -105,18 +105,17 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがオープン・再オープンされたときの処理
    */
-  private async processOpened(
+  private async onOpened(
     event: PullRequestOpenedEvent | PullRequestReopenedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const mentions = await this.getMentions()
 
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
     const assigneesText = this.getUsersText(pullRequest.assignees)
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -150,11 +149,10 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがクローズされたときの処理
    */
-  private async processClosed(event: PullRequestClosedEvent): Promise<void> {
+  private async onClosed(event: PullRequestClosedEvent): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -182,17 +180,15 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがアサインされたときの処理
    */
-  private async processAssigned(
+  private async onAssigned(
     event: PullRequestAssignedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const mentions = await this.getUsersMentions([event.assignee])
-
     const assigneesText = this.getUsersText(pullRequest.assignees)
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -221,15 +217,14 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストのアサインが解除されたときの処理
    */
-  private async processUnassigned(
+  private async onUnassigned(
     event: PullRequestUnassignedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const assigneesText = this.getUsersText(pullRequest.assignees)
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -257,11 +252,10 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストのレビュー依頼がされたときの処理
    */
-  private async processReviewRequested(
+  private async onReviewRequested(
     event: PullRequestReviewRequestedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const requested =
       'requested_reviewer' in event
@@ -271,7 +265,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
     const mentions = await this.getUsersMentions([requested])
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -300,15 +294,14 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストのレビュー依頼が解除されたときの処理
    */
-  private async processReviewRequestRemoved(
+  private async onReviewRequestRemoved(
     event: PullRequestReviewRequestRemovedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -336,13 +329,12 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストにラベルが付与されたときの処理
    */
-  private async processLabeled(event: PullRequestLabeledEvent): Promise<void> {
+  private async onLabeled(event: PullRequestLabeledEvent): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const labels = pullRequest.labels
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -365,15 +357,14 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストのラベルが削除されたときの処理
    */
-  private async processUnlabeled(
+  private async onUnlabeled(
     event: PullRequestUnlabeledEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const labels = pullRequest.labels
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -396,9 +387,8 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストが編集されたときの処理
    */
-  private async processEdited(event: PullRequestEditedEvent): Promise<void> {
+  private async onEdited(event: PullRequestEditedEvent): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const changes = event.changes
 
@@ -454,7 +444,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       return
     }
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -471,11 +461,10 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがレビュー待ちになったときの処理
    */
-  private async processReadyForReview(
+  private async onReadyForReview(
     event: PullRequestReadyForReviewEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const mentions = await this.getUsersMentions(
       pullRequest.requested_reviewers
@@ -483,7 +472,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
 
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -512,11 +501,10 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがロックされたときの処理
    */
-  private async processLocked(event: PullRequestLockedEvent): Promise<void> {
+  private async onLocked(event: PullRequestLockedEvent): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -532,13 +520,12 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがロック解除されたときの処理
    */
-  private async processUnlocked(
+  private async onUnlocked(
     event: PullRequestUnlockedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -554,13 +541,12 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * 自動マージが有効になったときの処理
    */
-  private async processAutoMergeEnabled(
+  private async onAutoMergeEnabled(
     event: PullRequestAutoMergeEnabledEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -576,15 +562,14 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * 自動マージが無効になったときの処理
    */
-  private async processAutoMergeDisabled(
+  private async onAutoMergeDisabled(
     event: PullRequestAutoMergeDisabledEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const { reason } = event
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -607,13 +592,12 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストが下書きに変換されたときの処理
    */
-  private async processConvertedToDraft(
+  private async onConvertedToDraft(
     event: PullRequestConvertedToDraftEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -629,15 +613,14 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがマイルストーンに追加されたときの処理
    */
-  private async processMilestoned(
+  private async onMilestoned(
     event: PullRequestMilestonedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const { milestone } = event
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -660,15 +643,14 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがマイルストーンから外されたときの処理
    */
-  private async processDemilestoned(
+  private async onDemilestoned(
     event: PullRequestDemilestonedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
     const { milestone } = event
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -691,13 +673,12 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがキューに追加されたときの処理
    */
-  private async processEnqueued(
+  private async onEnqueued(
     event: PullRequestEnqueuedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
@@ -713,13 +694,12 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがキューから外されたときの処理
    */
-  private async processDequeued(
+  private async onDequeued(
     event: PullRequestDequeuedEvent
   ): Promise<void> {
     const pullRequest = event.pull_request
-    const color = this.getColor()
 
-    const embed = createEmbed(this.eventName, color, {
+    const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
       description: this.getBody(),
       url: pullRequest.html_url,
