@@ -59,7 +59,7 @@ async function hook(
     webhookUrl,
   })
 
-  const disabledEvents = GWBEnvironment.getOrNull('DESABLED_EVENTS')
+  const disabledEvents = GWBEnvironment.getOrNull('DISABLED_EVENTS')
   if (disabledEvents) {
     const disabledEventsArray = disabledEvents.split(',')
     if (disabledEventsArray.includes(eventName)) {

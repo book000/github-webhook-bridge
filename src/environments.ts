@@ -6,7 +6,7 @@ type EnvironmentKey =
   | 'GITHUB_USER_MAP_FILE_URL'
   | 'MUTE_USERS_FILE_PATH'
   | 'MUTE_USERS_FILE_URL'
-  | 'DESABLED_EVENTS'
+  | 'DISABLED_EVENTS'
 
 export class GWBEnvironment {
   public static get(key: EnvironmentKey, defaultValue?: string): string {
