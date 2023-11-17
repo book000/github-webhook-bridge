@@ -90,9 +90,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       milestoned: async () =>
         await this.onMilestoned(this.event as PullRequestMilestonedEvent),
       demilestoned: async () =>
-        await this.onDemilestoned(
-          this.event as PullRequestDemilestonedEvent
-        ),
+        await this.onDemilestoned(this.event as PullRequestDemilestonedEvent),
       enqueued: async () =>
         await this.onEnqueued(this.event as PullRequestEnqueuedEvent),
       dequeued: async () =>
@@ -180,9 +178,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがアサインされたときの処理
    */
-  private async onAssigned(
-    event: PullRequestAssignedEvent
-  ): Promise<void> {
+  private async onAssigned(event: PullRequestAssignedEvent): Promise<void> {
     const pullRequest = event.pull_request
 
     const mentions = await this.getUsersMentions([event.assignee])
@@ -217,9 +213,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストのアサインが解除されたときの処理
    */
-  private async onUnassigned(
-    event: PullRequestUnassignedEvent
-  ): Promise<void> {
+  private async onUnassigned(event: PullRequestUnassignedEvent): Promise<void> {
     const pullRequest = event.pull_request
 
     const assigneesText = this.getUsersText(pullRequest.assignees)
@@ -357,9 +351,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストのラベルが削除されたときの処理
    */
-  private async onUnlabeled(
-    event: PullRequestUnlabeledEvent
-  ): Promise<void> {
+  private async onUnlabeled(event: PullRequestUnlabeledEvent): Promise<void> {
     const pullRequest = event.pull_request
 
     const labels = pullRequest.labels
@@ -520,9 +512,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがロック解除されたときの処理
    */
-  private async onUnlocked(
-    event: PullRequestUnlockedEvent
-  ): Promise<void> {
+  private async onUnlocked(event: PullRequestUnlockedEvent): Promise<void> {
     const pullRequest = event.pull_request
 
     const embed = createEmbed(this.eventName, this.getColor(), {
@@ -613,9 +603,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがマイルストーンに追加されたときの処理
    */
-  private async onMilestoned(
-    event: PullRequestMilestonedEvent
-  ): Promise<void> {
+  private async onMilestoned(event: PullRequestMilestonedEvent): Promise<void> {
     const pullRequest = event.pull_request
 
     const { milestone } = event
@@ -673,9 +661,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがキューに追加されたときの処理
    */
-  private async onEnqueued(
-    event: PullRequestEnqueuedEvent
-  ): Promise<void> {
+  private async onEnqueued(event: PullRequestEnqueuedEvent): Promise<void> {
     const pullRequest = event.pull_request
 
     const embed = createEmbed(this.eventName, this.getColor(), {
@@ -694,9 +680,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   /**
    * プルリクエストがキューから外されたときの処理
    */
-  private async onDequeued(
-    event: PullRequestDequeuedEvent
-  ): Promise<void> {
+  private async onDequeued(event: PullRequestDequeuedEvent): Promise<void> {
     const pullRequest = event.pull_request
 
     const embed = createEmbed(this.eventName, this.getColor(), {
