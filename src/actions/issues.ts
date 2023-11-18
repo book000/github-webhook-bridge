@@ -462,7 +462,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
    */
   private getTitle(): string {
     const { action, issue, repository } = this.event
-    return `[${repository.full_name}] Pull Request ${action}: #${issue.number} ${issue.title}`
+    return `[${repository.full_name}] Issue ${action}: #${issue.number} ${issue.title}`
   }
 
   /**
