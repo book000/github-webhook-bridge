@@ -130,18 +130,21 @@ export class IssueCommentAction extends BaseAction<IssueCommentEvent> {
     const githubUserMap = new GitHubUserMapManager()
     await githubUserMap.load()
 
-    const discordUserIds = mentions
-      .map((mention) => {
-        const githubUserId = githubUserMap.getFromUsername(mention)
+    const discordUserIds = await Promise.all(
+      mentions.map(async (mention) => {
+        const githubUserId = await githubUserMap.getFromUsername(mention)
         if (!githubUserId) {
           return null
         }
 
         return `<@${githubUserId}>`
       })
-      .filter((mention) => mention !== null)
+    )
+    const filteredDiscordUserIds = discordUserIds.filter(
+      (discordUserId): discordUserId is string => discordUserId !== null
+    )
 
-    return discordUserIds.join(' ')
+    return filteredDiscordUserIds.join(' ')
   }
 
   /**
