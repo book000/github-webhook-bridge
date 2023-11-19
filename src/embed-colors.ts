@@ -1,41 +1,44 @@
 export const EmbedColors = {
   Unknown: 0x00_00_00,
-  PullRequestOpened: 0x2e_cc_71,
-  PullRequestClosed: 0xe7_4c_3c,
-  PullRequestReopened: 0x34_98_db,
-  PullRequestAssigned: 0x9b_59_b6,
-  PullRequestUnassigned: 0x9b_59_b6,
-  PullRequestReviewRequested: 0x9b_59_b6,
-  PullRequestReviewRequestRemoved: 0x9b_59_b6,
-  PullRequestLabeled: 0x9b_59_b6,
-  PullRequestUnlabeled: 0x9b_59_b6,
-  PullRequestEdited: 0x9b_59_b6,
-  PullRequestReadyForReview: 0x9b_59_b6,
-  PullRequestLocked: 0x9b_59_b6,
-  PullRequestUnlocked: 0x9b_59_b6,
-  PullRequestAutoMergeEnabled: 0x9b_59_b6,
-  PullRequestAutoMergeDisabled: 0x9b_59_b6,
-  PullRequestConvertedToDraft: 0x9b_59_b6,
-  PullRequestDemilestoned: 0x9b_59_b6,
-  PullRequestMilestoned: 0x9b_59_b6,
-  PullRequestEnqueued: 0x9b_59_b6,
-  PullRequestDequeued: 0x9b_59_b6,
-  IssueOpened: 0x2e_cc_71,
-  IssueClosed: 0xe7_4c_3c,
-  IssueReopened: 0x34_98_db,
-  IssueAssigned: 0x9b_59_b6,
-  IssueUnassigned: 0x9b_59_b6,
-  IssueLabeled: 0x9b_59_b6,
-  IssueUnlabeled: 0x9b_59_b6,
-  IssueEdited: 0x9b_59_b6,
-  IssueLocked: 0x9b_59_b6,
-  IssueUnlocked: 0x9b_59_b6,
-  IssueMilestoned: 0x9b_59_b6,
-  IssueDemilestoned: 0x9b_59_b6,
-  IssueTransferred: 0x9b_59_b6,
-  IssuePinned: 0x9b_59_b6,
-  IssueUnpinned: 0x9b_59_b6,
-  IssueDeleted: 0x9b_59_b6,
-  Push: 0x34_98_db,
-  Ping: 0x2e_cc_71,
+  PullRequestOpened: 0x2e_cc_71, // Green
+  PullRequestClosed: 0x95_a5_a6, // Grayish Blue
+  PullRequestReopened: 0x34_98_db, // Blue
+  PullRequestAssigned: 0xf3_9c_12, // Orange
+  PullRequestUnassigned: 0xf3_9c_12, // Orange
+  PullRequestReviewRequested: 0x9b_59_b6, // Purple
+  PullRequestReviewRequestRemoved: 0x9b_59_b6, // Purple
+  PullRequestLabeled: 0x34_98_db, // Blue
+  PullRequestUnlabeled: 0x34_98_db, // Blue
+  PullRequestEdited: 0x34_98_db, // Blue
+  PullRequestReadyForReview: 0x2e_cc_71, // Green
+  PullRequestLocked: 0x7f_8c_8d, // Gray
+  PullRequestUnlocked: 0x7f_8c_8d, // Gray
+  PullRequestAutoMergeEnabled: 0x2e_cc_71, // Green
+  PullRequestAutoMergeDisabled: 0xe7_4c_3c, // Red
+  PullRequestConvertedToDraft: 0x95_a5_a6, // Grayish Blue
+  PullRequestDemilestoned: 0x95_a5_a6, // Grayish Blue
+  PullRequestMilestoned: 0x34_98_db, // Blue
+  PullRequestEnqueued: 0x34_98_db, // Blue
+  PullRequestDequeued: 0x34_98_db, // Blue
+  IssueOpened: 0x2e_cc_71, // Green
+  IssueClosed: 0x95_a5_a6, // Grayish Blue
+  IssueReopened: 0x34_98_db, // Blue
+  IssueAssigned: 0xf3_9c_12, // Orange
+  IssueUnassigned: 0xf3_9c_12, // Orange
+  IssueLabeled: 0x34_98_db, // Blue
+  IssueUnlabeled: 0x34_98_db, // Blue
+  IssueEdited: 0x34_98_db, // Blue
+  IssueLocked: 0x7f_8c_8d, // Gray
+  IssueUnlocked: 0x7f_8c_8d, // Gray
+  IssueMilestoned: 0x34_98_db, // Blue
+  IssueDemilestoned: 0x95_a5_a6, // Grayish Blue
+  IssueTransferred: 0x95_a5_a6, // Grayish Blue
+  IssuePinned: 0x2e_cc_71, // Green
+  IssueUnpinned: 0xe7_4c_3c, // Red
+  IssueDeleted: 0xe7_4c_3c, // Red
+  IssueCommentCreated: 0x34_98_db, // Blue
+  IssueCommentEdited: 0x34_98_db, // Blue
+  IssueCommentDeleted: 0xe7_4c_3c, // Red
+  Push: 0x2e_cc_71, // Green
+  Ping: 0x95_a5_a6, // Grayish Blue
 } as const
