@@ -6,9 +6,9 @@ import {
 } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
 import { DiscordEmbedAuthor } from '@book000/node-utils'
-import { EmbedColors } from 'src/embed-colors'
-import { GitHubUserMapManager } from 'src/manager/github-user'
-import { createEmbed } from 'src/utils'
+import { EmbedColors } from '../embed-colors'
+import { GitHubUserMapManager } from '../manager/github-user'
+import { createEmbed } from '../utils'
 
 export class IssueCommentAction extends BaseAction<IssueCommentEvent> {
   public run(): Promise<void> {
