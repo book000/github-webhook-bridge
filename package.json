@@ -23,7 +23,7 @@
     "@book000/node-utils": "1.11.8",
     "@fastify/cors": "8.4.2",
     "@octokit/webhooks-types": "7.3.1",
-    "@types/diff": "5.0.8",
+    "@types/diff": "5.0.9",
     "@types/node": "20.10.3",
     "@typescript-eslint/eslint-plugin": "6.13.2",
     "@typescript-eslint/parser": "6.13.2",
