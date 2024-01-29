@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@book000/node-utils": "1.12.38",
-    "@fastify/cors": "8.5.0",
+    "@fastify/cors": "9.0.0",
     "@octokit/webhooks-types": "7.3.1",
     "@types/diff": "5.0.9",
     "@types/node": "20.11.7",
