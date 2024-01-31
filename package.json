@@ -24,7 +24,7 @@
     "@fastify/cors": "9.0.0",
     "@octokit/webhooks-types": "7.3.1",
     "@types/diff": "5.0.9",
-    "@types/node": "20.11.7",
+    "@types/node": "20.11.9",
     "@typescript-eslint/eslint-plugin": "6.19.1",
     "@typescript-eslint/parser": "6.19.1",
     "@vercel/node": "3.0.17",
