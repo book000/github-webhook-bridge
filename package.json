@@ -22,7 +22,7 @@
   "devDependencies": {
     "@book000/node-utils": "1.12.48",
     "@fastify/cors": "9.0.1",
-    "@octokit/webhooks-types": "7.3.1",
+    "@octokit/webhooks-types": "7.3.2",
     "@types/diff": "5.0.9",
     "@types/node": "20.11.16",
     "@typescript-eslint/eslint-plugin": "6.20.0",
