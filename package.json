@@ -20,7 +20,7 @@
     "fix:prettier": "prettier --write src"
   },
   "devDependencies": {
-    "@book000/node-utils": "1.12.81",
+    "@book000/node-utils": "1.12.82",
     "@fastify/cors": "9.0.1",
     "@octokit/webhooks-types": "7.3.2",
     "@types/diff": "5.0.9",
