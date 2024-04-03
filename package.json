@@ -27,7 +27,7 @@
     "@types/node": "20.12.3",
     "@typescript-eslint/eslint-plugin": "7.5.0",
     "@typescript-eslint/parser": "7.5.0",
-    "@vercel/node": "3.0.25",
+    "@vercel/node": "3.0.26",
     "axios": "1.6.8",
     "diff": "5.2.0",
     "eslint": "8.57.0",
