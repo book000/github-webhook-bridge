@@ -643,6 +643,13 @@ ajv-formats@^2.1.1:
   dependencies:
     ajv "^8.0.0"
 
+ajv-formats@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/ajv-formats/-/ajv-formats-3.0.1.tgz#3d5dc762bca17679c3c2ea7e90ad6b7532309578"
+  integrity sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==
+  dependencies:
+    ajv "^8.0.0"
+
 ajv@8.6.3:
   version "8.6.3"
   resolved "https://registry.yarnpkg.com/ajv/-/ajv-8.6.3.tgz#11a66527761dc3e9a3845ea775d2d3c0414e8764"
@@ -941,9 +948,9 @@ callsites@^3.0.0:
   integrity sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==
 
 caniuse-lite@^1.0.30001587:
-  version "1.0.30001606"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001606.tgz#b4d5f67ab0746a3b8b5b6d1f06e39c51beb39a9e"
-  integrity sha512-LPbwnW4vfpJId225pwjZJOgX1m9sGfbw/RKJvw/t0QhYOOaTXHvkjVGFGPpvwEzufrjvTlsULnVTxdy4/6cqkg==
+  version "1.0.30001609"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001609.tgz#fc34fad75c0c6d6d6303bdbceec2da8f203dabd6"
+  integrity sha512-JFPQs34lHKx1B5t1EpQpWH4c+29zIyn/haGsbpfq3suuV9v56enjFt23zqijxGTMwy1p/4H2tjnQMY+p1WoAyA==
 
 chalk@^1.1.3:
   version "1.1.3"
@@ -1250,9 +1257,9 @@ edge-runtime@2.5.9:
     time-span "4.0.0"
 
 electron-to-chromium@^1.4.668:
-  version "1.4.729"
-  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.729.tgz#8477d21e2a50993781950885b2731d92ad532c00"
-  integrity sha512-bx7+5Saea/qu14kmPTDHQxkp2UnziG3iajUQu3BxFvCOnpAJdDbMV4rSl+EqFDkkpNNVUFlR1kDfpL59xfy1HA==
+  version "1.4.736"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.736.tgz#ecb4348f4d5c70fb1e31c347e5bad6b751066416"
+  integrity sha512-Rer6wc3ynLelKNM4lOCg7/zPQj8tPOCB2hzD32PX9wd3hgRRi9MxEbmkFCokzcEhRVMiOVLjnL9ig9cefJ+6+Q==
 
 emoji-regex@^8.0.0:
   version "8.0.0"
@@ -1811,13 +1818,13 @@ fast-json-stable-stringify@^2.0.0:
   integrity sha512-lhd/wF+Lk98HZoTCtlVraHtfh5XYijIjalXck7saUtuanSDyLMxnHhSXEDJqHxD7msR8D0uCmqlkwjCV8xvwHw==
 
 fast-json-stringify@^5.7.0, fast-json-stringify@^5.8.0:
-  version "5.13.0"
-  resolved "https://registry.yarnpkg.com/fast-json-stringify/-/fast-json-stringify-5.13.0.tgz#3eafc02168713ef934d75000a8cf749492729fe8"
-  integrity sha512-XjTDWKHP3GoMQUOfnjYUbqeHeEt+PvYgvBdG2fRSmYaORILbSr8xTJvZX+w1YSAP5pw2NwKrGRmQleYueZEoxw==
+  version "5.14.1"
+  resolved "https://registry.yarnpkg.com/fast-json-stringify/-/fast-json-stringify-5.14.1.tgz#3b1aa5a823e4dd5414ec079d32f51e33dd887766"
+  integrity sha512-J1Grbf0oSXV3lKsBf3itz1AvRk43qVrx3Ac10sNvi3LZaz1by4oDdYKFrJycPhS8+Gb7y8rgV/Jqw1UZVjyNvw==
   dependencies:
     "@fastify/merge-json-schemas" "^0.1.0"
     ajv "^8.10.0"
-    ajv-formats "^2.1.1"
+    ajv-formats "^3.0.1"
     fast-deep-equal "^3.1.3"
     fast-uri "^2.1.0"
     json-schema-ref-resolver "^1.0.1"
@@ -2562,9 +2569,9 @@ levn@^0.4.1:
     type-check "~0.4.0"
 
 light-my-request@^5.11.0:
-  version "5.12.0"
-  resolved "https://registry.yarnpkg.com/light-my-request/-/light-my-request-5.12.0.tgz#e42ed02ddbfa587f82031b21459c6841a6948dfa"
-  integrity sha512-P526OX6E7aeCIfw/9UyJNsAISfcFETghysaWHQAlQYayynShT08MOj4c6fBCvTWBrHXSvqBAKDp3amUPSCQI4w==
+  version "5.13.0"
+  resolved "https://registry.yarnpkg.com/light-my-request/-/light-my-request-5.13.0.tgz#b29905e55e8605b77fee2a946e17b219bca35113"
+  integrity sha512-9IjUN9ZyCS9pTG+KqTDEQo68Sui2lHsYBrfMyVUTTZ3XhH8PMZq7xO94Kr+eP9dhi/kcKsx4N41p2IXEBil1pQ==
   dependencies:
     cookie "^0.6.0"
     process-warning "^3.0.0"
