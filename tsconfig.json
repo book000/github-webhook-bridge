@@ -25,5 +25,5 @@
     "baseUrl": ".",
     "newLine": "LF"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "api/**/*"]
 }

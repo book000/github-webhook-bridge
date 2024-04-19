@@ -43,61 +43,81 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       Exclude<PullRequestEvent['action'], 'synchronize'>,
       () => Promise<void>
     > = {
-      opened: async () =>
-        await this.onOpened(this.event as PullRequestOpenedEvent),
-      closed: async () =>
-        await this.onClosed(this.event as PullRequestClosedEvent),
-      reopened: async () =>
-        await this.onOpened(this.event as PullRequestReopenedEvent),
-      assigned: async () =>
-        await this.onAssigned(this.event as PullRequestAssignedEvent),
-      unassigned: async () =>
-        await this.onUnassigned(this.event as PullRequestUnassignedEvent),
-      review_requested: async () =>
+      opened: async () => {
+        await this.onOpened(this.event as PullRequestOpenedEvent)
+      },
+      closed: async () => {
+        await this.onClosed(this.event as PullRequestClosedEvent)
+      },
+      reopened: async () => {
+        await this.onOpened(this.event as PullRequestReopenedEvent)
+      },
+      assigned: async () => {
+        await this.onAssigned(this.event as PullRequestAssignedEvent)
+      },
+      unassigned: async () => {
+        await this.onUnassigned(this.event as PullRequestUnassignedEvent)
+      },
+      review_requested: async () => {
         await this.onReviewRequested(
           this.event as PullRequestReviewRequestedEvent
-        ),
-      review_request_removed: async () =>
+        )
+      },
+      review_request_removed: async () => {
         await this.onReviewRequestRemoved(
           this.event as PullRequestReviewRequestRemovedEvent
-        ),
-      labeled: async () =>
-        await this.onLabeled(this.event as PullRequestLabeledEvent),
-      unlabeled: async () =>
-        await this.onUnlabeled(this.event as PullRequestUnlabeledEvent),
-      edited: async () =>
-        await this.onEdited(this.event as PullRequestEditedEvent),
-      ready_for_review: async () =>
+        )
+      },
+      labeled: async () => {
+        await this.onLabeled(this.event as PullRequestLabeledEvent)
+      },
+      unlabeled: async () => {
+        await this.onUnlabeled(this.event as PullRequestUnlabeledEvent)
+      },
+      edited: async () => {
+        await this.onEdited(this.event as PullRequestEditedEvent)
+      },
+      ready_for_review: async () => {
         await this.onReadyForReview(
           this.event as PullRequestReadyForReviewEvent
-        ),
-      locked: async () =>
-        await this.onLocked(this.event as PullRequestLockedEvent),
-      unlocked: async () =>
-        await this.onUnlocked(this.event as PullRequestUnlockedEvent),
-      auto_merge_enabled: async () =>
+        )
+      },
+      locked: async () => {
+        await this.onLocked(this.event as PullRequestLockedEvent)
+      },
+      unlocked: async () => {
+        await this.onUnlocked(this.event as PullRequestUnlockedEvent)
+      },
+      auto_merge_enabled: async () => {
         await this.onAutoMergeEnabled(
           this.event as PullRequestAutoMergeEnabledEvent
-        ),
-      auto_merge_disabled: async () =>
+        )
+      },
+      auto_merge_disabled: async () => {
         await this.onAutoMergeDisabled(
           this.event as PullRequestAutoMergeDisabledEvent
-        ),
-      converted_to_draft: async () =>
+        )
+      },
+      converted_to_draft: async () => {
         await this.onConvertedToDraft(
           this.event as PullRequestConvertedToDraftEvent
-        ),
-      milestoned: async () =>
-        await this.onMilestoned(this.event as PullRequestMilestonedEvent),
-      demilestoned: async () =>
-        await this.onDemilestoned(this.event as PullRequestDemilestonedEvent),
-      enqueued: async () =>
-        await this.onEnqueued(this.event as PullRequestEnqueuedEvent),
-      dequeued: async () =>
-        await this.onDequeued(this.event as PullRequestDequeuedEvent),
+        )
+      },
+      milestoned: async () => {
+        await this.onMilestoned(this.event as PullRequestMilestonedEvent)
+      },
+      demilestoned: async () => {
+        await this.onDemilestoned(this.event as PullRequestDemilestonedEvent)
+      },
+      enqueued: async () => {
+        await this.onEnqueued(this.event as PullRequestEnqueuedEvent)
+      },
+      dequeued: async () => {
+        await this.onDequeued(this.event as PullRequestDequeuedEvent)
+      },
     }
 
-    return await methodMap[action]()
+    await methodMap[action]()
   }
 
   /**
@@ -616,7 +636,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       fields: [
         {
           name: 'Milestone',
-          value: milestone?.title || '*No milestone provided*',
+          value: milestone.title || '*No milestone provided*',
           inline: true,
         },
       ],
@@ -646,7 +666,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       fields: [
         {
           name: 'Milestone',
-          value: milestone?.title || '*No milestone provided*',
+          value: milestone.title || '*No milestone provided*',
           inline: true,
         },
       ],
@@ -711,7 +731,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
     const { action, pull_request: pullRequest } = this.event
     switch (action) {
       case 'opened': {
-        return pullRequest.body?.slice(0, 500) || '*No description provided*'
+        return pullRequest.body?.slice(0, 500) ?? '*No description provided*'
       }
       default: {
         return ''
@@ -786,7 +806,6 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
         }
         return reviewer.name
       })
-      .filter((mention) => mention !== null)
       .join(' ')
   }
 

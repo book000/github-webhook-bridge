@@ -1,7 +1,7 @@
 import { getApp } from '../src/main'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-export default async function (
+export default async function serverless (
   request: VercelRequest,
   response: VercelResponse
 ) {

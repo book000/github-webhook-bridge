@@ -91,7 +91,7 @@ export class IssueCommentAction extends BaseAction<IssueCommentEvent> {
     switch (action) {
       case 'created':
       case 'edited': {
-        return comment.body?.slice(0, 500) || '*No description provided*'
+        return comment.body.slice(0, 500) || '*No description provided*'
       }
       default: {
         return ''
@@ -121,7 +121,7 @@ export class IssueCommentAction extends BaseAction<IssueCommentEvent> {
   private async getMentions(): Promise<Promise<string>> {
     const { action, comment } = this.event
 
-    const mentions = comment.body.match(/@([\da-z](?:-?[\da-z]){0,38})/gi) || []
+    const mentions = comment.body.match(/@([\da-z](?:-?[\da-z]){0,38})/gi) ?? []
 
     if (action !== 'created') {
       return ''
