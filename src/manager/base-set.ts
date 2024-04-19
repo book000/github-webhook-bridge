@@ -6,7 +6,7 @@ export abstract class BaseSetManager<T> {
   protected abstract readonly filePath: string
   protected loaded = false
 
-  protected data: Set<T> = new Set()
+  protected data = new Set<T>()
 
   public async load(): Promise<void> {
     if (this.loaded) return

@@ -66,7 +66,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
 
     const assigneesText = this.getUsersText(issue.assignees)
     const labelsText =
-      issue.labels?.map((label) => label.name).join(' ') || '*No labels*'
+      issue.labels?.map((label) => label.name).join(' ') ?? '*No labels*'
 
     const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
@@ -256,7 +256,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
       const bodyDiff = jsdiff.createPatch(
         'body',
         changes.body.from,
-        issue.body || '',
+        issue.body ?? '',
         'Previous Body',
         'Current Body'
       )
@@ -472,7 +472,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
     const { action, issue } = this.event
     switch (action) {
       case 'opened': {
-        return issue.body?.slice(0, 500) || '*No description provided*'
+        return issue.body?.slice(0, 500) ?? '*No description provided*'
       }
       default: {
         return ''
@@ -534,7 +534,6 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
         }
         return reviewer.name
       })
-      .filter((mention) => mention !== null)
       .join(' ')
   }
 

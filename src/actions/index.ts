@@ -10,12 +10,13 @@ export abstract class BaseAction<T extends Schema> {
   protected readonly eventName: string
   protected readonly event: T
 
-  private readonly messageCache: {
-    [key: string]: {
+  private readonly messageCache: Record<
+    string,
+    {
       messageId: string
       timestamp: number
     }
-  } = {}
+  > = {}
 
   public constructor(discord: Discord, eventName: string, event: T) {
     this.discord = discord
@@ -39,6 +40,7 @@ export abstract class BaseAction<T extends Schema> {
     for (const cacheKey of cacheKeys) {
       const { timestamp } = this.messageCache[cacheKey]
       if (Date.now() - timestamp > 5 * 60 * 1000) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete this.messageCache[cacheKey]
       }
     }
@@ -47,7 +49,7 @@ export abstract class BaseAction<T extends Schema> {
     if (key in this.messageCache) {
       const { messageId: cachedMessage, timestamp } = this.messageCache[key]
       if (Date.now() - timestamp < 5 * 60 * 1000) {
-        this.discord.editMessage(cachedMessage, message)
+        await this.discord.editMessage(cachedMessage, message)
         return
       }
     }

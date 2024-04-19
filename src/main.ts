@@ -20,20 +20,20 @@ async function hook(
   const headers = request.headers
   const secret = GWBEnvironment.get('GITHUB_WEBHOOK_SECRET')
   if (!request.rawBody) {
-    reply.status(400).send({
+    await reply.status(400).send({
       message: 'Bad Request: Invalid body',
     })
     return
   }
   if (!isSignatureValid(secret, headers, request.rawBody)) {
-    reply.status(400).send({
+    await reply.status(400).send({
       message: 'Bad Request: Invalid X-Hub-Signature',
     })
     return
   }
   const eventName = headers['x-github-event']
   if (!eventName || typeof eventName !== 'string') {
-    reply.status(400).send({
+    await reply.status(400).send({
       message: 'Bad Request: Invalid X-GitHub-Event',
     })
     return
@@ -46,7 +46,7 @@ async function hook(
     request.body.sender?.id &&
     muteManager.isMuted(request.body.sender.id)
   ) {
-    reply.status(200).send({
+    await reply.status(200).send({
       message: 'Muted user',
     })
     return
@@ -63,7 +63,7 @@ async function hook(
   if (disabledEvents) {
     const disabledEventsArray = disabledEvents.split(',')
     if (disabledEventsArray.includes(eventName)) {
-      reply.status(202).send({
+      await reply.status(202).send({
         message: 'Disabled event',
       })
       return
@@ -71,18 +71,11 @@ async function hook(
   }
 
   const action = getAction(discord, eventName, request.body)
-  if (!action) {
-    reply.status(400).send({
-      message: 'Bad Request: Invalid event',
-    })
-    return
-  }
-
   try {
     await action.run()
   } catch (error) {
     Logger.configure('hook').error('Error', error as Error)
-    reply.status(500).send({
+    await reply.status(500).send({
       message: 'An error occurred: ' + (error as Error).message,
     })
   }
@@ -90,7 +83,7 @@ async function hook(
 
 export async function getApp() {
   const app = fastify()
-  app.register(cors, {
+  await app.register(cors, {
     origin: true,
     credentials: true,
     methods: ['GET', 'POST'],
@@ -98,6 +91,7 @@ export async function getApp() {
   await app.register(fastifyRawBody)
 
   app.get('/', (_request, reply) => {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     reply.status(400).send({
       message: 'Bad Request: Please use POST method',
     })
