@@ -29,7 +29,7 @@
     "@vercel/node": "3.0.28",
     "axios": "1.6.8",
     "diff": "5.2.0",
-    "eslint": "9.1.1",
+    "eslint": "9.2.0",
     "eslint-config-standard": "17.1.0",
     "eslint-plugin-import": "2.29.1",
     "eslint-plugin-n": "17.4.0",
