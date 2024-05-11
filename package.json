@@ -37,7 +37,7 @@
     "fastify": "4.27.0",
     "fastify-raw-body": "4.3.0",
     "prettier": "3.2.5",
-    "tsx": "4.9.4",
+    "tsx": "4.10.0",
     "typescript": "5.4.5",
     "yarn-run-all": "3.1.1"
   }
