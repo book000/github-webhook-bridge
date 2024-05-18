@@ -9,7 +9,6 @@ export class PushAction extends BaseAction<PushEvent> {
 
     if (commits.length === 0) return Promise.resolve()
 
-    // eslint-disable-next-line unicorn/prevent-abbreviations
     const shortRef = ref.replace('refs/heads/', '').replace('refs/tags/', '')
 
     const embed = createEmbed(this.eventName, EmbedColors.Push, {
