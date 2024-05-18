@@ -812,7 +812,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
    * @returns 色
    */
   private getColor(): (typeof EmbedColors)[keyof typeof EmbedColors] {
-    const { action } = this.event
+    const { action, pull_request: pullRequest } = this.event
     if (action === 'synchronize') {
       return EmbedColors.Unknown
     }
@@ -823,7 +823,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       (typeof EmbedColors)[keyof typeof EmbedColors]
     > = {
       opened: EmbedColors.PullRequestOpened,
-      closed: EmbedColors.PullRequestClosed,
+      closed: pullRequest.merged ? EmbedColors.PullRequestMerged : EmbedColors.PullRequestClosed,
       reopened: EmbedColors.PullRequestReopened,
       assigned: EmbedColors.PullRequestAssigned,
       auto_merge_disabled: EmbedColors.PullRequestAutoMergeDisabled,

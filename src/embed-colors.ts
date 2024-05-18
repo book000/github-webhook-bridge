@@ -1,6 +1,7 @@
 export const EmbedColors = {
   Unknown: 0x00_00_00,
   PullRequestOpened: 0x2e_cc_71, // Green
+  PullRequestMerged: 0x00_00_00, // Black
   PullRequestClosed: 0x95_a5_a6, // Grayish Blue
   PullRequestReopened: 0x34_98_db, // Blue
   PullRequestAssigned: 0xf3_9c_12, // Orange
