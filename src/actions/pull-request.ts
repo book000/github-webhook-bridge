@@ -477,9 +477,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   ): Promise<void> {
     const pullRequest = event.pull_request
 
-    const mentions = await getUsersMentions(
-      pullRequest.requested_reviewers
-    )
+    const mentions = await getUsersMentions(pullRequest.requested_reviewers)
 
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
 

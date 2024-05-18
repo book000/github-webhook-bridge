@@ -52,7 +52,6 @@ export function createEmbed(
   }
 }
 
-
 /**
  * GitHubのユーザーからDiscordのユーザーに変換し、メンション一覧を作成する
  *
@@ -60,23 +59,23 @@ export function createEmbed(
  * @returns Discordのメンション一覧
  */
 export async function getUsersMentions(
-    userOrTeams: (User | Team)[]
-  ): Promise<string> {
-    const githubUserMap = new GitHubUserMapManager()
-    await githubUserMap.load()
-    return userOrTeams
-      .map((reviewer) => {
-        if (!('login' in reviewer)) {
-          return null
-        }
+  userOrTeams: (User | Team)[]
+): Promise<string> {
+  const githubUserMap = new GitHubUserMapManager()
+  await githubUserMap.load()
+  return userOrTeams
+    .map((reviewer) => {
+      if (!('login' in reviewer)) {
+        return null
+      }
 
-        const discordUserId = githubUserMap.get(reviewer.id)
-        if (!discordUserId) {
-          return null
-        }
+      const discordUserId = githubUserMap.get(reviewer.id)
+      if (!discordUserId) {
+        return null
+      }
 
-        return `<@${discordUserId}>`
-      })
-      .filter((mention) => mention !== null)
-      .join(' ')
-  }
+      return `<@${discordUserId}>`
+    })
+    .filter((mention) => mention !== null)
+    .join(' ')
+}
