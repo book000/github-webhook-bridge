@@ -7,11 +7,7 @@ import {
 } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
 import { createEmbed, getUsersMentions } from '../utils'
-import {
-  DiscordEmbedAuthor,
-  DiscordEmbedField,
-  DiscordMessageFlag,
-} from '@book000/node-utils'
+import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
 import { EmbedColors } from '../embed-colors'
 import * as jsdiff from 'diff'
 
@@ -62,17 +58,14 @@ export class PullRequestReviewAction extends BaseAction<PullRequestReviewEvent> 
     })
 
     const mentions = await getUsersMentions([event.pull_request.user])
-    // レビューで変更がリクエストされた場合は通知し、それ以外は通知抑制する
-    const messageFlags =
-      state === 'changes_requested'
-        ? 0
-        : DiscordMessageFlag.SuppressNotifications
+    // レビューで変更がリクエストされた場合はメンションする
+    const mentionsForChangesRequested =
+      state === 'changes_requested' ? mentions : ''
 
     const key = `${this.event.repository.full_name}#${pullRequest.number}-review-${this.event.action}-${this.event.review.id}`
     return this.sendMessage(key, {
-      content: mentions,
+      content: mentionsForChangesRequested,
       embeds: [embed],
-      flags: messageFlags,
     })
   }
 
@@ -157,10 +150,10 @@ export class PullRequestReviewAction extends BaseAction<PullRequestReviewEvent> 
     const { review } = this.event
 
     const stateMap: Record<PullRequestReview['state'], string> = {
-      approved: 'Approved',
-      changes_requested: 'Requested changes',
-      dismissed: 'Dismissed',
-      commented: 'Commented',
+      approved: 'approved',
+      changes_requested: 'requested changes',
+      dismissed: 'dismissed',
+      commented: 'commented',
     }
 
     return `The pull request was ${stateMap[review.state]} by ${review.user.login}`
