@@ -24,8 +24,7 @@ import {
   PullRequestDequeuedEvent,
 } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
-import { createEmbed } from '../utils'
-import { GitHubUserMapManager } from '../manager/github-user'
+import { createEmbed, getUsersMentions } from '../utils'
 import { EmbedColors } from '../embed-colors'
 import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
 import jsdiff from 'diff'
@@ -201,7 +200,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   private async onAssigned(event: PullRequestAssignedEvent): Promise<void> {
     const pullRequest = event.pull_request
 
-    const mentions = await this.getUsersMentions([event.assignee])
+    const mentions = await getUsersMentions([event.assignee])
     const assigneesText = this.getUsersText(pullRequest.assignees)
 
     const embed = createEmbed(this.eventName, this.getColor(), {
@@ -276,7 +275,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
         ? event.requested_reviewer
         : event.requested_team
 
-    const mentions = await this.getUsersMentions([requested])
+    const mentions = await getUsersMentions([requested])
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
 
     const embed = createEmbed(this.eventName, this.getColor(), {
@@ -478,7 +477,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   ): Promise<void> {
     const pullRequest = event.pull_request
 
-    const mentions = await this.getUsersMentions(
+    const mentions = await getUsersMentions(
       pullRequest.requested_reviewers
     )
 
@@ -771,7 +770,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       action === 'review_requested' ||
       action === 'ready_for_review'
     const reviewersMentions = isNeedReviewerMention
-      ? await this.getUsersMentions(reviewers)
+      ? await getUsersMentions(reviewers)
       : ''
 
     // アサイン処理
@@ -782,7 +781,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       action === 'opened' || action === 'reopened' || action === 'assigned'
 
     const assigneesMentions = isNeedAssigneeMention
-      ? await this.getUsersMentions(assignees)
+      ? await getUsersMentions(assignees)
       : ''
 
     return reviewersMentions + ' ' + assigneesMentions
@@ -806,34 +805,6 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
         }
         return reviewer.name
       })
-      .join(' ')
-  }
-
-  /**
-   * GitHubのユーザーからDiscordのユーザーに変換し、メンション一覧を作成する
-   *
-   * @param userOrTeams User と Team の配列
-   * @returns Discordのメンション一覧
-   */
-  private async getUsersMentions(
-    userOrTeams: (User | Team)[]
-  ): Promise<string> {
-    const githubUserMap = new GitHubUserMapManager()
-    await githubUserMap.load()
-    return userOrTeams
-      .map((reviewer) => {
-        if (!('login' in reviewer)) {
-          return null
-        }
-
-        const discordUserId = githubUserMap.get(reviewer.id)
-        if (!discordUserId) {
-          return null
-        }
-
-        return `<@${discordUserId}>`
-      })
-      .filter((mention) => mention !== null)
       .join(' ')
   }
 

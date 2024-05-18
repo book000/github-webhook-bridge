@@ -20,6 +20,15 @@ export const EmbedColors = {
   PullRequestMilestoned: 0x34_98_db, // Blue
   PullRequestEnqueued: 0x34_98_db, // Blue
   PullRequestDequeued: 0x34_98_db, // Blue
+  PullRequestReviewApproved: 0x2e_cc_71, // Green
+  PullRequestReviewChangesRequested: 0xf3_9c_12, // Orange
+  PullRequestReviewDismissed: 0xe7_4c_3c, // Red
+  PullRequestReviewEdited: 0x34_98_db, // Blue
+  PullRequestReviewCommentCreated: 0x2e_cc_71, // Green
+  PullRequestReviewCommentEdited: 0x34_98_db, // Blue
+  PullRequestReviewCommentDeleted: 0xe7_4c_3c, // Red
+  PullRequestReviewThreadResolved: 0x2e_cc_71, // Green
+  PullRequestReviewThreadUnresolved: 0xe7_4c_3c, // Red
   IssueOpened: 0x2e_cc_71, // Green
   IssueClosed: 0x95_a5_a6, // Grayish Blue
   IssueReopened: 0x34_98_db, // Blue
