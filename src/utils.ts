@@ -2,6 +2,8 @@ import { IncomingHttpHeaders } from 'node:http'
 import crypto, { BinaryLike, timingSafeEqual } from 'node:crypto'
 import { DiscordEmbed } from '@book000/node-utils'
 import { EmbedColors } from './embed-colors'
+import { User, Team } from '@octokit/webhooks-types'
+import { GitHubUserMapManager } from './manager/github-user'
 
 export type SomeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>
@@ -48,4 +50,32 @@ export function createEmbed(
     color: embedColor,
     ...extraEmbed,
   }
+}
+
+/**
+ * GitHubのユーザーからDiscordのユーザーに変換し、メンション一覧を作成する
+ *
+ * @param userOrTeams User と Team の配列
+ * @returns Discordのメンション一覧
+ */
+export async function getUsersMentions(
+  userOrTeams: (User | Team)[]
+): Promise<string> {
+  const githubUserMap = new GitHubUserMapManager()
+  await githubUserMap.load()
+  return userOrTeams
+    .map((reviewer) => {
+      if (!('login' in reviewer)) {
+        return null
+      }
+
+      const discordUserId = githubUserMap.get(reviewer.id)
+      if (!discordUserId) {
+        return null
+      }
+
+      return `<@${discordUserId}>`
+    })
+    .filter((mention) => mention !== null)
+    .join(' ')
 }
