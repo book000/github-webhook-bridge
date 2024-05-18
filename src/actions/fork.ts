@@ -1,7 +1,7 @@
 import { ForkEvent } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
 import { createEmbed } from '../utils'
-import { EmbedColors } from 'src/embed-colors'
+import { EmbedColors } from '../embed-colors'
 
 export class ForkAction extends BaseAction<ForkEvent> {
   public run(): Promise<void> {
