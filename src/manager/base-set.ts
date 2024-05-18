@@ -1,5 +1,6 @@
 import axios from 'axios'
 import fs from 'node:fs'
+import path from 'node:path'
 
 export abstract class BaseSetManager<T> {
   protected abstract readonly fileUrl: string | null
@@ -24,6 +25,9 @@ export abstract class BaseSetManager<T> {
 
     if (!fs.existsSync(this.filePath)) {
       this.data = new Set()
+      if (!fs.existsSync(path.dirname(this.filePath))) {
+        fs.mkdirSync(path.dirname(this.filePath), { recursive: true })
+      }
       fs.writeFileSync(this.filePath, JSON.stringify([...this.data]))
       this.loaded = true
       return
