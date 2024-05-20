@@ -9,8 +9,8 @@ devDependencies:
     specifier: 1.6.18
     version: 1.6.18(eslint-config-standard@17.1.0)(eslint@9.3.0)(typescript@5.4.5)
   '@book000/node-utils':
-    specifier: 1.13.65
-    version: 1.13.65
+    specifier: 1.13.66
+    version: 1.13.66
   '@fastify/cors':
     specifier: 9.0.1
     version: 9.0.1
@@ -440,10 +440,10 @@ packages:
       - typescript
     dev: true
 
-  /@book000/node-utils@1.13.65:
-    resolution: {integrity: sha512-8g9vpGpK7HCamEAg8GNW1dsrsVFbYq/9tlHdzAbopGvDGHh3KYmXotzEP8lTxn2GvgPQdfaCj+H22e3l8ZO/ug==}
+  /@book000/node-utils@1.13.66:
+    resolution: {integrity: sha512-yFAC+xv8race1bcswm7cyNkp0mZeuIJ8beZlgz+lWjpx2jxTEEki2r5gr6iIOKb2uwelyDxx/Idavmbbsnv/8Q==}
     dependencies:
-      axios: 1.6.8
+      axios: 1.7.0
       cycle: 1.0.3
       form-data: 4.0.0
       jsonc-parser: 3.2.1
@@ -1765,6 +1765,16 @@ packages:
 
   /axios@1.6.8:
     resolution: {integrity: sha512-v/ZHtJDU39mDpyBoFVkETcd/uNdxrWRrg3bKpOKzXFA6Bvqopts6ALSMU3y6ijYxbw2B+wPrIv46egTzJXCLGQ==}
+    dependencies:
+      follow-redirects: 1.15.6
+      form-data: 4.0.0
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
+    dev: true
+
+  /axios@1.7.0:
+    resolution: {integrity: sha512-IiB0wQeKyPRdsFVhBgIo31FbzOyf2M6wYl7/NVutFwFBRMiAbjNiydJIHKeLmPugF4kJLfA1uWZ82Is2QzqqFA==}
     dependencies:
       follow-redirects: 1.15.6
       form-data: 4.0.0
