@@ -1,0 +1,64 @@
+name: Generate Docs
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: 📂 Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-yarn-${{ hashFiles('generate-docs/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: 👨🏻‍💻 Install dependencies (root)
+        run: yarn install --frozen-lockfile
+
+      - name: 👨🏻‍💻 Install dependencies (generate-docs)
+        working-directory: generate-docs
+        run: yarn install --frozen-lockfile
+
+      - name: 🧪 Run tests
+        run: yarn test
+
+      - name: 📝 Generate docs
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: yarn start
+          working-directory: generate-docs
+
+      - name: 📅 Set Datetime
+        id: datetime
+        run: echo "DATETIME=$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+
+      - name: 📤 Create Pull Request
+        id: create-pull-request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          commit-message: 'docs: update docs ${{ steps.datetime.outputs.DATETIME }}'
+          title: 'docs: update docs ${{ steps.datetime.outputs.DATETIME }}'
+          body: 'Update docs'
+          branch: docs/update-${{ steps.datetime.outputs.DATETIME }}
+          base: master
+          author: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+          reviewers: book000
+          draft: false
+          delete-branch: true
+          add-paths: |
+            docs/
