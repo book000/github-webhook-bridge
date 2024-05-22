@@ -5,8 +5,13 @@ import { EmbedColors } from '../embed-colors'
 
 export class StarAction extends BaseAction<StarEvent> {
   public run(): Promise<void> {
-    const embed = createEmbed(this.eventName, EmbedColors.Star, {
-      title: `Starred ${this.event.repository.full_name} by ${this.event.sender.login}`,
+    const { action } = this.event
+
+    const titlePrefix = action === 'created' ? 'Starred' : 'Unstarred'
+    const color = action === 'created' ? EmbedColors.Star : EmbedColors.Unstar
+
+    const embed = createEmbed(this.eventName, color, {
+      title: `${titlePrefix} ${this.event.repository.full_name} by ${this.event.sender.login}`,
       url: this.event.repository.html_url,
       author: {
         name: this.event.sender.login,
