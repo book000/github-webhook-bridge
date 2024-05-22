@@ -9,8 +9,8 @@ devDependencies:
     specifier: 1.6.21
     version: 1.6.21(eslint-config-standard@17.1.0)(eslint@9.3.0)(typescript@5.4.5)
   '@book000/node-utils':
-    specifier: 1.13.68
-    version: 1.13.68
+    specifier: 1.13.71
+    version: 1.13.71
   '@fastify/cors':
     specifier: 9.0.1
     version: 9.0.1
@@ -440,10 +440,10 @@ packages:
       - typescript
     dev: true
 
-  /@book000/node-utils@1.13.68:
-    resolution: {integrity: sha512-WGEm50SeSmj7zpiOBavhYJO7UcmDD6dpkYLhv8PYfhm6m6l+lPq47Tcnx4CJkK07pfJ71vqi6ZemK3iHoUJrSg==}
+  /@book000/node-utils@1.13.71:
+    resolution: {integrity: sha512-aigt5S7oKZWjQLFP6uQLQYSfVGDRrs/jXA8f7eOLYDM/v/jeBoiQei/WQRgODMp5Ltxe6Cl4TOws6/2OdRr9Lw==}
     dependencies:
-      axios: 1.7.0
+      axios: 1.7.2
       cycle: 1.0.3
       form-data: 4.0.0
       jsonc-parser: 3.2.1
@@ -1773,8 +1773,8 @@ packages:
       - debug
     dev: true
 
-  /axios@1.7.0:
-    resolution: {integrity: sha512-IiB0wQeKyPRdsFVhBgIo31FbzOyf2M6wYl7/NVutFwFBRMiAbjNiydJIHKeLmPugF4kJLfA1uWZ82Is2QzqqFA==}
+  /axios@1.7.2:
+    resolution: {integrity: sha512-2A8QhOMrbomlDuiLeK9XibIBzuHeRcqqNOHp0Cyp5EoJ1IFDh+XZH3A6BkXtv0K4gFGCI0Y4BM7B1wOEi0Rmgw==}
     dependencies:
       follow-redirects: 1.15.6
       form-data: 4.0.0
