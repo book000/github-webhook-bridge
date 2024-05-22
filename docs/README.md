@@ -6,6 +6,24 @@
 ![1](fork/1.png)
 ![2](fork/2.png)
 
+## issue_comment - created
+
+![0](issue_comment/created/0.png)
+![1](issue_comment/created/1.png)
+![2](issue_comment/created/2.png)
+![3](issue_comment/created/3.png)
+![4](issue_comment/created/4.png)
+
+## issue_comment - deleted
+
+![5](issue_comment/deleted/5.png)
+![6](issue_comment/deleted/6.png)
+
+## issue_comment - edited
+
+![7](issue_comment/edited/7.png)
+![8](issue_comment/edited/8.png)
+
 ## issues - assigned
 
 ![1](issues/assigned/1.png)
@@ -74,24 +92,6 @@
 
 ![28](issues/unpinned/28.png)
 
-## issue_comment - created
-
-![0](issue_comment/created/0.png)
-![1](issue_comment/created/1.png)
-![2](issue_comment/created/2.png)
-![3](issue_comment/created/3.png)
-![4](issue_comment/created/4.png)
-
-## issue_comment - deleted
-
-![5](issue_comment/deleted/5.png)
-![6](issue_comment/deleted/6.png)
-
-## issue_comment - edited
-
-![7](issue_comment/edited/7.png)
-![8](issue_comment/edited/8.png)
-
 ## ping
 
 ![0](ping/0.png)
@@ -143,13 +143,13 @@
 ![18](pull_request/reopened/18.png)
 ![19](pull_request/reopened/19.png)
 
-## pull_request - review_requested
-
-![21](pull_request/review_requested/21.png)
-
 ## pull_request - review_request_removed
 
 ![20](pull_request/review_request_removed/20.png)
+
+## pull_request - review_requested
+
+![21](pull_request/review_requested/21.png)
 
 ## pull_request - unassigned
 
