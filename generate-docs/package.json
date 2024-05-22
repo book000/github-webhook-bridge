@@ -1,0 +1,15 @@
+{
+  "name": "github-webhook-bridge-generate-docs",
+  "version": "0.0.0",
+  "license": "MIT",
+  "author": "Tomachi <tomachi@tomacheese.com>",
+  "private": true,
+  "main": "main.mjs",
+  "scripts": {
+    "start": "node main.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "22.9.0",
+    "tsx": "4.10.5"
+  }
+}
