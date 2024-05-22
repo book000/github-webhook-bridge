@@ -50,6 +50,7 @@ export const EmbedColors = {
   IssueCommentEdited: 0x34_98_db, // Blue
   IssueCommentDeleted: 0xe7_4c_3c, // Red
   Star: 0xff_d7_00, // Yellow
+  Unstar: 0x9b_59_b6, // Purple
   Fork: 0x2e_cc_71, // Green
   Push: 0x2e_cc_71, // Green
   Ping: 0x95_a5_a6, // Grayish Blue
