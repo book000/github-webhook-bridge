@@ -102,43 +102,42 @@ class ParallelRunner {
   }
 }
 
-function toLowerCamel(str) {
-  return str
+function toLowerCamel(string) {
+  return string
     .toLowerCase()
     .replaceAll(/([_-][a-z])/g, (group) =>
       group.toUpperCase().replace('-', '').replace('_', '')
     )
 }
 
-function snakeCaseToLowerCamelCase(obj) {
+function snakeCaseToLowerCamelCase(object) {
   const TYPE_STRING = {
     OBJECT: '[object Object]',
     ARRAY: '[object Array]',
   }
 
-  // eslint-disable-next-line @typescript-eslint/unbound-method
   const toString = Object.prototype.toString
 
-  if (toString.call(obj) === TYPE_STRING.OBJECT) {
+  if (toString.call(object) === TYPE_STRING.OBJECT) {
     // ObjectはキーをLowerCamelに変換する
     const result = {}
-    for (const key of Object.keys(obj)) {
+    for (const key of Object.keys(object)) {
       if (
-        toString.call(obj[key]) === TYPE_STRING.OBJECT ||
-        toString.call(obj[key]) === TYPE_STRING.ARRAY
+        toString.call(object[key]) === TYPE_STRING.OBJECT ||
+        toString.call(object[key]) === TYPE_STRING.ARRAY
       ) {
         // @ts-expect-error ここはObjectかArrayの場合の処理
-        result[toLowerCamel(key)] = snakeCaseToLowerCamelCase(obj[key])
+        result[toLowerCamel(key)] = snakeCaseToLowerCamelCase(object[key])
       } else {
         // @ts-expect-error ここはそれ以外の場合の処理
-        result[toLowerCamel(key)] = obj[key]
+        result[toLowerCamel(key)] = object[key]
       }
     }
     return result
-  } else if (toString.call(obj) === TYPE_STRING.ARRAY) {
+  } else if (toString.call(object) === TYPE_STRING.ARRAY) {
     // Arrayの時は内部のデータがObjectの場合は処理をかける
     const result = []
-    for (const item of obj) {
+    for (const item of object) {
       if (toString.call(item) === TYPE_STRING.OBJECT) {
         result.push(snakeCaseToLowerCamelCase(item))
       } else {
@@ -148,7 +147,7 @@ function snakeCaseToLowerCamelCase(obj) {
     return result
   } else {
     // Object以外はそのまま返す
-    return obj
+    return object
   }
 }
 
@@ -189,6 +188,7 @@ async function main() {
     const pngPath = path.replace('.json', '.png')
     const splitPath = path.split('/')
     const eventName = splitPath[0]
+    // eslint-disable-next-line unicorn/no-null
     const actionName = splitPath.length === 3 ? splitPath[1] : null
     const fileName = splitPath.at(-1)?.replace('.json', '')
     const title = actionName ? `${eventName} - ${actionName}` : eventName
@@ -207,6 +207,7 @@ async function main() {
   fs.writeFileSync('../docs/README.md', readme.join('\n').trim())
 }
 
+// eslint-disable-next-line unicorn/prefer-top-level-await
 ;(async () => {
   await main()
 })()
