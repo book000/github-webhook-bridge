@@ -33,8 +33,8 @@ devDependencies:
     specifier: 3.1.5
     version: 3.1.5
   axios:
-    specifier: 1.6.8
-    version: 1.6.8
+    specifier: 1.7.2
+    version: 1.7.2
   diff:
     specifier: 5.2.0
     version: 5.2.0
@@ -1761,16 +1761,6 @@ packages:
       fastq: 1.17.1
     transitivePeerDependencies:
       - supports-color
-    dev: true
-
-  /axios@1.6.8:
-    resolution: {integrity: sha512-v/ZHtJDU39mDpyBoFVkETcd/uNdxrWRrg3bKpOKzXFA6Bvqopts6ALSMU3y6ijYxbw2B+wPrIv46egTzJXCLGQ==}
-    dependencies:
-      follow-redirects: 1.15.6
-      form-data: 4.0.0
-      proxy-from-env: 1.1.0
-    transitivePeerDependencies:
-      - debug
     dev: true
 
   /axios@1.7.2:
