@@ -30,8 +30,8 @@ devDependencies:
     specifier: 20.12.13
     version: 20.12.13
   '@vercel/node':
-    specifier: 3.1.5
-    version: 3.1.5
+    specifier: 3.1.6
+    version: 3.1.6
   axios:
     specifier: 1.7.2
     version: 1.7.2
@@ -1397,8 +1397,8 @@ packages:
       eslint-visitor-keys: 3.4.3
     dev: true
 
-  /@vercel/build-utils@8.2.0:
-    resolution: {integrity: sha512-yDr/zp/SX45mIy6DO8IRD6hmEs6gIr33/ajT3y8efUt/crQvgNtaSkbx9ubbwkR4RV/qKL213v6kXxj+EpsnlQ==}
+  /@vercel/build-utils@8.2.1:
+    resolution: {integrity: sha512-hZiSnzgb13JlWh4spHq5g6RQ76xMNFBFQLWmW7xx+f0yMsWTx/h6uBJm8AbW7AhAtsqeJ8Q6KvCFnxwXKYxLDw==}
     dev: true
 
   /@vercel/error-utils@2.0.2:
@@ -1427,14 +1427,14 @@ packages:
       - supports-color
     dev: true
 
-  /@vercel/node@3.1.5:
-    resolution: {integrity: sha512-1LVqdL/HKrfuLGIWEHm7O/zA6admKRClIuJOVsasvW0PHrrwUUfcoKvgHj/sH6HUEzgE9WIelqFLe8/j/tzA4A==}
+  /@vercel/node@3.1.6:
+    resolution: {integrity: sha512-PXCbN8Ocw5xdCidi8XKbBbKAoyBh2XJQJJFvImzAHM1pck7gCLYxgb7ZBcrJ/BtgMjmy/kSmSQ8FF/ctsFRK7w==}
     dependencies:
       '@edge-runtime/node-utils': 2.3.0
       '@edge-runtime/primitives': 4.1.0
       '@edge-runtime/vm': 3.2.0
       '@types/node': 16.18.11
-      '@vercel/build-utils': 8.2.0
+      '@vercel/build-utils': 8.2.1
       '@vercel/error-utils': 2.0.2
       '@vercel/nft': 0.27.0
       '@vercel/static-config': 3.0.0
