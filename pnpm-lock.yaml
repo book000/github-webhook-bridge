@@ -6,8 +6,8 @@ settings:
 
 devDependencies:
   '@book000/eslint-config':
-    specifier: 1.6.30
-    version: 1.6.30(eslint-config-standard@17.1.0)(eslint@9.4.0)(typescript@5.4.5)
+    specifier: 1.6.31
+    version: 1.6.31(eslint-config-standard@17.1.0)(eslint@9.4.0)(typescript@5.4.5)
   '@book000/node-utils':
     specifier: 1.13.99
     version: 1.13.99
@@ -418,8 +418,8 @@ packages:
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
     dev: true
 
-  /@book000/eslint-config@1.6.30(eslint-config-standard@17.1.0)(eslint@9.4.0)(typescript@5.4.5):
-    resolution: {integrity: sha512-2JTqgbaYKWt3vBrPEdfioT2Dyf34b95RKbaLQF2Qu8gW7L1D11SnLsq8abgdQ024uEVNrtj1tEUvX+Tvp6Dzyg==}
+  /@book000/eslint-config@1.6.31(eslint-config-standard@17.1.0)(eslint@9.4.0)(typescript@5.4.5):
+    resolution: {integrity: sha512-KTU2uUocns12Kg1Orf2S0Hfmlm1+NJVJf+xYRo7q6d/rX1MWTQiCEM2Gw7eNbucHsR0NwMAEHYGu67vCK/S4xQ==}
     peerDependencies:
       eslint: 9.4.0
       eslint-config-standard: 17.1.0
@@ -430,7 +430,7 @@ packages:
       eslint-config-prettier: 9.1.0(eslint@9.4.0)
       eslint-config-standard: 17.1.0(eslint-plugin-import@2.29.1)(eslint-plugin-n@17.8.1)(eslint-plugin-promise@6.2.0)(eslint@9.4.0)
       eslint-plugin-unicorn: 53.0.0(eslint@9.4.0)
-      globals: 15.3.0
+      globals: 15.4.0
       typescript-eslint: 7.12.0(eslint@9.4.0)(typescript@5.4.5)
     transitivePeerDependencies:
       - supports-color
@@ -3391,6 +3391,11 @@ packages:
 
   /globals@15.3.0:
     resolution: {integrity: sha512-cCdyVjIUVTtX8ZsPkq1oCsOsLmGIswqnjZYMJJTGaNApj1yHtLSymKhwH51ttirREn75z3p4k051clwg7rvNKA==}
+    engines: {node: '>=18'}
+    dev: true
+
+  /globals@15.4.0:
+    resolution: {integrity: sha512-unnwvMZpv0eDUyjNyh9DH/yxUaRYrEjW/qK4QcdrHg3oO11igUQrCSgODHEqxlKg8v2CD2Sd7UkqqEBoz5U7TQ==}
     engines: {node: '>=18'}
     dev: true
 
