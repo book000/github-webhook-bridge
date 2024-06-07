@@ -5304,10 +5304,10 @@ tsconfig-paths@^3.15.0:
     minimist "^1.2.6"
     strip-bom "^3.0.0"
 
-tsx@4.13.0:
-  version "4.13.0"
-  resolved "https://registry.yarnpkg.com/tsx/-/tsx-4.13.0.tgz#f0f98d1adcd8de397e46b3242805e9098449b8ac"
-  integrity sha512-kNY70P2aLMdVBii1Err5ENxDhQ6Vz2PbQGX68DcvzY2/PWK5NLBO6vI7lPr1/2xG3IKSt2MN+KOAyWDQSRlbCA==
+tsx@4.13.1:
+  version "4.13.1"
+  resolved "https://registry.yarnpkg.com/tsx/-/tsx-4.13.1.tgz#929019f83fddbdaa4dd1724983d2ae219cab7546"
+  integrity sha512-MU1IshdvSdIvf0U9ofr5ZWCWjLAPvf5gIvRZygGisoA/fq/FmSxjAfLIxF8ZoZtvHffY1NRkmxIR5/RW1Qc84g==
   dependencies:
     esbuild "~0.20.2"
     get-tsconfig "^4.7.5"
