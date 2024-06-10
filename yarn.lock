@@ -301,10 +301,10 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@book000/eslint-config@1.6.32":
-  version "1.6.32"
-  resolved "https://registry.yarnpkg.com/@book000/eslint-config/-/eslint-config-1.6.32.tgz#a37628c85928be20915c5632e278caf67c14547c"
-  integrity sha512-pZ/FE5DkOadHnICtvRJuLammNagVlz+ADkSd6UnNEFflma6XkeRFhlKK7xvfujazgn/R0nhI2nlQ3cR4bs8ICQ==
+"@book000/eslint-config@1.6.33":
+  version "1.6.33"
+  resolved "https://registry.yarnpkg.com/@book000/eslint-config/-/eslint-config-1.6.33.tgz#ebae06473eddf298eb53d77db49cdb4b29724d17"
+  integrity sha512-LAdzKshtQQI9pL6BQSSZAZJ6AXFXfrOGN5plHoDShre2l/X9uu2IHFXrj6J54xBMSQLALBF3G9/bnYPYfzo2PA==
   dependencies:
     "@eslint/eslintrc" "3.1.0"
     "@typescript-eslint/parser" "7.12.0"
