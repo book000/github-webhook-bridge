@@ -43,7 +43,7 @@
     "jest-expect-message": "1.1.3",
     "prettier": "3.3.1",
     "ts-jest": "29.1.4",
-    "tsx": "4.15.1",
+    "tsx": "4.15.2",
     "typescript": "5.4.5",
     "yarn-run-all": "3.1.1"
   },
