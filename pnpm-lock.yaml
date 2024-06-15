@@ -6,8 +6,8 @@ settings:
 
 devDependencies:
   '@book000/eslint-config':
-    specifier: 1.6.36
-    version: 1.6.36(eslint-config-standard@17.1.0)(eslint@9.5.0)(typescript@5.4.5)
+    specifier: 1.7.0
+    version: 1.7.0(eslint-config-standard@17.1.0)(eslint@9.5.0)(typescript@5.4.5)
   '@book000/node-utils':
     specifier: 1.13.122
     version: 1.13.122
@@ -428,8 +428,8 @@ packages:
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
     dev: true
 
-  /@book000/eslint-config@1.6.36(eslint-config-standard@17.1.0)(eslint@9.5.0)(typescript@5.4.5):
-    resolution: {integrity: sha512-q8TC/8L6+GyodjACC/sBWkOmqEGTy/bZuOD/R35eRdIQcC/A2Zl6XFmdK+jl6ZiMQK6AtTqskbV2cuNea4exWQ==}
+  /@book000/eslint-config@1.7.0(eslint-config-standard@17.1.0)(eslint@9.5.0)(typescript@5.4.5):
+    resolution: {integrity: sha512-pSs8SszZPd7XixR2xjrAWcNvyT7E0p5i88eKzTiReu+0z9T0B64ccV8eNfif8tHlWoFukNZZ90MaRiLE80f3mQ==}
     peerDependencies:
       eslint: 9.5.0
       eslint-config-standard: 17.1.0
