@@ -9,7 +9,7 @@
     "start": "node main.mjs"
   },
   "devDependencies": {
-    "puppeteer-core": "22.11.0",
+    "puppeteer-core": "22.11.1",
     "tsx": "4.15.5"
   }
 }
