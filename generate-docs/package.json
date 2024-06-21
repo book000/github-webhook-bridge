@@ -10,6 +10,6 @@
   },
   "devDependencies": {
     "puppeteer-core": "22.11.2",
-    "tsx": "4.15.6"
+    "tsx": "4.15.7"
   }
 }
