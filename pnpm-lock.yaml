@@ -54,8 +54,8 @@ devDependencies:
     specifier: 6.2.0
     version: 6.2.0(eslint@9.6.0)
   fastify:
-    specifier: 4.28.0
-    version: 4.28.0
+    specifier: 4.28.1
+    version: 4.28.1
   fastify-raw-body:
     specifier: 4.3.0
     version: 4.3.0
@@ -3122,8 +3122,8 @@ packages:
       secure-json-parse: 2.7.0
     dev: true
 
-  /fastify@4.28.0:
-    resolution: {integrity: sha512-HhW7UHW07YlqH5qpS0af8d2Gl/o98DhJ8ZDQWHRNDnzeOhZvtreWsX8xanjGgXmkYerGbo8ax/n40Dpwqkot8Q==}
+  /fastify@4.28.1:
+    resolution: {integrity: sha512-kFWUtpNr4i7t5vY2EJPCN2KgMVpuqfU4NjnJNCgiNB900oiDeYqaNDRcAfeBbOF5hGixixxcKnOU4KN9z6QncQ==}
     dependencies:
       '@fastify/ajv-compiler': 3.6.0
       '@fastify/error': 3.4.1
