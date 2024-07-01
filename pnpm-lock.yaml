@@ -9,8 +9,8 @@ devDependencies:
     specifier: 1.7.11
     version: 1.7.11(eslint-config-standard@17.1.0)(eslint@9.6.0)(typescript@5.5.2)
   '@book000/node-utils':
-    specifier: 1.13.151
-    version: 1.13.151
+    specifier: 1.13.152
+    version: 1.13.152
   '@fastify/cors':
     specifier: 9.0.1
     version: 9.0.1
@@ -447,8 +447,8 @@ packages:
       - typescript
     dev: true
 
-  /@book000/node-utils@1.13.151:
-    resolution: {integrity: sha512-gTPsRCmG2fjHicJcX3u5EJRklgRGB/FUNhiov+Zr9KfXQv3F458JcmOcyJWcjcIhRwuteAtV6ro3uH7Sm5qYIA==}
+  /@book000/node-utils@1.13.152:
+    resolution: {integrity: sha512-hBv21hpLq3etKKEHCCS/bmw97DCeJiJSupvh0UzvcQ5im6QyLgwLbiISS5t92BLf83vYQ28UMoCnHXJad1qRzg==}
     dependencies:
       axios: 1.7.2
       cycle: 1.0.3
