@@ -15,7 +15,7 @@ export class PushAction extends BaseAction<PushEvent> {
       title: `[${repository.full_name}:${shortRef}] ${commits.length} new commit(s)`,
       description: this.getDescription(commits),
       author: {
-        name: sender.name,
+        name: sender.name ?? sender.login,
         url: sender.html_url,
         icon_url: sender.avatar_url,
       },
