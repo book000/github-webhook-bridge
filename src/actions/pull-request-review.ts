@@ -9,7 +9,7 @@ import { BaseAction } from '.'
 import { createEmbed, getUsersMentions } from '../utils'
 import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
 import { EmbedColors } from '../embed-colors'
-import * as jsdiff from 'diff'
+import { createPatch } from 'diff'
 
 export class PullRequestReviewAction extends BaseAction<PullRequestReviewEvent> {
   public async run(): Promise<void> {
@@ -81,7 +81,7 @@ export class PullRequestReviewAction extends BaseAction<PullRequestReviewEvent> 
 
     const fields: DiscordEmbedField[] = []
     if ('body' in changes && changes.body) {
-      const bodyDiff = jsdiff.createPatch(
+      const bodyDiff = createPatch(
         'body',
         changes.body.from,
         pullRequest.body ?? '',

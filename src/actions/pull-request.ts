@@ -27,7 +27,7 @@ import { BaseAction } from '.'
 import { createEmbed, getUsersMentions } from '../utils'
 import { EmbedColors } from '../embed-colors'
 import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
-import jsdiff from 'diff'
+import { createPatch } from 'diff'
 
 export class PullRequestAction extends BaseAction<PullRequestEvent> {
   public async run(): Promise<void> {
@@ -405,7 +405,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
 
     const fields: DiscordEmbedField[] = []
     if ('title' in changes && changes.title) {
-      const titleDiff = jsdiff.createPatch(
+      const titleDiff = createPatch(
         'title',
         changes.title.from,
         pullRequest.title,
@@ -419,7 +419,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       })
     }
     if ('body' in changes && changes.body && pullRequest.body) {
-      const bodyDiff = jsdiff.createPatch(
+      const bodyDiff = createPatch(
         'body',
         changes.body.from,
         pullRequest.body,
@@ -437,7 +437,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       changes.base &&
       changes.base.ref.from !== pullRequest.base.ref
     ) {
-      const baseDiff = jsdiff.createPatch(
+      const baseDiff = createPatch(
         'base',
         changes.base.ref.from,
         pullRequest.base.ref,
