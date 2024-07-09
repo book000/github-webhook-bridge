@@ -24,7 +24,7 @@ import { EmbedColors } from '../embed-colors'
 import { GitHubUserMapManager } from '../manager/github-user'
 import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
 import { createEmbed } from '../utils'
-import jsdiff from 'diff'
+import { createPatch } from 'diff'
 
 export class IssuesAction extends BaseAction<IssuesEvent> {
   public run(): Promise<void> {
@@ -239,7 +239,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
 
     const fields: DiscordEmbedField[] = []
     if ('title' in changes && changes.title) {
-      const titleDiff = jsdiff.createPatch(
+      const titleDiff = createPatch(
         'title',
         changes.title.from,
         issue.title,
@@ -253,7 +253,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
       })
     }
     if ('body' in changes && changes.body) {
-      const bodyDiff = jsdiff.createPatch(
+      const bodyDiff = createPatch(
         'body',
         changes.body.from,
         issue.body ?? '',
