@@ -13,6 +13,7 @@ async function hook(
     Body: Schema
     Querystring: {
       url?: string
+      'disabled-events'?: string
     }
   }>,
   reply: FastifyReply
@@ -59,7 +60,9 @@ async function hook(
     webhookUrl,
   })
 
-  const disabledEvents = GWBEnvironment.getOrNull('DISABLED_EVENTS')
+  const disabledEvents =
+    request.query['disabled-events'] ??
+    GWBEnvironment.getOrNull('DISABLED_EVENTS')
   if (disabledEvents) {
     const disabledEventsArray = disabledEvents.split(',')
     if (disabledEventsArray.includes(eventName)) {
