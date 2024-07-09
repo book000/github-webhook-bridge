@@ -5,10 +5,11 @@ import {
   IssueCommentEvent,
 } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
-import { DiscordEmbedAuthor } from '@book000/node-utils'
+import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
 import { EmbedColors } from '../embed-colors'
 import { GitHubUserMapManager } from '../manager/github-user'
 import { createEmbed } from '../utils'
+import { createPatch } from 'diff'
 
 export class IssueCommentAction extends BaseAction<IssueCommentEvent> {
   public run(): Promise<void> {
@@ -45,6 +46,23 @@ export class IssueCommentAction extends BaseAction<IssueCommentEvent> {
 
   private async onEdited(event: IssueCommentEditedEvent): Promise<void> {
     const comment = event.comment
+    const changes = event.changes
+
+    const fields: DiscordEmbedField[] = []
+    if ('body' in changes && changes.body) {
+      const bodyDiff = createPatch(
+        'body',
+        changes.body.from,
+        comment.body,
+        'Previous Body',
+        'Current Body'
+      )
+      fields.push({
+        name: 'Body',
+        value: '```diff\n' + bodyDiff + '\n```',
+        inline: true,
+      })
+    }
 
     const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
