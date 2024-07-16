@@ -29,7 +29,7 @@
     "@types/diff": "5.2.1",
     "@types/jest": "29.5.12",
     "@types/node": "20.14.10",
-    "@vercel/node": "3.2.3",
+    "@vercel/node": "3.2.4",
     "axios": "1.7.2",
     "diff": "5.2.0",
     "eslint": "9.7.0",
