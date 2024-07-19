@@ -127,8 +127,6 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   ): Promise<void> {
     const pullRequest = event.pull_request
 
-    const mentions = await this.getMentions()
-
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
     const assigneesText = this.getUsersText(pullRequest.assignees)
 
@@ -158,7 +156,6 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
 
     const key = `${this.event.repository.full_name}#${pullRequest.number}-${this.event.action}`
     return this.sendMessage(key, {
-      content: mentions,
       embeds: [embed],
     })
   }
