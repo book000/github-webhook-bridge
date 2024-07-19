@@ -7,6 +7,7 @@ import { GWBEnvironment } from './environments'
 import { getAction } from './get-action'
 import fastifyRawBody from 'fastify-raw-body'
 import { MuteManager } from './manager/mute'
+import { isAxiosError } from 'axios'
 
 async function hook(
   request: FastifyRequest<{
@@ -77,10 +78,61 @@ async function hook(
   try {
     await action.run()
   } catch (error) {
-    Logger.configure('hook').error('Error', error as Error)
+    const logger = Logger.configure('hook')
+
+    if (!error || !(error instanceof Error)) {
+      await reply.status(500).send({
+        message: 'An error occurred (UnknownError)',
+      })
+      logger.error('UnknownError')
+      return
+    }
+
+    // Method not implemented.
+    if (error.message === 'Method not implemented.') {
+      await reply.status(406).send({
+        message: 'Method not implemented',
+      })
+      logger.info('Method not implemented')
+      return
+    }
+
+    // AxiosError
+    if (isAxiosError(error)) {
+      const requestMethod = error.response?.config.method
+      const requestUrl = error.response?.config.url
+      const responseStatus = error.response?.status
+      const responseData = error.response?.data
+
+      await reply.status(500).send({
+        message: 'An error occurred (AxiosError)',
+        details: {
+          requestMethod,
+          requestUrl,
+          responseStatus,
+          responseData,
+        },
+      })
+      logger.error('AxiosError')
+      logger.error(`- Request Method: ${requestMethod}`)
+      logger.error(`- Request URL: ${requestUrl}`)
+      logger.error(`- Response Status: ${responseStatus}`)
+      logger.error(`- Response Data: ${JSON.stringify(responseData)}`)
+      return
+    }
+
+    const errorInfo = {
+      message: error.message,
+      stack: error.stack,
+    }
+
     await reply.status(500).send({
-      message: 'An error occurred: ' + (error as Error).message,
+      message: 'An error occurred',
+      details: errorInfo,
     })
+    logger.error('Error')
+    logger.error(`- Message: ${errorInfo.message}`)
+    logger.error(`- Stack: ${errorInfo.stack}`)
   }
 }
 
