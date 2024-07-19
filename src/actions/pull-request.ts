@@ -746,43 +746,6 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   }
 
   /**
-   * メンション先を取得する
-   *
-   * プルリク作成時、再オープン時、レビュー依頼時、レビュー待ち時、アサイン時にメンションを付ける
-   *
-   * @returns メンション先
-   */
-  private async getMentions(): Promise<Promise<string>> {
-    const { action, pull_request: pullRequest } = this.event
-
-    // レビュアー処理
-    // プルリク作成時、再オープン時、レビュー依頼時、レビュー待ち時にメンションを付ける
-    const reviewers = pullRequest.requested_reviewers
-
-    const isNeedReviewerMention =
-      action === 'opened' ||
-      action === 'reopened' ||
-      action === 'review_requested' ||
-      action === 'ready_for_review'
-    const reviewersMentions = isNeedReviewerMention
-      ? await getUsersMentions(reviewers)
-      : ''
-
-    // アサイン処理
-    // プルリク作成時、再オープン時、アサイン時にメンションを付ける
-    const assignees = pullRequest.assignees
-
-    const isNeedAssigneeMention =
-      action === 'opened' || action === 'reopened' || action === 'assigned'
-
-    const assigneesMentions = isNeedAssigneeMention
-      ? await getUsersMentions(assignees)
-      : ''
-
-    return reviewersMentions + ' ' + assigneesMentions
-  }
-
-  /**
    * GitHubのユーザーからDiscordのユーザーに変換し、ユーザー一覧を作成する
    *
    * @param userOrTeams User と Team の配列
