@@ -150,7 +150,8 @@ export class IssueCommentAction extends BaseAction<IssueCommentEvent> {
 
     const discordUserIds = await Promise.all(
       mentions.map(async (mention) => {
-        const githubUserId = await githubUserMap.getFromUsername(mention)
+        const username = mention.slice(1)
+        const githubUserId = await githubUserMap.getFromUsername(username)
         if (!githubUserId) {
           return null
         }
