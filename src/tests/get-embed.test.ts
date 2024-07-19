@@ -69,7 +69,8 @@ describe('Get embed', () => {
       mockInstance.mockRestore()
 
       if (
-        response.body.includes('An error occurred: Method not implemented.')
+        response.body.includes('Method not implemented') &&
+        response.statusCode === 406
       ) {
         return
       }
