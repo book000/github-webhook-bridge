@@ -127,8 +127,6 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   ): Promise<void> {
     const pullRequest = event.pull_request
 
-    const mentions = await this.getMentions()
-
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
     const assigneesText = this.getUsersText(pullRequest.assignees)
 
@@ -158,7 +156,6 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
 
     const key = `${this.event.repository.full_name}#${pullRequest.number}-${this.event.action}`
     return this.sendMessage(key, {
-      content: mentions,
       embeds: [embed],
     })
   }
@@ -746,43 +743,6 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       url: sender.html_url,
       icon_url: sender.avatar_url,
     }
-  }
-
-  /**
-   * メンション先を取得する
-   *
-   * プルリク作成時、再オープン時、レビュー依頼時、レビュー待ち時、アサイン時にメンションを付ける
-   *
-   * @returns メンション先
-   */
-  private async getMentions(): Promise<Promise<string>> {
-    const { action, pull_request: pullRequest } = this.event
-
-    // レビュアー処理
-    // プルリク作成時、再オープン時、レビュー依頼時、レビュー待ち時にメンションを付ける
-    const reviewers = pullRequest.requested_reviewers
-
-    const isNeedReviewerMention =
-      action === 'opened' ||
-      action === 'reopened' ||
-      action === 'review_requested' ||
-      action === 'ready_for_review'
-    const reviewersMentions = isNeedReviewerMention
-      ? await getUsersMentions(reviewers)
-      : ''
-
-    // アサイン処理
-    // プルリク作成時、再オープン時、アサイン時にメンションを付ける
-    const assignees = pullRequest.assignees
-
-    const isNeedAssigneeMention =
-      action === 'opened' || action === 'reopened' || action === 'assigned'
-
-    const assigneesMentions = isNeedAssigneeMention
-      ? await getUsersMentions(assignees)
-      : ''
-
-    return reviewersMentions + ' ' + assigneesMentions
   }
 
   /**
