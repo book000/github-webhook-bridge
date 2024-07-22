@@ -19,28 +19,41 @@ jobs:
         with:
           node-version-file: .node-version
 
-      - name: 📂 Cache node_modules
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        id: pnpm-install
+        with:
+          run_install: false
+          package_json_file: package.json
+
+      - name: 📂 Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: 📂 Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-yarn-${{ hashFiles('generate-docs/yarn.lock') }}
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-pnpm-store-
 
       - name: 👨🏻‍💻 Install dependencies (root)
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-frozen-lockfile
 
       - name: 👨🏻‍💻 Install dependencies (generate-docs)
         working-directory: generate-docs
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-frozen-lockfile
 
       - name: 🧪 Run tests
-        run: yarn test
+        run: pnpm run test
 
       - name: 📝 Generate docs
         uses: coactions/setup-xvfb@v1
         with:
-          run: yarn start
+          run: pnpm run start
           working-directory: generate-docs
 
       - name: 📅 Set Datetime

@@ -130,3 +130,6 @@ dist
 .pnp.*
 
 data/
+
+# pnpm
+.pnpm-store
