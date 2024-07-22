@@ -1,5 +1,4 @@
 {
-  "ts-node": { "files": true },
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
@@ -16,6 +15,7 @@
     "declarationMap": true,
     "strict": true,
     "noImplicitAny": true,
+    "strictNullChecks": true,
     "strictBindCallApply": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

@@ -1,0 +1,45 @@
+{
+  "name": "github-webhook-bridge",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:0-18",
+  "otherPortsAttributes": {
+    "onAutoForward": "silent"
+  },
+  "postCreateCommand": "pnpm install",
+  "waitFor": "postCreateCommand",
+  "customizations": {
+    "extensions": [
+      "esbenp.prettier-vscode"
+    ],
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "[typescript]": {
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "never"
+          },
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "editor.formatOnSave": true,
+        "git.branchProtection": [
+          "main",
+          "master"
+        ]
+      }
+    },
+    "settings": {
+      "[typescript]": {
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": false
+        },
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      },
+      "editor.formatOnSave": true,
+      "git.branchProtection": [
+        "main",
+        "master"
+      ]
+    }
+  }
+}
