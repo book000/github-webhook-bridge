@@ -9,7 +9,7 @@
     "start": "node main.mjs"
   },
   "devDependencies": {
-    "puppeteer-core": "22.14.0"
+    "puppeteer-core": "22.15.0"
   },
   "packageManager": "pnpm@9.6.0"
 }
