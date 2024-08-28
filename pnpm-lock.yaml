@@ -33,8 +33,8 @@ importers:
         specifier: 20.16.2
         version: 20.16.2
       '@vercel/node':
-        specifier: 3.2.9
-        version: 3.2.9
+        specifier: 3.2.10
+        version: 3.2.10
       axios:
         specifier: 1.7.5
         version: 1.7.5
@@ -755,8 +755,8 @@ packages:
     resolution: {integrity: sha512-RmZwrTbQ9QveF15m/Cl28n0LXD6ea2CjkhH5rQ55ewz3H24w+AMCJHPVYaZ8/0HoG8Z3cLLFFycRXxeO2tz9FA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@vercel/build-utils@8.3.7':
-    resolution: {integrity: sha512-xscYxdzQ2IAMNbXlldbTZv1+YtD/Yq/EXgruqFBTZ/ofh+GIMCig1YrJh2CS6R2B2ja77szUiel//T8lRrDN1g==}
+  '@vercel/build-utils@8.3.8':
+    resolution: {integrity: sha512-qcKV+owhfSwPJ3RyDpdS3xZdgDtPpVaeYTXRJjmMPv0PQIci5NRik/QNmYth0pyXCYbG5ES9/OYg9j5kAqPhZA==}
 
   '@vercel/error-utils@2.0.2':
     resolution: {integrity: sha512-Sj0LFafGpYr6pfCqrQ82X6ukRl5qpmVrHM/191kNYFqkkB9YkjlMAj6QcEsvCG259x4QZ7Tya++0AB85NDPbKQ==}
@@ -766,8 +766,8 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  '@vercel/node@3.2.9':
-    resolution: {integrity: sha512-q3HLv+yIU3sOFS82GltdjFiBXt8cRcPmDKD3lI0z4cDLb2FSJeGE4yYqK7FxZmO8E5Hqzrm2uUoy5Mw3XERTmw==}
+  '@vercel/node@3.2.10':
+    resolution: {integrity: sha512-NH3qPfIdu/Nxn7v34DnbSFiODIKUrqHWg8IAuRUccFfRIRp4EVreX7QfXGRgzvjTF/Ps+ATluw4IftlHQtVocA==}
 
   '@vercel/static-config@3.0.0':
     resolution: {integrity: sha512-2qtvcBJ1bGY0dYGYh3iM7yGKkk971FujLEDXzuW5wcZsPr1GSEjO/w2iSr3qve6nDDtBImsGoDEnus5FI4+fIw==}
@@ -3991,7 +3991,7 @@ snapshots:
       '@typescript-eslint/types': 8.3.0
       eslint-visitor-keys: 3.4.3
 
-  '@vercel/build-utils@8.3.7': {}
+  '@vercel/build-utils@8.3.8': {}
 
   '@vercel/error-utils@2.0.2': {}
 
@@ -4013,13 +4013,13 @@ snapshots:
       - encoding
       - supports-color
 
-  '@vercel/node@3.2.9':
+  '@vercel/node@3.2.10':
     dependencies:
       '@edge-runtime/node-utils': 2.3.0
       '@edge-runtime/primitives': 4.1.0
       '@edge-runtime/vm': 3.2.0
       '@types/node': 16.18.11
-      '@vercel/build-utils': 8.3.7
+      '@vercel/build-utils': 8.3.8
       '@vercel/error-utils': 2.0.2
       '@vercel/nft': 0.27.3
       '@vercel/static-config': 3.0.0
