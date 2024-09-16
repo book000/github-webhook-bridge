@@ -69,6 +69,7 @@ export class IssueCommentAction extends BaseAction<IssueCommentEvent> {
       description: this.getBody(),
       url: comment.html_url,
       author: this.getAuthor(),
+      fields,
     })
 
     const key = `${this.event.repository.full_name}#${this.event.issue.number}-comment-${comment.id}`
@@ -107,8 +108,7 @@ export class IssueCommentAction extends BaseAction<IssueCommentEvent> {
   private getBody(): string {
     const { action, comment } = this.event
     switch (action) {
-      case 'created':
-      case 'edited': {
+      case 'created': {
         return comment.body.slice(0, 500) || '*No description provided*'
       }
       default: {
