@@ -8,7 +8,6 @@ type EnvironmentKey =
   | 'MUTE_USERS_FILE_URL'
   | 'DISABLED_EVENTS'
 
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class GWBEnvironment {
   public static get(key: EnvironmentKey, defaultValue?: string): string {
     const value = process.env[key] ?? defaultValue

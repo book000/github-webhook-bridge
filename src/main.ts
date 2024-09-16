@@ -146,7 +146,6 @@ export async function getApp() {
   await app.register(fastifyRawBody)
 
   app.get('/', (_request, reply) => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     reply.status(400).send({
       message: 'Bad Request: Please use POST method',
     })
