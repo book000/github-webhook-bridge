@@ -1,7 +1,7 @@
 import { PublicEvent } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
-import { createEmbed } from 'src/utils'
-import { EmbedColors } from 'src/embed-colors'
+import { createEmbed } from '../utils'
+import { EmbedColors } from '../embed-colors'
 
 export class PublicAction extends BaseAction<PublicEvent> {
   public run(): Promise<void> {
