@@ -54,4 +54,5 @@ export const EmbedColors = {
   Fork: 0x2e_cc_71, // Green
   Push: 0x2e_cc_71, // Green
   Ping: 0x95_a5_a6, // Grayish Blue
+  Public: 0x2e_cc_71, // Green
 } as const

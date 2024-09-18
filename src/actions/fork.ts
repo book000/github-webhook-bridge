@@ -15,7 +15,7 @@ export class ForkAction extends BaseAction<ForkEvent> {
       },
     })
 
-    const key = `${this.event.repository.full_name}-star-${this.event.sender.login}`
+    const key = `${this.event.repository.full_name}-fork-${this.event.sender.login}`
     return this.sendMessage(key, {
       embeds: [embed],
     })
