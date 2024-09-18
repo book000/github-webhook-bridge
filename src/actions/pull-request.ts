@@ -197,7 +197,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   private async onAssigned(event: PullRequestAssignedEvent): Promise<void> {
     const pullRequest = event.pull_request
 
-    const mentions = await getUsersMentions([event.assignee])
+    const mentions = await getUsersMentions(event.sender, [event.assignee])
     const assigneesText = this.getUsersText(pullRequest.assignees)
 
     const embed = createEmbed(this.eventName, this.getColor(), {
@@ -272,7 +272,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
         ? event.requested_reviewer
         : event.requested_team
 
-    const mentions = await getUsersMentions([requested])
+    const mentions = await getUsersMentions(event.sender, [requested])
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
 
     const embed = createEmbed(this.eventName, this.getColor(), {
@@ -474,7 +474,10 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   ): Promise<void> {
     const pullRequest = event.pull_request
 
-    const mentions = await getUsersMentions(pullRequest.requested_reviewers)
+    const mentions = await getUsersMentions(
+      event.sender,
+      pullRequest.requested_reviewers
+    )
 
     const reviewersText = this.getUsersText(pullRequest.requested_reviewers)
 

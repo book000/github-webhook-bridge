@@ -55,10 +55,12 @@ export function createEmbed(
 /**
  * GitHubのユーザーからDiscordのユーザーに変換し、メンション一覧を作成する
  *
+ * @param sender アクションを送信したユーザー
  * @param userOrTeams User と Team の配列
  * @returns Discordのメンション一覧
  */
 export async function getUsersMentions(
+  sender: User,
   userOrTeams: (User | Team)[]
 ): Promise<string> {
   const githubUserMap = new GitHubUserMapManager()
@@ -66,6 +68,10 @@ export async function getUsersMentions(
   return userOrTeams
     .map((reviewer) => {
       if (!('login' in reviewer)) {
+        return null
+      }
+
+      if (reviewer.login === sender.login) {
         return null
       }
 
