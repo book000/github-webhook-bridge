@@ -56,18 +56,34 @@ jobs:
           run: pnpm run start
           working-directory: generate-docs
 
-      - name: 📅 Set Datetime
-        id: datetime
-        run: echo "DATETIME=$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+      - name: Check existing branch
+        id: check-existing-branch
+        run: |
+          git fetch origin
+          if git rev-parse --verify origin/docs/update; then
+            echo "::set-output name=EXISTING_BRANCH::true"
+          else
+            echo "::set-output name=EXISTING_BRANCH::false"
+          fi
+
+      - name: 📤 Commit changes
+        if: steps.check-existing-branch.outputs.EXISTING_BRANCH == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add docs/
+          git commit -m "docs: update docs - $GITHUB_SHA"
+          git push origin HEAD:docs/update -f
 
       - name: 📤 Create Pull Request
         id: create-pull-request
+        if: steps.check-existing-branch.outputs.EXISTING_BRANCH == 'false'
         uses: peter-evans/create-pull-request@v7
         with:
-          commit-message: 'docs: update docs ${{ steps.datetime.outputs.DATETIME }}'
-          title: 'docs: update docs ${{ steps.datetime.outputs.DATETIME }}'
+          commit-message: 'docs: update docs'
+          title: 'docs: update docs'
           body: 'Update docs'
-          branch: docs/update-${{ steps.datetime.outputs.DATETIME }}
+          branch: docs/update
           base: master
           author: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
           reviewers: book000
