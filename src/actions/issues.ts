@@ -21,9 +21,8 @@ import {
 } from '@octokit/webhooks-types'
 import { BaseAction } from '.'
 import { EmbedColors } from '../embed-colors'
-import { GitHubUserMapManager } from '../manager/github-user'
 import { DiscordEmbedAuthor, DiscordEmbedField } from '@book000/node-utils'
-import { createEmbed } from '../utils'
+import { createEmbed, getUsersMentions } from '../utils'
 import { createPatch } from 'diff'
 
 export class IssuesAction extends BaseAction<IssuesEvent> {
@@ -119,7 +118,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
   private async onAssigned(event: IssuesAssignedEvent): Promise<void> {
     const issue = event.issue
 
-    const mentions = await this.getUsersMentions(issue.assignees)
+    const mentions = await getUsersMentions(event.sender, issue.assignees)
     const assigneesText = this.getUsersText(issue.assignees)
 
     const embed = createEmbed(this.eventName, this.getColor(), {
@@ -149,7 +148,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
   private async onUnassigned(event: IssuesUnassignedEvent): Promise<void> {
     const issue = event.issue
 
-    const mentions = await this.getUsersMentions(issue.assignees)
+    const mentions = await getUsersMentions(event.sender, issue.assignees)
     const assigneesText = this.getUsersText(issue.assignees)
 
     const embed = createEmbed(this.eventName, this.getColor(), {
@@ -500,7 +499,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
    * @returns メンション先
    */
   private async getMentions(): Promise<Promise<string>> {
-    const { action, issue } = this.event
+    const { action, issue, sender } = this.event
 
     // アサイン処理
     // プルリク作成時、再オープン時、アサイン時にメンションを付ける
@@ -510,7 +509,7 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
       action === 'opened' || action === 'reopened' || action === 'assigned'
 
     const assigneesMentions = isNeedAssigneeMention
-      ? await this.getUsersMentions(assignees)
+      ? await getUsersMentions(sender, assignees)
       : ''
 
     return assigneesMentions
@@ -534,34 +533,6 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
         }
         return reviewer.name
       })
-      .join(' ')
-  }
-
-  /**
-   * GitHubのユーザーからDiscordのユーザーに変換し、メンション一覧を作成する
-   *
-   * @param userOrTeams User と Team の配列
-   * @returns Discordのメンション一覧
-   */
-  private async getUsersMentions(
-    userOrTeams: (User | Team)[]
-  ): Promise<string> {
-    const githubUserMap = new GitHubUserMapManager()
-    await githubUserMap.load()
-    return userOrTeams
-      .map((reviewer) => {
-        if (!('login' in reviewer)) {
-          return null
-        }
-
-        const discordUserId = githubUserMap.get(reviewer.id)
-        if (!discordUserId) {
-          return null
-        }
-
-        return `<@${discordUserId}>`
-      })
-      .filter((mention) => mention !== null)
       .join(' ')
   }
 

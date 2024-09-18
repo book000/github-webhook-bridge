@@ -57,7 +57,9 @@ export class PullRequestReviewAction extends BaseAction<PullRequestReviewEvent> 
       author: this.getAuthor(),
     })
 
-    const mentions = await getUsersMentions([event.pull_request.user])
+    const mentions = await getUsersMentions(event.sender, [
+      event.pull_request.user,
+    ])
     // レビューで変更がリクエストされた場合はメンションする
     const mentionsForChangesRequested =
       state === 'changes_requested' ? mentions : ''

@@ -19,15 +19,19 @@ describe('Get embed', () => {
 
     jest.spyOn(utils, 'isSignatureValid').mockReturnValue(true)
 
-    jest.spyOn(utils, 'getUsersMentions').mockImplementation((userOrTeams) => {
-      return Promise.resolve(
-        userOrTeams
-          .map((userOrTeam) => {
-            return 'login' in userOrTeam ? `@${userOrTeam.login}` : null
-          })
-          .join(' ')
-      )
-    })
+    jest
+      .spyOn(utils, 'getUsersMentions')
+      .mockImplementation((sender, userOrTeams) => {
+        return Promise.resolve(
+          userOrTeams
+            .map((userOrTeam) => {
+              return 'login' in userOrTeam && userOrTeam.id !== sender.id
+                ? `@${userOrTeam.login}`
+                : null
+            })
+            .join(' ')
+        )
+      })
   })
 
   it.each(
