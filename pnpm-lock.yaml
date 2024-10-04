@@ -18,11 +18,11 @@ importers:
         specifier: 10.0.1
         version: 10.0.1
       '@octokit/webhooks-examples':
-        specifier: 7.5.1
-        version: 7.5.1
+        specifier: 7.6.1
+        version: 7.6.1
       '@octokit/webhooks-types':
-        specifier: 7.5.1
-        version: 7.5.1
+        specifier: 7.6.1
+        version: 7.6.1
       '@types/diff':
         specifier: 5.2.2
         version: 5.2.2
@@ -615,11 +615,11 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@octokit/webhooks-examples@7.5.1':
-    resolution: {integrity: sha512-8AI8J9y1J8r3KJ37mchoM5iWng+KwxqEKYO3Mw08J0/on8kB5ueo6kYv9Rue8OrPRE9+Frr0ul2j8gzTxXpA9Q==}
+  '@octokit/webhooks-examples@7.6.1':
+    resolution: {integrity: sha512-De6U3XB6O3DtCa7bKgCMzTHdeopqqZ6SNivMYJnK65ierKL1AnNIA0tkRYCRS7lwGT792d+Ps1WbfHlso6MynQ==}
 
-  '@octokit/webhooks-types@7.5.1':
-    resolution: {integrity: sha512-1dozxWEP8lKGbtEu7HkRbK1F/nIPuJXNfT0gd96y6d3LcHZTtRtlf8xz3nicSJfesADxJyDh+mWBOsdLkqgzYw==}
+  '@octokit/webhooks-types@7.6.1':
+    resolution: {integrity: sha512-S8u2cJzklBC0FgTwWVLaM8tMrDuDMVE4xiTK4EYXM9GntyvrdbSoxqDQa+Fh57CCNApyIpyeqPhhFEmHPfrXgw==}
 
   '@rollup/pluginutils@4.2.1':
     resolution: {integrity: sha512-iKnFXr7NkdZAIHiIWE+BX5ULi/ucVFYWD6TbAV+rZctiRTY2PL6tsIKhoIOaoskiWAkgu+VsbXgUVDNLHf+InQ==}
@@ -3817,11 +3817,11 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.17.1
 
-  '@octokit/webhooks-examples@7.5.1':
+  '@octokit/webhooks-examples@7.6.1':
     dependencies:
-      '@octokit/webhooks-types': 7.5.1
+      '@octokit/webhooks-types': 7.6.1
 
-  '@octokit/webhooks-types@7.5.1': {}
+  '@octokit/webhooks-types@7.6.1': {}
 
   '@rollup/pluginutils@4.2.1':
     dependencies:
