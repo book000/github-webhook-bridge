@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       puppeteer-core:
-        specifier: 23.10.3
-        version: 23.10.3
+        specifier: 23.10.4
+        version: 23.10.4
 
 packages:
 
@@ -226,8 +226,8 @@ packages:
   pump@3.0.2:
     resolution: {integrity: sha512-tUPXtzlGM8FE3P0ZL6DVs/3P58k9nk8/jZeQCurTJylQA8qFYzHFfhBJkuqyE0FifOsQ0uKWekiZ5g8wtr28cw==}
 
-  puppeteer-core@23.10.3:
-    resolution: {integrity: sha512-7JG8klL2qHLyH8t2pOmM9zgykhaulUf7cxnmmqupjdwGfNMiGaYehQka20iUB9R/fwVyG8mFMZcsmw1FHrgKVw==}
+  puppeteer-core@23.10.4:
+    resolution: {integrity: sha512-pQAY7+IFAndWDkDodsQGguW1/ifV5OMlGXJDspwtK49Asb7poJZ/V5rXJxVSpq57bWrJasjQBZ1X27z1oWVq4Q==}
     engines: {node: '>=18'}
 
   queue-tick@1.0.1:
@@ -575,7 +575,7 @@ snapshots:
       end-of-stream: 1.4.4
       once: 1.4.0
 
-  puppeteer-core@23.10.3:
+  puppeteer-core@23.10.4:
     dependencies:
       '@puppeteer/browsers': 2.6.1
       chromium-bidi: 0.8.0(devtools-protocol@0.0.1367902)
