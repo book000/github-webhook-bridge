@@ -1,33 +1,17 @@
 {
   "name": "github-webhook-bridge",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:1-18",
+  "remoteUser": "node",
   "otherPortsAttributes": {
     "onAutoForward": "silent"
   },
-  "postCreateCommand": "pnpm install",
-  "waitFor": "postCreateCommand",
+  "postCreateCommand": "sudo npm uninstall -g pnpm yarn && sudo chown node node_modules .pnpm-store && sudo npm install -g corepack@latest && sudo corepack enable && corepack install && pnpm install && pnpm approve-builds",
+  "waitFor": "postStartCommand",
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
+    "source=pnpm-store,target=${containerWorkspaceFolder}/.pnpm-store,type=volume"
+  ],
   "customizations": {
-    "extensions": [
-      "esbenp.prettier-vscode"
-    ],
-    "vscode": {
-      "extensions": [
-        "esbenp.prettier-vscode"
-      ],
-      "settings": {
-        "[typescript]": {
-          "editor.codeActionsOnSave": {
-            "source.organizeImports": "never"
-          },
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
-        },
-        "editor.formatOnSave": true,
-        "git.branchProtection": [
-          "main",
-          "master"
-        ]
-      }
-    },
     "settings": {
       "[typescript]": {
         "editor.codeActionsOnSave": {
@@ -35,11 +19,22 @@
         },
         "editor.defaultFormatter": "esbenp.prettier-vscode"
       },
-      "editor.formatOnSave": true,
-      "git.branchProtection": [
-        "main",
-        "master"
-      ]
-    }
+      "git.branchProtection": ["main", "master"],
+      "editor.formatOnSave": true
+    },
+    "vscode": {
+      "settings": {
+        "[typescript]": {
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "never"
+          },
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "git.branchProtection": ["main", "master"],
+        "editor.formatOnSave": true
+      },
+      "extensions": ["esbenp.prettier-vscode"]
+    },
+    "extensions": ["esbenp.prettier-vscode"]
   }
 }
