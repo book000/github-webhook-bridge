@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@book000/eslint-config": "1.8.12",
-    "@book000/node-utils": "1.14.0",
+    "@book000/node-utils": "1.14.3",
     "@fastify/cors": "10.1.0",
     "@octokit/webhooks-examples": "7.6.1",
     "@octokit/webhooks-types": "7.6.1",
