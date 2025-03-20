@@ -12,8 +12,8 @@ importers:
         specifier: 1.8.28
         version: 1.8.28(eslint-config-standard@17.1.0(eslint-plugin-import@2.31.0(@typescript-eslint/parser@8.26.1(eslint@9.22.0)(typescript@5.8.2))(eslint@9.22.0))(eslint-plugin-n@17.16.2(eslint@9.22.0))(eslint-plugin-promise@7.2.1(eslint@9.22.0))(eslint@9.22.0))(eslint@9.22.0)(typescript@5.8.2)
       '@book000/node-utils':
-        specifier: 1.14.40
-        version: 1.14.40
+        specifier: 1.14.41
+        version: 1.14.41
       '@fastify/cors':
         specifier: 11.0.0
         version: 11.0.0
@@ -257,8 +257,8 @@ packages:
       eslint: 9.22.0
       eslint-config-standard: 17.1.0
 
-  '@book000/node-utils@1.14.40':
-    resolution: {integrity: sha512-b+khaD9HdVqI0eR0pViKXz7NgQoAfEgNQSDrsOVmxv3CIx9TwXc8sQ+hdXKNzcDjvD9VSivr0lP4+h3R9y379Q==}
+  '@book000/node-utils@1.14.41':
+    resolution: {integrity: sha512-bp346j9AR4rnkvv8i0snY/sD0+rm2XJMctp5eK34XGzdy+CdTsA/dxpeSCxhkFoOMO66IqOfww24DIvQV/xkCg==}
 
   '@colors/colors@1.6.0':
     resolution: {integrity: sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA==}
@@ -957,9 +957,6 @@ packages:
 
   avvio@9.1.0:
     resolution: {integrity: sha512-fYASnYi600CsH/j9EQov7lECAniYiBFiiAtBNuZYLA2leLe9qOvZzqYHFjtIj6gD2VMoMLP14834LFWvr4IfDw==}
-
-  axios@1.8.3:
-    resolution: {integrity: sha512-iP4DebzoNlP/YN2dpwCgb8zoCmhtkajzS48JvwmkSkXvPI3DHc7m+XYL5tGnSlJtR6nImXZmdCuN5aP8dh1d8A==}
 
   axios@1.8.4:
     resolution: {integrity: sha512-eBSYY4Y68NNlHbHBMdeDmKNtDgXWhQsJcGqzO3iLUM0GraQFSS9cVgPX5I9b3lbdFKyYoAEGAZF1DwhTaljNAw==}
@@ -3488,7 +3485,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@book000/node-utils@1.14.40':
+  '@book000/node-utils@1.14.41':
     dependencies:
       axios: 1.8.4
       cycle: 1.0.3
@@ -4310,14 +4307,6 @@ snapshots:
     dependencies:
       '@fastify/error': 4.1.0
       fastq: 1.19.1
-
-  axios@1.8.3:
-    dependencies:
-      follow-redirects: 1.15.9
-      form-data: 4.0.2
-      proxy-from-env: 1.1.0
-    transitivePeerDependencies:
-      - debug
 
   axios@1.8.4:
     dependencies:
