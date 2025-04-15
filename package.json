@@ -37,7 +37,7 @@
     "@octokit/webhooks-types": "7.6.1",
     "@types/diff": "7.0.2",
     "@types/jest": "29.5.14",
-    "@types/node": "22.14.0",
+    "@types/node": "22.14.1",
     "@vercel/node": "5.1.14",
     "axios": "1.8.4",
     "diff": "7.0.0",
