@@ -1,6 +1,6 @@
 import fastify, { FastifyReply, FastifyRequest } from 'fastify'
 import cors from '@fastify/cors'
-import { Schema } from '@octokit/webhooks-types'
+import { Schema, WebhookEventName } from '@octokit/webhooks-types'
 import { Discord, Logger } from '@book000/node-utils'
 import { isSignatureValid } from './utils'
 import { GWBEnvironment } from './environments'
@@ -46,7 +46,11 @@ async function hook(
   if (
     'sender' in request.body &&
     request.body.sender?.id &&
-    muteManager.isMuted(request.body.sender.id)
+    muteManager.isMuted(
+      request.body.sender.id,
+      eventName,
+      'action' in request.body ? request.body.action : null
+    )
   ) {
     await reply.status(200).send({
       message: 'Muted user',
@@ -74,7 +78,7 @@ async function hook(
     }
   }
 
-  const action = getAction(discord, eventName, request.body)
+  const action = getAction(discord, eventName as WebhookEventName, request.body)
   try {
     await action.run()
   } catch (error) {
