@@ -52,7 +52,11 @@ export class MuteManager extends BaseSetManager<MuteRecord> {
    * @param userId GitHub のユーザー ID
    * @returns ミュートしているかどうか
    */
-  public isMuted(userId: number, eventName: string, action: string | null): boolean {
+  public isMuted(
+    userId: number,
+    eventName: string,
+    action: string | null
+  ): boolean {
     if (!this.loaded) throw new Error('not loaded')
 
     const record = [...this.data].find((record) => record.userId === userId)
@@ -69,19 +73,14 @@ export class MuteManager extends BaseSetManager<MuteRecord> {
         return event.actions.includes(action)
       })
     }
-    if (record.type === 'exclude') {
-      // 指定したイベントを除いてミュートする場合は、対象のイベントが含まれていないかどうかをチェック
-      return !record.events.some((event) => {
-        if (event.eventName !== eventName) return false
-        // actions が null の場合は全てのアクションを対象とする
-        if (event.actions === null) return false
-        // actions が null でない場合は、指定されたアクションが含まれているかどうかをチェック
-        if (action === null) return true // action が null の場合はミュートする
-        return event.actions.includes(action)
-      })
-    }
-
-    // それ以外の場合はミュートしない
-    return false
+    // 指定したイベントを除いてミュートする場合は、対象のイベントが含まれていないかどうかをチェック
+    return !record.events.some((event) => {
+      if (event.eventName !== eventName) return false
+      // actions が null の場合は全てのアクションを対象とする
+      if (event.actions === null) return false
+      // actions が null でない場合は、指定されたアクションが含まれているかどうかをチェック
+      if (action === null) return true // action が null の場合はミュートする
+      return event.actions.includes(action)
+    })
   }
 }

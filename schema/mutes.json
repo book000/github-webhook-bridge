@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MuteRecord",
+  "type": "object",
+  "properties": {
+    "userId": {
+      "type": "integer",
+      "description": "GitHub のユーザー ID"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["include", "exclude", "all"],
+      "description": "ミュート方式\n\n- `include` : 指定したイベントのみミュート\n- `exclude` : 指定したイベントを除いてミュート\n- `all` : 全てのイベントをミュート"
+    },
+    "events": {
+      "type": "array",
+      "description": "対象のイベントのリスト",
+      "items": {
+        "$ref": "#/definitions/MuteEvent"
+      }
+    }
+  },
+  "required": ["userId", "type", "events"],
+  "additionalProperties": false,
+  "definitions": {
+    "MuteEvent": {
+      "type": "object",
+      "properties": {
+        "eventName": {
+          "type": "string",
+          "description": "イベントの名前"
+        },
+        "actions": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "イベントのアクション"
+        }
+      },
+      "required": ["eventName", "actions"],
+      "additionalProperties": false
+    }
+  }
+}
