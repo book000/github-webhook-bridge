@@ -55,4 +55,19 @@ export const EmbedColors = {
   Push: 0x2e_cc_71, // Green
   Ping: 0x95_a5_a6, // Grayish Blue
   Public: 0x2e_cc_71, // Green
+
+  // Discussion Colors
+  DiscussionCreated: 0x2e_cc_71, // Green
+  DiscussionEdited: 0x34_98_db, // Blue
+  DiscussionDeleted: 0xe7_4c_3c, // Red
+  DiscussionPinned: 0x2e_cc_71, // Green
+  DiscussionUnpinned: 0xe7_4c_3c, // Red
+  DiscussionLabeled: 0x34_98_db, // Blue
+  DiscussionUnlabeled: 0x34_98_db, // Blue
+  DiscussionTransferred: 0x95_a5_a6, // Grayish Blue
+  DiscussionCategoryChanged: 0x34_98_db, // Blue
+  DiscussionAnswered: 0x2e_cc_71, // Green
+  DiscussionUnanswered: 0xe7_4c_3c, // Red
+  DiscussionLocked: 0x7f_8c_8d, // Gray
+  DiscussionUnlocked: 0x7f_8c_8d, // Gray
 } as const
