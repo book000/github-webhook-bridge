@@ -1,10 +1,76 @@
 # Sample Discord message
 
+## discussion - answered
+
+![1](discussion/answered/1.png)
+
+## discussion - category_changed
+
+![2](discussion/category_changed/2.png)
+
+## discussion - created
+
+![0](discussion/created/0.png)
+![3](discussion/created/3.png)
+
+## discussion - edited
+
+![4](discussion/edited/4.png)
+![5](discussion/edited/5.png)
+
+## discussion - labeled
+
+![6](discussion/labeled/6.png)
+![7](discussion/labeled/7.png)
+
+## discussion - locked
+
+![8](discussion/locked/8.png)
+![9](discussion/locked/9.png)
+
+## discussion - pinned
+
+![10](discussion/pinned/10.png)
+
+## discussion - transferred
+
+![11](discussion/transferred/11.png)
+
+## discussion - unanswered
+
+![12](discussion/unanswered/12.png)
+
+## discussion - unlabeled
+
+![13](discussion/unlabeled/13.png)
+
+## discussion - unlocked
+
+![14](discussion/unlocked/14.png)
+
 ## fork
 
 ![0](fork/0.png)
 ![1](fork/1.png)
 ![2](fork/2.png)
+
+## issue_comment - created
+
+![0](issue_comment/created/0.png)
+![1](issue_comment/created/1.png)
+![2](issue_comment/created/2.png)
+![3](issue_comment/created/3.png)
+![4](issue_comment/created/4.png)
+
+## issue_comment - deleted
+
+![5](issue_comment/deleted/5.png)
+![6](issue_comment/deleted/6.png)
+
+## issue_comment - edited
+
+![7](issue_comment/edited/7.png)
+![8](issue_comment/edited/8.png)
 
 ## issues - assigned
 
@@ -74,30 +140,18 @@
 
 ![28](issues/unpinned/28.png)
 
-## issue_comment - created
-
-![0](issue_comment/created/0.png)
-![1](issue_comment/created/1.png)
-![2](issue_comment/created/2.png)
-![3](issue_comment/created/3.png)
-![4](issue_comment/created/4.png)
-
-## issue_comment - deleted
-
-![5](issue_comment/deleted/5.png)
-![6](issue_comment/deleted/6.png)
-
-## issue_comment - edited
-
-![7](issue_comment/edited/7.png)
-![8](issue_comment/edited/8.png)
-
 ## ping
 
 ![0](ping/0.png)
 ![1](ping/1.png)
 ![2](ping/2.png)
 ![3](ping/3.png)
+
+## public
+
+![0](public/0.png)
+![1](public/1.png)
+![2](public/2.png)
 
 ## pull_request - assigned
 
@@ -143,13 +197,13 @@
 ![18](pull_request/reopened/18.png)
 ![19](pull_request/reopened/19.png)
 
-## pull_request - review_requested
-
-![21](pull_request/review_requested/21.png)
-
 ## pull_request - review_request_removed
 
 ![20](pull_request/review_request_removed/20.png)
+
+## pull_request - review_requested
+
+![21](pull_request/review_requested/21.png)
 
 ## pull_request - unassigned
 
