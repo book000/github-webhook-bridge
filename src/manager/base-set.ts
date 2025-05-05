@@ -1,6 +1,7 @@
 import axios from 'axios'
 import fs from 'node:fs'
 import path from 'node:path'
+import { parse } from 'jsonc-parser'
 
 export abstract class BaseSetManager<T> {
   protected abstract readonly fileUrl: string | null
@@ -13,9 +14,10 @@ export abstract class BaseSetManager<T> {
     if (this.loaded) return
 
     if (this.fileUrl) {
-      const result = await axios.get(this.fileUrl, {
-        responseType: 'json',
+      const raw = await axios.get<string>(this.fileUrl, {
+        responseType: 'text',
       })
+      const result = parse(raw.data)
       if (!Array.isArray(result.data)) throw new Error('data is not array')
 
       this.data = new Set(result.data)

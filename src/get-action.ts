@@ -55,6 +55,7 @@ import {
   TeamAddEvent,
   TeamEvent,
   WatchEvent,
+  WebhookEventName,
   WorkflowDispatchEvent,
   WorkflowJobEvent,
   WorkflowRunEvent,
@@ -119,7 +120,11 @@ import { WorkflowJobAction } from './actions/workflow-job'
 import { WorkflowRunAction } from './actions/workflow-run'
 import { Discord } from '@book000/node-utils'
 
-export function getAction(discord: Discord, eventName: string, event: Schema) {
+export function getAction(
+  discord: Discord,
+  eventName: WebhookEventName,
+  event: Schema
+) {
   switch (eventName) {
     case 'branch_protection_rule': {
       return new BranchProtectionRuleAction(

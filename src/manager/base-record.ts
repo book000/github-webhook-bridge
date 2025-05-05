@@ -1,6 +1,7 @@
 import axios from 'axios'
 import fs from 'node:fs'
 import path from 'node:path'
+import { parse } from 'jsonc-parser'
 
 export abstract class BaseRecordManager<T extends string | number | symbol, U> {
   protected abstract readonly fileUrl: string | null
@@ -13,9 +14,10 @@ export abstract class BaseRecordManager<T extends string | number | symbol, U> {
     if (this.loaded) return
 
     if (this.fileUrl) {
-      const result = await axios.get(this.fileUrl, {
-        responseType: 'json',
+      const raw = await axios.get(this.fileUrl, {
+        responseType: 'text',
       })
+      const result = parse(raw.data)
       if (typeof result.data !== 'object') throw new Error('data is not object')
 
       this.data = result.data
