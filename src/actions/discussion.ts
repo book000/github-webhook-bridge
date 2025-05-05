@@ -130,7 +130,7 @@ export class DiscussionAction extends BaseAction<DiscussionEvent> {
         name: 'Body',
         value:
           '```diff\n' +
-          bodyDiff.substring(0, 1000) +
+          bodyDiff.slice(0, 1000) +
           (bodyDiff.length > 1000 ? '...' : '') +
           '\n```',
         inline: false,
@@ -267,8 +267,7 @@ export class DiscussionAction extends BaseAction<DiscussionEvent> {
     const { discussion } = event
     // changes.new_repository にアクセスして新しいリポジトリ情報を取得
     const toRepo =
-      event.changes?.new_repository?.full_name ||
-      this.event.repository.full_name
+      event.changes.new_repository.full_name || this.event.repository.full_name
 
     const embed = createEmbed(this.eventName, this.getColor(), {
       title: this.getTitle(),
@@ -304,7 +303,7 @@ export class DiscussionAction extends BaseAction<DiscussionEvent> {
       fields: [
         {
           name: 'From Category',
-          value: changes?.category?.from?.name || '*Unknown*',
+          value: changes.category.from.name || '*Unknown*',
           inline: true,
         },
         {
@@ -378,8 +377,8 @@ export class DiscussionAction extends BaseAction<DiscussionEvent> {
 
     // lock_reasonがない場合があるため、条件付きでフィールドを作成
     const fields: DiscordEmbedField[] = []
-    const lockReason = 'reason' in event ? (event as any).reason : undefined
-    if (lockReason) {
+    if ('reason' in event) {
+      const lockReason = (event as { reason: string }).reason
       fields.push({
         name: 'Lock Reason',
         value: lockReason,
@@ -435,11 +434,10 @@ export class DiscussionAction extends BaseAction<DiscussionEvent> {
     const { action, discussion } = this.event
     switch (action) {
       case 'created': {
-        return (
-          discussion.body?.slice(0, 500) +
-            (discussion.body && discussion.body.length > 500 ? '...' : '') ||
-          '*No description provided*'
-        )
+        return discussion.body
+          ? discussion.body.slice(0, 500) +
+              (discussion.body.length > 500 ? '...' : '')
+          : '*No description provided*'
       }
       default: {
         return ''
