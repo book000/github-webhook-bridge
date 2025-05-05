@@ -18,9 +18,9 @@ export abstract class BaseSetManager<T> {
         responseType: 'text',
       })
       const result = parse(raw.data)
-      if (!Array.isArray(result.data)) throw new Error('data is not array')
+      if (!Array.isArray(result)) throw new Error('data is not array')
 
-      this.data = new Set(result.data)
+      this.data = new Set(result)
       this.loaded = true
       return
     }

@@ -46,7 +46,11 @@ async function hook(
   if (
     'sender' in request.body &&
     request.body.sender?.id &&
-    muteManager.isMuted(request.body.sender.id, eventName, 'action' in request.body ? request.body.action : null)
+    muteManager.isMuted(
+      request.body.sender.id,
+      eventName,
+      'action' in request.body ? request.body.action : null
+    )
   ) {
     await reply.status(200).send({
       message: 'Muted user',

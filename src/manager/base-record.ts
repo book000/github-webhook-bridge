@@ -18,9 +18,9 @@ export abstract class BaseRecordManager<T extends string | number | symbol, U> {
         responseType: 'text',
       })
       const result = parse(raw.data)
-      if (typeof result.data !== 'object') throw new Error('data is not object')
+      if (typeof result !== 'object') throw new Error('data is not object')
 
-      this.data = result.data
+      this.data = result
       this.loaded = true
       return
     }
