@@ -9,13 +9,13 @@ importers:
   .:
     devDependencies:
       puppeteer-core:
-        specifier: 24.7.2
-        version: 24.7.2
+        specifier: 24.8.0
+        version: 24.8.0
 
 packages:
 
-  '@puppeteer/browsers@2.10.2':
-    resolution: {integrity: sha512-i4Ez+s9oRWQbNjtI/3+jxr7OH508mjAKvza0ekPJem0ZtmsYHP3B5dq62+IaBHKaGCOuqJxXzvFLUhJvQ6jtsQ==}
+  '@puppeteer/browsers@2.10.3':
+    resolution: {integrity: sha512-iPpnFpX25gKIVsHsqVjHV+/GzW36xPgsscWkCnrrETndcdxNsXLdCrTwhkCJNR/FGWr122dJUBeyV4niz/j3TA==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -117,8 +117,8 @@ packages:
     resolution: {integrity: sha512-TllpMR/t0M5sqCXfj85i4XaAzxmS5tVA16dqvdkMwGmzI+dXLXnw3J+3Vdv7VKw+ThlTMboK6i9rnZ6Nntj5CQ==}
     engines: {node: '>= 14'}
 
-  devtools-protocol@0.0.1425554:
-    resolution: {integrity: sha512-uRfxR6Nlzdzt0ihVIkV+sLztKgs7rgquY/Mhcv1YNCWDh5IZgl5mnn2aeEnW5stYTE0wwiF4RYVz8eMEpV1SEw==}
+  devtools-protocol@0.0.1439962:
+    resolution: {integrity: sha512-jJF48UdryzKiWhJ1bLKr7BFWUQCEIT5uCNbDLqkQJBtkFxYzILJH44WN0PDKMIlGDN7Utb8vyUY85C3w4R/t2g==}
 
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
@@ -232,8 +232,8 @@ packages:
   pump@3.0.2:
     resolution: {integrity: sha512-tUPXtzlGM8FE3P0ZL6DVs/3P58k9nk8/jZeQCurTJylQA8qFYzHFfhBJkuqyE0FifOsQ0uKWekiZ5g8wtr28cw==}
 
-  puppeteer-core@24.7.2:
-    resolution: {integrity: sha512-P9pZyTmJqKODFCnkZgemCpoFA4LbAa8+NumHVQKyP5X9IgdNS1ZnAnIh1sMAwhF8/xEUGf7jt+qmNLlKieFw1Q==}
+  puppeteer-core@24.8.0:
+    resolution: {integrity: sha512-tDf2YKIo5kM5r0vOzT52+PTgN0bBZOA4OFgQaqYyfarrcXLLJ92wi/lSMe44hd+F+gk0gw9QsAzyRW8v6ra93w==}
     engines: {node: '>=18'}
 
   require-directory@2.1.1:
@@ -332,7 +332,7 @@ packages:
 
 snapshots:
 
-  '@puppeteer/browsers@2.10.2':
+  '@puppeteer/browsers@2.10.3':
     dependencies:
       debug: 4.4.0
       extract-zip: 2.0.1
@@ -400,9 +400,9 @@ snapshots:
 
   buffer-crc32@0.2.13: {}
 
-  chromium-bidi@4.1.1(devtools-protocol@0.0.1425554):
+  chromium-bidi@4.1.1(devtools-protocol@0.0.1439962):
     dependencies:
-      devtools-protocol: 0.0.1425554
+      devtools-protocol: 0.0.1439962
       mitt: 3.0.1
       zod: 3.24.3
 
@@ -430,7 +430,7 @@ snapshots:
       escodegen: 2.1.0
       esprima: 4.0.1
 
-  devtools-protocol@0.0.1425554: {}
+  devtools-protocol@0.0.1439962: {}
 
   emoji-regex@8.0.0: {}
 
@@ -561,12 +561,12 @@ snapshots:
       end-of-stream: 1.4.4
       once: 1.4.0
 
-  puppeteer-core@24.7.2:
+  puppeteer-core@24.8.0:
     dependencies:
-      '@puppeteer/browsers': 2.10.2
-      chromium-bidi: 4.1.1(devtools-protocol@0.0.1425554)
+      '@puppeteer/browsers': 2.10.3
+      chromium-bidi: 4.1.1(devtools-protocol@0.0.1439962)
       debug: 4.4.0
-      devtools-protocol: 0.0.1425554
+      devtools-protocol: 0.0.1439962
       typed-query-selector: 2.12.0
       ws: 8.18.2
     transitivePeerDependencies:
