@@ -40,7 +40,7 @@
     "@types/node": "22.15.17",
     "@vercel/node": "5.1.16",
     "axios": "1.9.0",
-    "diff": "8.0.0",
+    "diff": "8.0.1",
     "eslint": "9.26.0",
     "eslint-config-standard": "17.1.0",
     "eslint-plugin-import": "2.31.0",
