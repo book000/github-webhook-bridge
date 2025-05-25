@@ -39,8 +39,8 @@ importers:
         specifier: 1.9.0
         version: 1.9.0
       diff:
-        specifier: 8.0.1
-        version: 8.0.1
+        specifier: 8.0.2
+        version: 8.0.2
       eslint:
         specifier: 9.27.0
         version: 9.27.0
@@ -1260,8 +1260,8 @@ packages:
     resolution: {integrity: sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==}
     engines: {node: '>=0.3.1'}
 
-  diff@8.0.1:
-    resolution: {integrity: sha512-rEaM3KmVm78zE3dFZaop3aCQa2MTm+T4kcigUFLVU/KbOYdiY6JnL2g2puOYnct3QFw9pjZadaCbCZ1O8ArMlQ==}
+  diff@8.0.2:
+    resolution: {integrity: sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg==}
     engines: {node: '>=0.3.1'}
 
   doctrine@2.1.0:
@@ -3957,7 +3957,7 @@ snapshots:
 
   '@types/diff@8.0.0':
     dependencies:
-      diff: 8.0.1
+      diff: 8.0.2
 
   '@types/estree@1.0.7': {}
 
@@ -4583,7 +4583,7 @@ snapshots:
 
   diff@4.0.2: {}
 
-  diff@8.0.1: {}
+  diff@8.0.2: {}
 
   doctrine@2.1.0:
     dependencies:
