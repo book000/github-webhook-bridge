@@ -30,7 +30,7 @@
     "fix": "run-z fix:prettier,fix:eslint"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.9.3",
+    "@book000/eslint-config": "1.9.4",
     "@book000/node-utils": "1.18.12",
     "@fastify/cors": "11.0.1",
     "@octokit/webhooks-examples": "7.6.1",
