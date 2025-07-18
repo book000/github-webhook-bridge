@@ -2,12 +2,12 @@
 
 ## プロジェクト概要
 
-このプロジェクトは、GitHubのWebhookを受信してDiscordにメッセージを送信するNode.jsアプリケーションです。GitHubとDiscordの連携を強化し、より柔軟な通知システムを提供します。
+このプロジェクトは、GitHub の Webhook を受信して Discord にメッセージを送信する Node.js アプリケーションです。GitHub と Discord の連携を強化し、より柔軟な通知システムを提供します。
 
 ## 技術スタック
 
 - **言語**: TypeScript (厳密な型設定)
-- **Webフレームワーク**: Fastify
+- **Web フレームワーク**: Fastify
 - **テスト**: Jest + ts-jest
 - **コード品質**: ESLint (@book000/eslint-config) + Prettier
 - **パッケージマネージャー**: pnpm
@@ -17,59 +17,63 @@
 
 ## コーディング標準
 
-### TypeScript設定
+### TypeScript 設定
+
 - 厳密な型チェック（strict: true）
 - 未使用の変数・パラメータの検出
-- implicit returnの禁止
-- ESNext + CommonJSモジュール
+- implicit return の禁止
+- ESNext + CommonJS モジュール
 
-### コードフォーマット（Prettier設定）
+### コードフォーマット（Prettier 設定）
+
 ```yaml
 printWidth: 80
 tabWidth: 2
 useTabs: false
-semi: false                 # セミコロンなし
-singleQuote: true          # シングルクォート使用
-trailingComma: 'es5'       # ES5形式のトレイリングカンマ
+semi: false # セミコロンなし
+singleQuote: true # シングルクォート使用
+trailingComma: 'es5' # ES5 形式のトレイリングカンマ
 bracketSpacing: true
 arrowParens: 'always'
 endOfLine: lf
 ```
 
 ### ESLint
-- @book000/eslint-configを使用
-- standardスタイルベース
-- importの順序とPromiseの適切な処理
+
+- @book000/eslint-config を使用
+- standard スタイルベース
+- import の順序と Promise の適切な処理
 
 ## ファイル構成ルール
 
 ```
 src/
 ├── main.ts                 # アプリケーションのエントリーポイント
-├── actions/               # 各GitHubイベントのハンドラー
+├── actions/               # 各 GitHub イベントのハンドラー
 │   ├── index.ts          # アクション一覧のエクスポート
-│   ├── push.ts           # pushイベント処理
-│   ├── pull-request.ts   # PRイベント処理
+│   ├── push.ts           # push イベント処理
+│   ├── pull-request.ts   # PR イベント処理
 │   └── ...               # その他のイベント
 ├── manager/              # 各種管理機能
 │   └── mute.ts          # ミュート機能
 ├── tests/                # テストファイル（*.test.ts）
 ├── environments.ts       # 環境変数管理
 ├── get-action.ts        # アクション取得ロジック
-├── embed-colors.ts      # Discordの埋め込み色定義
+├── embed-colors.ts      # Discord の埋め込み色定義
 └── utils.ts             # 共通ユーティリティ
 ```
 
 ## 開発ガイドライン
 
-### GitHubWebhookハンドラーの作成
+### GitHub Webhook ハンドラーの作成
 
 1. **新しいイベントハンドラー作成時**:
+
    ```typescript
    // src/actions/new-event.ts
    import { WebhookEvent } from '@octokit/webhooks-types'
    import { Discord } from '@book000/node-utils'
-   
+
    export async function handleNewEvent(
      event: WebhookEvent,
      discord: Discord
@@ -79,14 +83,15 @@ src/
    ```
 
 2. **src/actions/index.ts に追加**:
+
    ```typescript
    export { handleNewEvent } from './new-event'
    ```
 
-### Discord連携パターン
+### Discord 連携パターン
 
 - **埋め込みメッセージ**: 構造化された情報表示
-- **色分け**: src/embed-colors.ts で定義された色を使用
+- **色分け**: 通知タイプごとに適宜定義し、適切な色を選定する。
 - **フィールド構造**: タイトル、説明、フィールド、フッターを適切に使用
 
 ### テスト作成ルール
@@ -94,9 +99,10 @@ src/
 1. **テストファイル命名**: `*.test.ts`
 2. **配置場所**: `src/tests/`
 3. **テスト構造**:
+
    ```typescript
    import { describe, expect, test } from '@jest/globals'
-   
+
    describe('機能名', () => {
      test('具体的なテストケース', () => {
        // テストロジック
@@ -105,11 +111,11 @@ src/
    })
    ```
 
-## コミットとPRの規約
+## コミットと PR の規約
 
 ### コミットメッセージ（Conventional Commits）
 
-**英語**でConventional Commitsの仕様に従う：
+**英語**で Conventional Commits の仕様に従う：
 
 ```
 <type>[optional scope]: <description>
@@ -119,7 +125,8 @@ src/
 [optional footer(s)]
 ```
 
-**Type例**:
+**Type 例**:
+
 - `feat`: 新機能
 - `fix`: バグ修正
 - `docs`: ドキュメント更新
@@ -129,18 +136,19 @@ src/
 - `chore`: その他のメンテナンス
 
 **例**:
+
 ```
 feat(webhook): add support for discussion events
 fix(discord): resolve embed color issue for PRs
 docs: update API documentation
 ```
 
-### PRタイトルとコミュニケーション
+### PR タイトルとコミュニケーション
 
-- **PRタイトル**: 英語でConventional Commits形式
-- **PR本文**: 日本語
+- **PR タイトル**: 英語で Conventional Commits 形式
+- **PR 本文**: 日本語
 - **レビューコメント**: 日本語
-- **Issue/PR内での会話**: 日本語
+- **Issue/PR 内での会話**: 日本語
 
 ## 開発コマンド
 
@@ -166,33 +174,36 @@ pnpm run fix
 
 ## 環境変数
 
-主要な環境変数は`src/environments.ts`で管理：
+主要な環境変数は `src/environments.ts` で管理：
 
-- `GITHUB_WEBHOOK_SECRET`: GitHubウェブフックの検証用シークレット
-- `DISCORD_WEBHOOK_URL`: Discord送信先URL
+- `GITHUB_WEBHOOK_SECRET`: GitHub ウェブフックの検証用シークレット
+- `DISCORD_WEBHOOK_URL`: Discord 送信先 URL
 
 ## コードレビュー観点
 
-1. **型安全性**: TypeScriptの型定義が適切か
+1. **型安全性**: TypeScript の型定義が適切か
 2. **エラーハンドリング**: 例外処理が適切に実装されているか
 3. **テスト**: 新機能に対応するテストが追加されているか
-4. **フォーマット**: PrettierとESLintが通るか
+4. **フォーマット**: Prettier と ESLint が通るか
 5. **パフォーマンス**: 非効率な処理がないか
 6. **セキュリティ**: ウェブフック検証が適切か
 
 ## 実装時の注意点
 
-### Webhookセキュリティ
-- X-Hub-Signatureの検証を必須とする
-- utils.tsの`isSignatureValid`関数を使用
+### Webhook セキュリティ
 
-### Discord連携
+- X-Hub-Signature の検証を必須とする
+- utils.ts の `isSignatureValid` 関数を使用
+
+### Discord 連携
+
 - レート制限を考慮した実装
 - 埋め込みメッセージの文字数制限に注意
 - エラー時の適切なフォールバック
 
 ### ミュート機能
-- MuteManagerを使用してユーザーのミュート状態を管理
+
+- MuteManager を使用してユーザーのミュート状態を管理
 - 各イベントハンドラーでミュート状態を確認
 
 ## 参考リソース
