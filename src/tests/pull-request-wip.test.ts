@@ -49,7 +49,7 @@ describe('PullRequest WIP functionality', () => {
   })
 
   describe('onEdited with WIP removal', () => {
-    it('should mention reviewers when WIP is removed from title', async () => {
+    it('should mention reviewers when WIP is removed from draft PR title', async () => {
       const event: PullRequestEditedEvent = {
         action: 'edited',
         number: 123,
@@ -62,6 +62,7 @@ describe('PullRequest WIP functionality', () => {
           id: 1,
           number: 123,
           title: 'Fix important bug',
+          draft: true,
           html_url: 'https://github.com/owner/repo/pull/123',
           requested_reviewers: [
             {
@@ -106,6 +107,61 @@ describe('PullRequest WIP functionality', () => {
       )
     })
 
+    it('should not mention reviewers when WIP is removed from non-draft PR title', async () => {
+      const event: PullRequestEditedEvent = {
+        action: 'edited',
+        number: 123,
+        changes: {
+          title: {
+            from: 'WIP: Fix important bug',
+          },
+        },
+        pull_request: {
+          id: 1,
+          number: 123,
+          title: 'Fix important bug',
+          draft: false,
+          html_url: 'https://github.com/owner/repo/pull/123',
+          requested_reviewers: [
+            {
+              id: 1,
+              login: 'reviewer1',
+              type: 'User',
+            },
+            {
+              id: 2,
+              login: 'reviewer2',
+              type: 'User',
+            },
+          ],
+        } as any,
+        sender: {
+          id: 99,
+          login: 'author',
+          type: 'User',
+        } as any,
+        repository: {
+          full_name: 'owner/repo',
+        } as any,
+      }
+
+      const mockDiscord = {} as Discord
+      const action = new PullRequestAction(mockDiscord, 'pull_request', event)
+      await action.run()
+
+      // Should not call getUsersMentions for non-draft PRs
+      expect(mockGetUsersMentions).not.toHaveBeenCalled()
+
+      // Should send message without mentions
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        'owner/repo#123-edited',
+        expect.objectContaining({
+          content: undefined,
+          embeds: expect.any(Array),
+        })
+      )
+    })
+
     it('should not mention reviewers when title changes but WIP is not removed', async () => {
       const event: PullRequestEditedEvent = {
         action: 'edited',
@@ -119,6 +175,7 @@ describe('PullRequest WIP functionality', () => {
           id: 1,
           number: 123,
           title: 'Fix really important bug',
+          draft: true,
           html_url: 'https://github.com/owner/repo/pull/123',
           requested_reviewers: [
             {
@@ -168,6 +225,7 @@ describe('PullRequest WIP functionality', () => {
           id: 1,
           number: 123,
           title: 'WIP: Fix important bug',
+          draft: true,
           html_url: 'https://github.com/owner/repo/pull/123',
           requested_reviewers: [
             {

@@ -417,8 +417,9 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
         inline: true,
       })
 
-      // WIPがタイトルから削除された場合、レビュアーにメンションする
+      // ドラフトPRでWIPがタイトルから削除された場合、レビュアーにメンションする
       if (
+        pullRequest.draft &&
         this.isWipTitle(changes.title.from) &&
         !this.isWipTitle(pullRequest.title)
       ) {
@@ -470,7 +471,7 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       fields,
     })
 
-    // WIPが削除された場合はレビュアーにメンションを含める
+    // ドラフトPRでWIPが削除された場合はレビュアーにメンションを含める
     const mentions = shouldMentionReviewers
       ? await getUsersMentions(event.sender, pullRequest.requested_reviewers)
       : undefined
