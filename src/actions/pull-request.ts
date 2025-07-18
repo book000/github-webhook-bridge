@@ -401,6 +401,8 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
     const changes = event.changes
 
     const fields: DiscordEmbedField[] = []
+    let shouldMentionReviewers = false
+
     if ('title' in changes && changes.title) {
       const titleDiff = createPatch(
         'title',
@@ -414,6 +416,14 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
         value: '```diff\n' + titleDiff + '\n```',
         inline: true,
       })
+
+      // WIPがタイトルから削除された場合、レビュアーにメンションする
+      if (
+        this.isWipTitle(changes.title.from) &&
+        !this.isWipTitle(pullRequest.title)
+      ) {
+        shouldMentionReviewers = true
+      }
     }
     if ('body' in changes && changes.body && pullRequest.body) {
       const bodyDiff = createPatch(
@@ -460,8 +470,14 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
       fields,
     })
 
+    // WIPが削除された場合はレビュアーにメンションを含める
+    const mentions = shouldMentionReviewers
+      ? await getUsersMentions(event.sender, pullRequest.requested_reviewers)
+      : undefined
+
     const key = `${this.event.repository.full_name}#${pullRequest.number}-${this.event.action}`
     return this.sendMessage(key, {
+      content: mentions,
       embeds: [embed],
     })
   }
@@ -767,6 +783,23 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
         return reviewer.name
       })
       .join(' ')
+  }
+
+  /**
+   * タイトルにWIP（Work In Progress）が含まれているかを判定する
+   *
+   * @param title PRのタイトル
+   * @returns WIPが含まれている場合はtrue
+   */
+  private isWipTitle(title: string): boolean {
+    const wipPatterns = [
+      /\bwip\b/i, // 単語としてのWIP
+      /\[wip\]/i, // [WIP]
+      /wip:/i, // WIP:
+      /^wip\s/i, // 行頭のWIP + 空白
+    ]
+
+    return wipPatterns.some((pattern) => pattern.test(title))
   }
 
   /**
