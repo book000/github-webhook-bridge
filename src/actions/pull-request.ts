@@ -197,7 +197,10 @@ export class PullRequestAction extends BaseAction<PullRequestEvent> {
   private async onAssigned(event: PullRequestAssignedEvent): Promise<void> {
     const pullRequest = event.pull_request
 
-    const mentions = await getUsersMentions(event.sender, [event.assignee])
+    // ドラフトPRの場合はメンションしない
+    const mentions = pullRequest.draft
+      ? undefined
+      : await getUsersMentions(event.sender, [event.assignee])
     const assigneesText = this.getUsersText(pullRequest.assignees)
 
     const embed = createEmbed(this.eventName, this.getColor(), {
