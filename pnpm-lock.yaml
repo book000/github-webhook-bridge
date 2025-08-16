@@ -33,8 +33,8 @@ importers:
         specifier: 22.17.1
         version: 22.17.1
       '@vercel/node':
-        specifier: 5.3.11
-        version: 5.3.11
+        specifier: 5.3.12
+        version: 5.3.12
       axios:
         specifier: 1.11.0
         version: 1.11.0
@@ -945,8 +945,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@vercel/build-utils@11.0.0':
-    resolution: {integrity: sha512-jeBQHHOVqTgIMynVLtGUhf+Qf2Q0K1C/luZP7wuUM9veTeTMUSjju6HtpuJE5yuxre0rIogKRbKjvRXrAsbOIg==}
+  '@vercel/build-utils@11.0.1':
+    resolution: {integrity: sha512-eEzx3RVyqOTbf+XLmX8fsW7UGlVhN4W1MSBcqvkbtK2mtM1sHdXLv/xDjc5akhISJqZ9uW6UmyKVP+XpdWgfCA==}
 
   '@vercel/error-utils@2.0.3':
     resolution: {integrity: sha512-CqC01WZxbLUxoiVdh9B/poPbNpY9U+tO1N9oWHwTl5YAZxcqXmmWJ8KNMFItJCUUWdY3J3xv8LvAuQv2KZ5YdQ==}
@@ -956,8 +956,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@vercel/node@5.3.11':
-    resolution: {integrity: sha512-mXywAl778oXpuQZgdqf8SSO/AH+fwQ2x89ucbbm72Xa+pXhvMKorkxZ10Modo2wQAIta9xRoL9l5tkbC8ESi0g==}
+  '@vercel/node@5.3.12':
+    resolution: {integrity: sha512-IcnV+IMeccnnm6YhbMvorYlUz853EI443Ynof1NoN7YsiAcpaqTDsTyxDi064wc9BYBusGvqaPSVurOlcXehZg==}
 
   '@vercel/static-config@3.1.1':
     resolution: {integrity: sha512-IRtKnm9N1Uqd2ayIbLPjRtdwcl1GTWvqF1PuEVNm9O43kmoI+m9VpGlW8oga+5LQq1LmJ2Y67zHr7NbjrH1rrw==}
@@ -4328,7 +4328,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@vercel/build-utils@11.0.0': {}
+  '@vercel/build-utils@11.0.1': {}
 
   '@vercel/error-utils@2.0.3': {}
 
@@ -4351,13 +4351,13 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/node@5.3.11':
+  '@vercel/node@5.3.12':
     dependencies:
       '@edge-runtime/node-utils': 2.3.0
       '@edge-runtime/primitives': 4.1.0
       '@edge-runtime/vm': 3.2.0
       '@types/node': 16.18.11
-      '@vercel/build-utils': 11.0.0
+      '@vercel/build-utils': 11.0.1
       '@vercel/error-utils': 2.0.3
       '@vercel/nft': 0.29.2
       '@vercel/static-config': 3.1.1
