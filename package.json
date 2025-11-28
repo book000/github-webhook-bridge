@@ -38,7 +38,7 @@
     "@types/diff": "8.0.0",
     "@types/jest": "30.0.0",
     "@types/node": "24.10.1",
-    "@vercel/node": "5.5.10",
+    "@vercel/node": "5.5.11",
     "axios": "1.13.2",
     "diff": "8.0.2",
     "eslint": "9.39.1",
