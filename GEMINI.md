@@ -15,7 +15,23 @@
 - 日本語と英数字の間には半角スペースを入れる。
 
 ## プロジェクト概要
-- 目的: This project is a Node.js application for receiving and parsing GitHub Webhooks and sending messages to Discord. It enhances the integration between GitHub and Discord and provides a more flexible not...
+Receive and parse GitHub Webhooks and send messages to Discord. Provides flexible notification system bridging GitHub and Discord.
+
+### 技術スタック
+- **言語**: TypeScript
+- **フレームワーク**: Fastify, Express
+- **パッケージマネージャー**: pnpm
+- **主要な依存関係**:
+  - fastify
+  - fastify-raw-body
+  - @fastify/cors
+  - h3
+  - @octokit/webhooks-types
+  - @octokit/webhooks-examples
+  - axios
+  - diff
+  - jest
+  - @vercel/node
 
 ## コーディング規約
 - フォーマット: 既存設定（ESLint / Prettier / formatter）に従う。
@@ -23,12 +39,47 @@
 - コメント言語: 日本語
 - エラーメッセージ: 英語
 
-## 開発コマンド
+### 開発コマンド
 ```bash
-# 依存関係のインストール
+# install
 pnpm install
 
-# 開発 / テスト / Lint は README を確認してください
+# dev
+tsx watch ./src/main.ts
+
+# start
+tsx ./src/main.ts
+
+# build
+tsc -p tsconfig.json
+
+# vercel
+vercel dev
+
+# test
+jest --runInBand --passWithNoTests --detectOpenHandles --forceExit
+
+# lint
+run-z lint:prettier,lint:eslint,lint:tsc
+
+# lint:prettier
+prettier --check src
+
+# lint:eslint
+eslint . -c eslint.config.mjs
+
+# lint:tsc
+tsc
+
+# fix
+run-z fix:prettier,fix:eslint
+
+# fix:prettier
+prettier --write src
+
+# fix:eslint
+eslint . -c eslint.config.mjs --fix
+
 ```
 
 ## 注意事項
@@ -37,3 +88,12 @@ pnpm install
 - 既存のプロジェクトルールがある場合はそれを優先する。
 
 ## リポジトリ固有
+- **node_version**: 20+ (.node-version)
+- **package_manager**: pnpm@10.28.1
+- **preinstall**: pnpm only (enforces pnpm usage)
+- **testing**: Jest with ts-jest for TypeScript
+- **deployment**: Vercel serverless functions + Docker support
+- **git_hooks**: Likely Husky (standard in @book000 projects)
+- **license**: MIT
+- **npm_publish**: Private package
+- **special_tools**: run-z for task orchestration, tsx for TypeScript execution

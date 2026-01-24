@@ -25,3 +25,12 @@
 - ログに機密情報を出力しない。
 
 ## リポジトリ固有
+- **node_version**: 20+ (.node-version)
+- **package_manager**: pnpm@10.28.1
+- **preinstall**: pnpm only (enforces pnpm usage)
+- **testing**: Jest with ts-jest for TypeScript
+- **deployment**: Vercel serverless functions + Docker support
+- **git_hooks**: Likely Husky (standard in @book000 projects)
+- **license**: MIT
+- **npm_publish**: Private package
+- **special_tools**: run-z for task orchestration, tsx for TypeScript execution

@@ -1,37 +1,89 @@
-# CLAUDE.md
+# GitHub Copilot Instructions
 
+## プロジェクト概要
+Receive and parse GitHub Webhooks and send messages to Discord. Provides flexible notification system bridging GitHub and Discord.
 
-
-## プロジェクトの目的
-
-## 重要ルール
-- 会話言語: 日本語
+## 共通ルール
+- 会話は日本語で行う。
 - PR とコミットは Conventional Commits に従う。
 - PR タイトルとコミット本文の言語: PR タイトルは Conventional Commits 形式（英語推奨）。PR 本文は日本語。コミットは Conventional Commits 形式（description は日本語）。
-- コメント言語: 日本語
-- エラーメッセージ: 英語
 - 日本語と英数字の間には半角スペースを入れる。
 - 既存のプロジェクトルールがある場合はそれを優先する。
 
+## 技術スタック
+- 言語: TypeScript
+- パッケージマネージャー: pnpm
+
 ## コーディング規約
+- フォーマット: 既存設定（ESLint / Prettier / formatter）に従う。
+- 命名規則: 既存のコード規約に従う。
+- Lint / Format: 既存の Lint / Format 設定に従う。
+- コメント言語: 日本語
+- エラーメッセージ: 英語
+- TypeScript 使用時は strict 前提とし、`skipLibCheck` で回避しない。
+- 関数やインターフェースには docstring（JSDoc など）を記載する。
 
-- コードスタイルは既存コードに従う
-
-## プロジェクト構成
-
-プロジェクト構成については README を確認してください。
-
-## 開発コマンド
-
+### 開発コマンド
 ```bash
-# 依存関係のインストール
+# install
 pnpm install
 
-# 開発 / テスト / Lint は README を確認してください
+# dev
+tsx watch ./src/main.ts
+
+# start
+tsx ./src/main.ts
+
+# build
+tsc -p tsconfig.json
+
+# vercel
+vercel dev
+
+# test
+jest --runInBand --passWithNoTests --detectOpenHandles --forceExit
+
+# lint
+run-z lint:prettier,lint:eslint,lint:tsc
+
+# lint:prettier
+prettier --check src
+
+# lint:eslint
+eslint . -c eslint.config.mjs
+
+# lint:tsc
+tsc
+
+# fix
+run-z fix:prettier,fix:eslint
+
+# fix:prettier
+prettier --write src
+
+# fix:eslint
+eslint . -c eslint.config.mjs --fix
+
 ```
 
-## 新機能実装時の注意事項
+## テスト方針
+- 新機能や修正には適切なテストを追加する。
 
-- 既存のコード構造とパターンを維持する
-- 適切なテストを追加する
-- ドキュメントを更新する
+## セキュリティ / 機密情報
+- 認証情報やトークンはコミットしない。
+- ログに機密情報を出力しない。
+
+## ドキュメント更新
+- 実装確定後、同一コミットまたは追加コミットで更新する。
+- README、API ドキュメント、コメント等は常に最新状態を保つ。
+
+## リポジトリ固有
+- **node_version**: 20+ (.node-version)
+- **package_manager**: pnpm@10.28.1
+- **preinstall**: pnpm only (enforces pnpm usage)
+- **testing**: Jest with ts-jest for TypeScript
+- **deployment**: Vercel serverless functions + Docker support
+- **git_hooks**: Likely Husky (standard in @book000 projects)
+- **license**: MIT
+- **npm_publish**: Private package
+- **special_tools**: run-z for task orchestration, tsx for TypeScript execution

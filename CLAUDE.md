@@ -13,7 +13,23 @@
 - 前提・仮定・不確実性を明示し、仮定を事実のように扱わない。
 
 ## プロジェクト概要
-- 目的: This project is a Node.js application for receiving and parsing GitHub Webhooks and sending messages to Discord. It enhances the integration between GitHub and Discord and provides a more flexible not...
+Receive and parse GitHub Webhooks and send messages to Discord. Provides flexible notification system bridging GitHub and Discord.
+
+### 技術スタック
+- **言語**: TypeScript
+- **フレームワーク**: Fastify, Express
+- **パッケージマネージャー**: pnpm
+- **主要な依存関係**:
+  - fastify
+  - fastify-raw-body
+  - @fastify/cors
+  - h3
+  - @octokit/webhooks-types
+  - @octokit/webhooks-examples
+  - axios
+  - diff
+  - jest
+  - @vercel/node
 
 ## 重要ルール
 - 会話言語: 日本語
@@ -42,28 +58,90 @@
 - TypeScript 使用時は `skipLibCheck` で回避しない。
 - 関数やインターフェースには docstring（JSDoc など）を記載する。
 
+### コーディング規約
+- **eslint**: @book000/eslint-config (extended from standard)
+- **prettier**: YAML configuration (.prettierrc.yml)
+**typescript:**
+  - target: es2020
+  - module: commonjs
+  - strict: True
+  - strict_options: noImplicitAny, strictNullChecks, strictBindCallApply, noUnusedLocals, noUnusedParameters, noImplicitReturns, noFallthroughCasesInSwitch
+
 ## 相談ルール
 - Codex CLI: 実装レビュー、局所設計、整合性確認に使う。
 - Gemini CLI: 外部仕様や最新情報の確認に使う。
 - 他エージェントの指摘は黙殺せず、採用または理由を明記して不採用とする。
 
-## 開発コマンド
+### 開発コマンド
 ```bash
-# 依存関係のインストール
+# install
 pnpm install
 
-# 開発 / テスト / Lint は README を確認してください
+# dev
+tsx watch ./src/main.ts
+
+# start
+tsx ./src/main.ts
+
+# build
+tsc -p tsconfig.json
+
+# vercel
+vercel dev
+
+# test
+jest --runInBand --passWithNoTests --detectOpenHandles --forceExit
+
+# lint
+run-z lint:prettier,lint:eslint,lint:tsc
+
+# lint:prettier
+prettier --check src
+
+# lint:eslint
+eslint . -c eslint.config.mjs
+
+# lint:tsc
+tsc
+
+# fix
+run-z fix:prettier,fix:eslint
+
+# fix:prettier
+prettier --write src
+
+# fix:eslint
+eslint . -c eslint.config.mjs --fix
+
 ```
 
-## アーキテクチャと主要ファイル
+### プロジェクト構造
+
+**主要ディレクトリ:**
+- `src/ - Source code (actions, manager, tests, main entry)`
+- `api/ - Vercel serverless functions`
+- `docs/ - Documentation`
+- `generate-docs/ - Documentation generation tool`
+
+**重要ファイル:**
+- `package.json`
+- `tsconfig.json`
+- `eslint.config.mjs`
+- `.prettierrc.yml`
+- `Dockerfile`
+- `compose.yaml`
+- `vercel.json`
 
 ## 実装パターン
+- 既存のコードパターンに従う。
+- プロジェクト固有の実装ガイドラインがある場合はそれに従う。
 
 ## テスト
 - 方針: 変更内容に応じてテストを追加する。
 
 ## ドキュメント更新ルール
 - 更新タイミング: 実装確定後、同一コミットまたは追加コミットで更新する。
+- README、API ドキュメント、コメント等は常に最新状態を保つ。
 
 ## 作業チェックリスト
 
@@ -94,3 +172,12 @@ pnpm install
 6. PR 本文の崩れがないことを確認する。
 
 ## リポジトリ固有
+- **node_version**: 20+ (.node-version)
+- **package_manager**: pnpm@10.28.1
+- **preinstall**: pnpm only (enforces pnpm usage)
+- **testing**: Jest with ts-jest for TypeScript
+- **deployment**: Vercel serverless functions + Docker support
+- **git_hooks**: Likely Husky (standard in @book000 projects)
+- **license**: MIT
+- **npm_publish**: Private package
+- **special_tools**: run-z for task orchestration, tsx for TypeScript execution
