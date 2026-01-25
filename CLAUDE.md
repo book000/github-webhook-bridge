@@ -164,10 +164,12 @@ src/
 ### 推奨パターン
 
 - **新しい Action の追加**:
-  1. `src/actions/` に新しいファイルを作成
-  2. `BaseAction<T>` を継承
-  3. `execute()` メソッドを実装
-  4. `src/get-action.ts` の switch 文に追加
+  1. `src/actions/` に新しいファイルを作成する（例: `src/actions/push.ts` と同じ構成）
+  2. 既存の Action（例: `src/actions/push.ts`）と同様に `BaseAction<TEvent>` を継承したクラスを定義する
+  3. コンストラクタ引数と `super(...)` の呼び出しも、`push` Action など既存の実装パターンに合わせて実装する（Webhook ペイロード、Discord クライアント、Logger、MuteManager など）
+  4. `BaseAction` が abstract で要求している `run(): Promise<void>` メソッドを実装する
+  5. `src/actions/index.ts` に新しい Action クラスを export として追加する
+  6. `src/get-action.ts` の Action ファクトリ（switch 文など）に、新しいイベントタイプ用のケースを追加し、既存 Action と同じコンストラクタ引数パターンでインスタンスを生成して返す
 - **型安全な環境変数**: `GWBEnvironment` クラスを使用
 - **Logger 使用**: `@book000/node-utils` の Logger で構造化ログ
 - **Discord メッセージ**: `@book000/node-utils` の Discord ラッパーを使用

@@ -18,8 +18,8 @@
 - 会話は日本語で行う。
 - コミットメッセージは [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) に従う。
   - 形式: `<type>(<scope>): <description>`
-  - `<description>` は日本語で記載
-  - 例: `feat: Discord メッセージ送信機能を追加`
+  - `<description>` は英語で記載
+  - 例: `feat: add Discord message sending feature`
 - ブランチ命名は [Conventional Branch](https://conventional-branch.github.io) に従う。
   - 形式: `<type>/<description>`
   - `<type>` は短縮形（feat, fix）を使用
@@ -201,11 +201,11 @@ src/
 
    ```typescript
    // src/actions/new-event.ts
-   import { BaseAction } from './index'
+   import { BaseAction } from '.'
    import { NewEvent } from '@octokit/webhooks-types'
 
    export class NewEventAction extends BaseAction<NewEvent> {
-     async execute(): Promise<void> {
+     async run(): Promise<void> {
        // イベント処理ロジック
      }
    }
@@ -215,7 +215,7 @@ src/
 
    ```typescript
    case 'new_event':
-     return new NewEventAction(event, mutes)
+     return new NewEventAction(discord, eventName, event as NewEvent)
    ```
 
 ### Discord 連携パターン
@@ -239,7 +239,7 @@ src/
 - **ブランチ保護**: main/master ブランチは保護される
 - **Logger**: `@book000/node-utils` の Logger を使用し、構造化エラーログを記録
 - **Discord 統合**: `@book000/node-utils` の Discord ラッパーを使用（discord.js を直接使用しない）
-- **Mute 機能**: MuteManager を使用してユーザーのミュート状態を管理。各イベントハンドラーでミュート状態を確認
+- **Mute 機能**: MuteManager を使用してユーザーのミュート状態を管理。Webhook 受信時に `src/main.ts` の `hook()`（`MuteManager.load()` → `isMuted()`）でミュート判定を行い、ミュート対象のイベントは各イベントハンドラーへ渡さない
 
 ## 参考リソース
 
