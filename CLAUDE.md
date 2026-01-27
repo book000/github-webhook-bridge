@@ -39,14 +39,8 @@
 
 ## 環境のルール
 
-- **Git コミット**: Conventional Commits に従う
-  - 形式: `<type>(<scope>): <description>`
-  - `<description>` は日本語で記載
-  - 例: `feat: Discord メッセージ送信機能を追加`
-- **ブランチ命名**: Conventional Branch に従う
-  - 形式: `<type>/<description>`
-  - `<type>` は短縮形（feat, fix）を使用
-  - 例: `feat/add-discord-notification`
+- **Git コミット**: 上記「重要ルール」を参照
+- **ブランチ命名**: 上記「重要ルール」を参照
 - **GitHub リポジトリ調査**: テンポラリディレクトリに git clone して調査
 - **Renovate PR**: 既存の Renovate が作成した PR に対して、追加コミットや更新を行わない
 
@@ -166,10 +160,10 @@ src/
 - **新しい Action の追加**:
   1. `src/actions/` に新しいファイルを作成する（例: `src/actions/push.ts` と同じ構成）
   2. 既存の Action（例: `src/actions/push.ts`）と同様に `BaseAction<TEvent>` を継承したクラスを定義する
-  3. コンストラクタ引数と `super(...)` の呼び出しも、`push` Action など既存の実装パターンに合わせて実装する（Webhook ペイロード、Discord クライアント、Logger、MuteManager など）
-  4. `BaseAction` が abstract で要求している `run(): Promise<void>` メソッドを実装する
+  3. `BaseAction` のコンストラクタは `(discord: Discord, eventName: string, event: T)` の形式で受け取る。`super(discord, eventName, event)` で親クラスのコンストラクタを呼び出す
+  4. `BaseAction` が abstract で要求している `public run(): Promise<void>` メソッドを実装する
   5. `src/actions/index.ts` に新しい Action クラスを export として追加する
-  6. `src/get-action.ts` の Action ファクトリ（switch 文など）に、新しいイベントタイプ用のケースを追加し、既存 Action と同じコンストラクタ引数パターンでインスタンスを生成して返す
+  6. `src/get-action.ts` の Action ファクトリ（switch 文）に、新しいイベントタイプ用のケースを追加し、`new YourAction(discord, eventName, event as YourEventType)` の形式でインスタンスを生成して返す
 - **型安全な環境変数**: `GWBEnvironment` クラスを使用
 - **Logger 使用**: `@book000/node-utils` の Logger で構造化ログ
 - **Discord メッセージ**: `@book000/node-utils` の Discord ラッパーを使用
