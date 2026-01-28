@@ -39,7 +39,7 @@
     "@types/jest": "30.0.0",
     "@types/node": "24.10.9",
     "@vercel/node": "5.5.27",
-    "axios": "1.13.2",
+    "axios": "1.13.3",
     "diff": "8.0.3",
     "eslint": "9.39.2",
     "eslint-config-standard": "17.1.0",
