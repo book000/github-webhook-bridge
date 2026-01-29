@@ -33,8 +33,8 @@ importers:
         specifier: 24.10.9
         version: 24.10.9
       '@vercel/node':
-        specifier: 5.5.27
-        version: 5.5.27
+        specifier: 5.5.28
+        version: 5.5.28
       axios:
         specifier: 1.13.3
         version: 1.13.3
@@ -1118,8 +1118,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@vercel/build-utils@13.2.15':
-    resolution: {integrity: sha512-h5Zfk2mcBfAyNsLib6d7IxAeLeFrY97R2hCmN6JUCNQCPX2QbABhookgN95u9uphoYHOdof2O6Ik+wKZLfrBYw==}
+  '@vercel/build-utils@13.2.16':
+    resolution: {integrity: sha512-5i6q9xXhDaZ75bQ/VMMCyeXtRY1HTJXj47ch3BEN42BgNdvFoDSL0eQVMzi80yRjyTvJ1bzGpn1A1K5aswLZVQ==}
 
   '@vercel/error-utils@2.0.3':
     resolution: {integrity: sha512-CqC01WZxbLUxoiVdh9B/poPbNpY9U+tO1N9oWHwTl5YAZxcqXmmWJ8KNMFItJCUUWdY3J3xv8LvAuQv2KZ5YdQ==}
@@ -1129,8 +1129,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@vercel/node@5.5.27':
-    resolution: {integrity: sha512-nHx/zTHpjVvVGwKfoXUyPF/rKEcl8zkbbrpGN71+7YEqY27s8LPUzwZ53SEELA5PxeQzbrX6378nOC7kIPu28A==}
+  '@vercel/node@5.5.28':
+    resolution: {integrity: sha512-zuhUKqFdeoTz+o6S5zyKKXERrxbJpFmbt5qMrsg7t2pfxJZSAR6xg+HRSJd710uJnKpmi4h89hp/TIu1CuvAUQ==}
 
   '@vercel/static-config@3.1.2':
     resolution: {integrity: sha512-2d+TXr6K30w86a+WbMbGm2W91O0UzO5VeemZYBBUJbCjk/5FLLGIi8aV6RS2+WmaRvtcqNTn2pUA7nCOK3bGcQ==}
@@ -4492,7 +4492,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@vercel/build-utils@13.2.15': {}
+  '@vercel/build-utils@13.2.16': {}
 
   '@vercel/error-utils@2.0.3': {}
 
@@ -4515,13 +4515,13 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/node@5.5.27':
+  '@vercel/node@5.5.28':
     dependencies:
       '@edge-runtime/node-utils': 2.3.0
       '@edge-runtime/primitives': 4.1.0
       '@edge-runtime/vm': 3.2.0
       '@types/node': 20.11.0
-      '@vercel/build-utils': 13.2.15
+      '@vercel/build-utils': 13.2.16
       '@vercel/error-utils': 2.0.3
       '@vercel/nft': 1.1.1
       '@vercel/static-config': 3.1.2
