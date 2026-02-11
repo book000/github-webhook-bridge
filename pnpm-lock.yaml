@@ -36,8 +36,8 @@ importers:
         specifier: 5.5.33
         version: 5.5.33
       axios:
-        specifier: 1.13.4
-        version: 1.13.4
+        specifier: 1.13.5
+        version: 1.13.5
       diff:
         specifier: 8.0.3
         version: 8.0.3
