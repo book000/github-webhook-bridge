@@ -33,8 +33,8 @@ importers:
         specifier: 24.11.0
         version: 24.11.0
       '@vercel/node':
-        specifier: 5.6.9
-        version: 5.6.9
+        specifier: 5.6.10
+        version: 5.6.10
       axios:
         specifier: 1.13.6
         version: 1.13.6
@@ -1109,8 +1109,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@vercel/build-utils@13.6.1':
-    resolution: {integrity: sha512-/qRDC8swTUDrdQLkKBnyY8TSk+DeI8RTOIhAba2BwCVCHaZoLF8+sdOCeHud1QJk/3a8R5rAmMQOvEI4P2FRZQ==}
+  '@vercel/build-utils@13.6.2':
+    resolution: {integrity: sha512-KiwRUd2x1ZHm73p+/hfdVWZHWXT8r+oN/5ZN1lJyb41AGK4Zhrug6X60jNyVhnw6GjpwBuPTBcys29cCsPjkWQ==}
 
   '@vercel/error-utils@2.0.3':
     resolution: {integrity: sha512-CqC01WZxbLUxoiVdh9B/poPbNpY9U+tO1N9oWHwTl5YAZxcqXmmWJ8KNMFItJCUUWdY3J3xv8LvAuQv2KZ5YdQ==}
@@ -1120,8 +1120,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@vercel/node@5.6.9':
-    resolution: {integrity: sha512-SiLToxNIGNSaELFhMorNAWIW1LkBCOEIw7+P3MxDxeaY9RAn5nqymT4uLg95L94JvI4dAFZbdfS7ntgmEfB64A==}
+  '@vercel/node@5.6.10':
+    resolution: {integrity: sha512-HEydd6y0KPjCyI9sM3n2/XCjS/fZV/7sO7jFjia9I5XbEJ6LCwkI6rR+GQB751NL0He0vFusy+mm394hJC/Rqg==}
 
   '@vercel/python-analysis@0.8.1':
     resolution: {integrity: sha512-gW1pZDqJaTcjZYPvNhXXLOPgLu6vJW9PKweJoX2f8EKAoW+JIiYncl8AddcSlngNhQRG7SqUl2u3qosZM4kUBA==}
@@ -4542,7 +4542,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@vercel/build-utils@13.6.1':
+  '@vercel/build-utils@13.6.2':
     dependencies:
       '@vercel/python-analysis': 0.8.1
 
@@ -4567,13 +4567,13 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/node@5.6.9':
+  '@vercel/node@5.6.10':
     dependencies:
       '@edge-runtime/node-utils': 2.3.0
       '@edge-runtime/primitives': 4.1.0
       '@edge-runtime/vm': 3.2.0
       '@types/node': 20.11.0
-      '@vercel/build-utils': 13.6.1
+      '@vercel/build-utils': 13.6.2
       '@vercel/error-utils': 2.0.3
       '@vercel/nft': 1.1.1
       '@vercel/static-config': 3.1.2
