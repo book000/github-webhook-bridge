@@ -11,5 +11,5 @@
   "devDependencies": {
     "puppeteer-core": "24.38.0"
   },
-  "packageManager": "pnpm@10.31.0"
+  "packageManager": "pnpm@10.32.0"
 }
