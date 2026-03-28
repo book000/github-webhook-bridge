@@ -1,16 +1,26 @@
 name: Check using src-import
 
-on: [pull_request_target]
+on:
+  pull_request:
+
+# ワークフロー全体のデフォルト権限を無効化（各ジョブで最小権限を明示する）
+permissions: {}
+
+concurrency:
+  # 同一 PR の連続 push などによる重複実行を防ぐため event_name と PR 番号 / ref を含める
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check-import:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # reviewdog の PR diff 取得に必要
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup reviewdog
         uses: reviewdog/action-setup@v1
@@ -20,10 +30,12 @@ jobs:
           COUNT=`grep -rEn "from 'src/" --include=*.ts src | tee ../import-src.txt | wc -l || true`
           echo count: $COUNT
           cat ../import-src.txt
-          cat ../import-src.txt | reviewdog -efm="%f:%l:%m" -name="Check using src-import" -reporter=github-pr-review -level=warning
-          if [ "$COUNT" != "0" ]; then
+          cat ../import-src.txt | reviewdog -efm="%f:%l:%m" -name="Check using src-import" -reporter=github-annotations -level=warning
+          if [ "$COUNT" -ne 0 ]; then
             echo "Found src-import in $COUNT files"
             exit 1
           fi
         env:
+          # github-annotations は PR レビューコメントへの書き込みは行わない（annotations としてのみ出力する）
+          # フォーク PR での読み取り専用 GITHUB_TOKEN でも動作する
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
