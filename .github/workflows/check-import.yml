@@ -7,7 +7,7 @@ on:
 permissions: {}
 
 concurrency:
-  # 将来的に複数のイベントトリガーが追加された場合の衝突を防ぐため event_name を含める
+  # 同一 PR の連続 push などによる重複実行を防ぐため event_name と PR 番号 / ref を含める
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
@@ -31,7 +31,7 @@ jobs:
           echo count: $COUNT
           cat ../import-src.txt
           cat ../import-src.txt | reviewdog -efm="%f:%l:%m" -name="Check using src-import" -reporter=github-annotations -level=warning
-          if [ "$COUNT" != "0" ]; then
+          if [ "$COUNT" -ne 0 ]; then
             echo "Found src-import in $COUNT files"
             exit 1
           fi
