@@ -2,15 +2,12 @@ name: Check using src-import
 
 on:
   pull_request:
-    branches:
-      - main
-      - master
 
 # ワークフロー全体のデフォルト権限を無効化（各ジョブで最小権限を明示する）
 permissions: {}
 
 concurrency:
-  # pull_request_target との二重発火を防ぐため event_name を含める
+  # 将来的に複数のイベントトリガーが追加された場合の衝突を防ぐため event_name を含める
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
@@ -23,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup reviewdog
         uses: reviewdog/action-setup@v1
@@ -39,6 +36,6 @@ jobs:
             exit 1
           fi
         env:
-          # github-annotations は diff 生成のみにトークンを使用し、書き込みは行わない
+          # github-annotations は PR レビューコメントへの書き込みは行わない（annotations としてのみ出力する）
           # フォーク PR での読み取り専用 GITHUB_TOKEN でも動作する
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
