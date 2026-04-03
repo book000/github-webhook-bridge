@@ -140,6 +140,11 @@ async function hook(
   }
 }
 
+/**
+ * Fastify アプリケーションを生成して初期化します。
+ *
+ * @returns 初期化済みの Fastify アプリケーション
+ */
 export async function getApp() {
   const app = fastify()
   await app.register(cors, {
@@ -159,7 +164,12 @@ export async function getApp() {
   return app
 }
 
-async function main() {
+/**
+ * HTTP サーバーを起動します。
+ *
+ * @returns サーバー起動処理の Promise
+ */
+export async function main() {
   const logger = Logger.configure('main')
 
   const app = await getApp()
@@ -179,16 +189,4 @@ async function main() {
       logger.info(`Server listening at ${address}`)
     }
   )
-}
-
-if (process.env.JEST_WORKER_ID === undefined) {
-  ;(async () => {
-    try {
-      await main()
-    } catch (err) {
-      Logger.configure('main').error('Error', err as Error)
-      // eslint-disable-next-line unicorn/no-process-exit
-      process.exit(1)
-    }
-  })()
 }
