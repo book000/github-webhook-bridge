@@ -3,8 +3,15 @@ import { main } from './main'
 ;(async () => {
   try {
     await main()
-  } catch (err) {
-    Logger.configure('main').error('Error', err as Error)
+  } catch (err: unknown) {
+    const logger = Logger.configure('main')
+
+    if (err instanceof Error) {
+      logger.error('Error', err)
+    } else {
+      logger.error(`Error: ${String(err)}`)
+    }
+
     // eslint-disable-next-line unicorn/no-process-exit
     process.exit(1)
   }

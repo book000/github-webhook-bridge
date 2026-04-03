@@ -9,6 +9,37 @@ import fastifyRawBody from 'fastify-raw-body'
 import { MuteManager } from './manager/mute'
 import { isAxiosError } from 'axios'
 
+/**
+ * ログ出力用に URL 内の機密情報をマスクします。
+ *
+ * @param requestUrl 元のリクエスト URL
+ * @returns 機密情報をマスクした URL
+ */
+function sanitizeRequestUrl(
+  requestUrl: string | undefined
+): string | undefined {
+  if (!requestUrl) {
+    return undefined
+  }
+
+  try {
+    const parsedUrl = new URL(requestUrl)
+    const pathSegments = parsedUrl.pathname.split('/')
+    if (
+      pathSegments.length >= 5 &&
+      pathSegments[1] === 'api' &&
+      pathSegments[2] === 'webhooks'
+    ) {
+      pathSegments[4] = '[REDACTED]'
+      parsedUrl.pathname = pathSegments.join('/')
+    }
+
+    return parsedUrl.toString()
+  } catch {
+    return '[Invalid URL]'
+  }
+}
+
 async function hook(
   request: FastifyRequest<{
     Body: Schema
@@ -104,39 +135,26 @@ async function hook(
     // AxiosError
     if (isAxiosError(err)) {
       const requestMethod = err.response?.config.method
-      const requestUrl = err.response?.config.url
+      const requestUrl = sanitizeRequestUrl(err.response?.config.url)
       const responseStatus = err.response?.status
-      const responseData = err.response?.data
 
       await reply.status(500).send({
         message: 'An error occurred (AxiosError)',
-        details: {
-          requestMethod,
-          requestUrl,
-          responseStatus,
-          responseData,
-        },
       })
       logger.error('AxiosError')
       logger.error(`- Request Method: ${requestMethod}`)
       logger.error(`- Request URL: ${requestUrl}`)
       logger.error(`- Response Status: ${responseStatus}`)
-      logger.error(`- Response Data: ${JSON.stringify(responseData)}`)
+      logger.error(`- Message: ${err.message}`)
       return
-    }
-
-    const errorInfo = {
-      message: err.message,
-      stack: err.stack,
     }
 
     await reply.status(500).send({
       message: 'An error occurred',
-      details: errorInfo,
     })
     logger.error('Error')
-    logger.error(`- Message: ${errorInfo.message}`)
-    logger.error(`- Stack: ${errorInfo.stack}`)
+    logger.error(`- Message: ${err.message}`)
+    logger.error(`- Stack: ${err.stack}`)
   }
 }
 
