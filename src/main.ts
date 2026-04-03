@@ -81,10 +81,10 @@ async function hook(
   const action = getAction(discord, eventName as WebhookEventName, request.body)
   try {
     await action.run()
-  } catch (error) {
+  } catch (err) {
     const logger = Logger.configure('hook')
 
-    if (!error || !(error instanceof Error)) {
+    if (!err || !(err instanceof Error)) {
       await reply.status(500).send({
         message: 'An error occurred (UnknownError)',
       })
@@ -93,7 +93,7 @@ async function hook(
     }
 
     // Method not implemented.
-    if (error.message === 'Method not implemented.') {
+    if (err.message === 'Method not implemented.') {
       await reply.status(406).send({
         message: 'Method not implemented',
       })
@@ -102,11 +102,11 @@ async function hook(
     }
 
     // AxiosError
-    if (isAxiosError(error)) {
-      const requestMethod = error.response?.config.method
-      const requestUrl = error.response?.config.url
-      const responseStatus = error.response?.status
-      const responseData = error.response?.data
+    if (isAxiosError(err)) {
+      const requestMethod = err.response?.config.method
+      const requestUrl = err.response?.config.url
+      const responseStatus = err.response?.status
+      const responseData = err.response?.data
 
       await reply.status(500).send({
         message: 'An error occurred (AxiosError)',
@@ -126,8 +126,8 @@ async function hook(
     }
 
     const errorInfo = {
-      message: error.message,
-      stack: error.stack,
+      message: err.message,
+      stack: err.stack,
     }
 
     await reply.status(500).send({
@@ -181,12 +181,14 @@ async function main() {
   )
 }
 
-;(async () => {
-  try {
-    await main()
-  } catch (error) {
-    Logger.configure('main').error('Error', error as Error)
-    // eslint-disable-next-line unicorn/no-process-exit
-    process.exit(1)
-  }
-})()
+if (process.env.JEST_WORKER_ID === undefined) {
+  ;(async () => {
+    try {
+      await main()
+    } catch (err) {
+      Logger.configure('main').error('Error', err as Error)
+      // eslint-disable-next-line unicorn/no-process-exit
+      process.exit(1)
+    }
+  })()
+}
