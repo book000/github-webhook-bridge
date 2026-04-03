@@ -65,7 +65,7 @@ describe('Get embed', () => {
         url: '/',
         headers: {
           'x-github-event': definition.name,
-          'x-hub-signature': 'sha1=1234567890',
+          'x-hub-signature-256': 'sha256=1234567890',
         },
         payload: example,
       })

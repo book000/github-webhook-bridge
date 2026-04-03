@@ -65,7 +65,7 @@ describe('Main error handling', () => {
       url: '/',
       headers: {
         'x-github-event': 'ping',
-        'x-hub-signature': 'sha1=1234567890',
+        'x-hub-signature-256': 'sha256=1234567890',
       },
       payload: {
         zen: 'Keep it logically awesome.',
@@ -96,7 +96,7 @@ describe('Main error handling', () => {
       url: '/',
       headers: {
         'x-github-event': 'ping',
-        'x-hub-signature': 'sha1=1234567890',
+        'x-hub-signature-256': 'sha256=1234567890',
       },
       payload: {
         zen: 'Keep it logically awesome.',

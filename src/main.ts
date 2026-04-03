@@ -194,18 +194,9 @@ export async function main() {
   const app = await getApp()
 
   const port = GWBEnvironment.getNumber('API_PORT', 3000)
-  app.listen(
-    {
-      host: '0.0.0.0',
-      port,
-    },
-    (error, address) => {
-      if (error) {
-        logger.error('Listen error', error)
-        // eslint-disable-next-line unicorn/no-process-exit
-        process.exit(1)
-      }
-      logger.info(`Server listening at ${address}`)
-    }
-  )
+  const address = await app.listen({
+    host: '0.0.0.0',
+    port,
+  })
+  logger.info(`Server listening at ${address}`)
 }
