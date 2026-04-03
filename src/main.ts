@@ -134,8 +134,9 @@ async function hook(
 
     // AxiosError
     if (isAxiosError(err)) {
-      const requestMethod = err.response?.config.method
-      const requestUrl = sanitizeRequestUrl(err.response?.config.url)
+      const requestConfig = err.config ?? err.response?.config
+      const requestMethod = requestConfig?.method
+      const requestUrl = sanitizeRequestUrl(requestConfig?.url)
       const responseStatus = err.response?.status
 
       await reply.status(500).send({
