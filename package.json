@@ -55,7 +55,7 @@
     "run-z": "2.1.0",
     "ts-jest": "29.4.9",
     "tsx": "4.21.0",
-    "typescript": "5.9.3"
+    "typescript": "6.0.2"
   },
   "jest": {
     "transform": {
