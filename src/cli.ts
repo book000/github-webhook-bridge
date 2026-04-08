@@ -1,7 +1,10 @@
 import { Logger } from '@book000/node-utils'
 import { main } from './main'
 
-// CLI エントリーポイント: サーバーを起動する
+/**
+ * CLI エントリーポイント。
+ * サーバーを起動し、起動に失敗した場合はエラーログを出力してプロセスを終了する。
+ */
 ;(async () => {
   try {
     await main()
