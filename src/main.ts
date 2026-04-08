@@ -159,7 +159,10 @@ export async function getApp() {
   return app
 }
 
-async function main() {
+/**
+ * サーバーを起動してリクエストを待ち受ける
+ */
+export async function main() {
   const logger = Logger.configure('main')
 
   const app = await getApp()
@@ -180,13 +183,3 @@ async function main() {
     }
   )
 }
-
-;(async () => {
-  try {
-    await main()
-  } catch (error) {
-    Logger.configure('main').error('Error', error as Error)
-    // eslint-disable-next-line unicorn/no-process-exit
-    process.exit(1)
-  }
-})()
