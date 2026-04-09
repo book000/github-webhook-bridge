@@ -9,7 +9,9 @@ import { main } from './main'
   try {
     await main()
   } catch (error) {
-    Logger.configure('main').error('Error', error as Error)
+    const normalizedError =
+      error instanceof Error ? error : new Error(String(error))
+    Logger.configure('main').error('Error', normalizedError)
     // eslint-disable-next-line unicorn/no-process-exit
     process.exit(1)
   }
