@@ -23,6 +23,9 @@
     "noFallthroughCasesInSwitch": true,
     "experimentalDecorators": true,
     "baseUrl": ".",
+    "rootDir": ".",
+    "ignoreDeprecations": "6.0",
+    "types": ["node", "jest"],
     "newLine": "LF"
   },
   "include": ["src/**/*", "api/**/*"]

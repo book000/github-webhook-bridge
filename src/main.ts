@@ -159,33 +159,27 @@ export async function getApp() {
   return app
 }
 
-async function main() {
+/**
+ * サーバーを起動してリクエストを待ち受ける。
+ * 起動に失敗した場合は例外を throw する。
+ */
+export async function main() {
   const logger = Logger.configure('main')
 
   const app = await getApp()
 
   const port = GWBEnvironment.getNumber('API_PORT', 3000)
-  app.listen(
-    {
-      host: '0.0.0.0',
-      port,
-    },
-    (error, address) => {
-      if (error) {
-        logger.error('Listen error', error)
-        // eslint-disable-next-line unicorn/no-process-exit
-        process.exit(1)
-      }
-      logger.info(`Server listening at ${address}`)
-    }
-  )
+  const address = await app.listen({ host: '0.0.0.0', port })
+  logger.info(`Server listening at ${address}`)
 }
 
 ;(async () => {
   try {
     await main()
   } catch (error) {
-    Logger.configure('main').error('Error', error as Error)
+    const normalizedError =
+      error instanceof Error ? error : new Error(String(error))
+    Logger.configure('main').error('Error', normalizedError)
     // eslint-disable-next-line unicorn/no-process-exit
     process.exit(1)
   }
