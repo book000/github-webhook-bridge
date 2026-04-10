@@ -172,3 +172,15 @@ export async function main() {
   const address = await app.listen({ host: '0.0.0.0', port })
   logger.info(`Server listening at ${address}`)
 }
+
+;(async () => {
+  try {
+    await main()
+  } catch (error) {
+    const normalizedError =
+      error instanceof Error ? error : new Error(String(error))
+    Logger.configure('main').error('Error', normalizedError)
+    // eslint-disable-next-line unicorn/no-process-exit
+    process.exit(1)
+  }
+})()
