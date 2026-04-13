@@ -27,11 +27,19 @@ export async function fetchOrThrow(
   const res = await fetch(url, options)
   if (!res.ok) {
     let responseData: unknown
+    const text = await res.text()
+    let result: unknown
     try {
-      responseData = await res.json()
+      result = JSON.parse(text)
     } catch {
-      responseData = await res.text().catch(() => null)
+      responseData = text
+      throw new HttpError(method, url, res.status, responseData)
     }
+    if (result === null || typeof result !== 'object') {
+      responseData = text
+      throw new HttpError(method, url, res.status, responseData)
+    }
+    responseData = result
     throw new HttpError(method, url, res.status, responseData)
   }
   return res
