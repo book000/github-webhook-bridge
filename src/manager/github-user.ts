@@ -1,6 +1,6 @@
 import { GWBEnvironment } from '../environments'
 import { BaseRecordManager } from './base-record'
-import axios from 'axios'
+import { fetchOrThrow } from '../http-error'
 
 export interface GitHubApiGetUserResponse {
   login: string
@@ -61,11 +61,11 @@ export class GitHubUserMapManager extends BaseRecordManager<number, string> {
   }
 
   public async getFromUsername(githubUsername: string) {
-    const response = await axios.get<GitHubApiGetUserResponse>(
+    const res = await fetchOrThrow(
       `https://api.github.com/users/${githubUsername}`
     )
-
-    const githubUserId = response.data.id
+    const data = (await res.json()) as GitHubApiGetUserResponse
+    const githubUserId = data.id
 
     return this.get(githubUserId)
   }

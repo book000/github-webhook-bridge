@@ -7,7 +7,7 @@ import { GWBEnvironment } from './environments'
 import { getAction } from './get-action'
 import fastifyRawBody from 'fastify-raw-body'
 import { MuteManager } from './manager/mute'
-import { isAxiosError } from 'axios'
+import { HttpError } from './http-error'
 
 async function hook(
   request: FastifyRequest<{
@@ -101,15 +101,15 @@ async function hook(
       return
     }
 
-    // AxiosError
-    if (isAxiosError(error)) {
-      const requestMethod = error.response?.config.method
-      const requestUrl = error.response?.config.url
-      const responseStatus = error.response?.status
-      const responseData = error.response?.data
+    // HttpError
+    if (error instanceof HttpError) {
+      const requestMethod = error.method
+      const requestUrl = error.url
+      const responseStatus = error.status
+      const responseData = error.responseData
 
       await reply.status(500).send({
-        message: 'An error occurred (AxiosError)',
+        message: 'An error occurred (HttpError)',
         details: {
           requestMethod,
           requestUrl,
@@ -117,7 +117,7 @@ async function hook(
           responseData,
         },
       })
-      logger.error('AxiosError')
+      logger.error('HttpError')
       logger.error(`- Request Method: ${requestMethod}`)
       logger.error(`- Request URL: ${requestUrl}`)
       logger.error(`- Response Status: ${responseStatus}`)
