@@ -15,16 +15,14 @@ RUN apk update && \
 
 WORKDIR /app
 
-COPY pnpm-lock.yaml ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch
 
-COPY package.json tsconfig.json ./
+COPY tsconfig.json ./
 COPY src src
 
-ENV CI=true
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
 
 ENV NODE_ENV=production
 ENV API_PORT=80
