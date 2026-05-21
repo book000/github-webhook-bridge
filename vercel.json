@@ -1,5 +1,4 @@
 {
-  "nodeVersion": "22",
   "outputDirectory": "dist",
   "rewrites": [
     {
