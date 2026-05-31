@@ -33,8 +33,8 @@ importers:
         specifier: 24.12.4
         version: 24.12.4
       '@vercel/node':
-        specifier: 5.8.5
-        version: 5.8.5
+        specifier: 5.8.6
+        version: 5.8.6
       diff:
         specifier: 9.0.0
         version: 9.0.0
@@ -1266,8 +1266,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@vercel/build-utils@13.26.2':
-    resolution: {integrity: sha512-dEgbr6NnbDkvXpKpYoV0V4kN3VWc82A41a5V9bYGqOMYyw76rEhf59VKgSdu9D0SOXgowSln2gL5O7ATJ3xFog==}
+  '@vercel/build-utils@13.26.3':
+    resolution: {integrity: sha512-56N47yvDJCrwBNJg7Ty0d+52AvAVD5PFfaKF9iM7toJXTihkh1NHrRS2n06eopoNGAEVA8mTZE++lC5rk3pb8Q==}
 
   '@vercel/error-utils@2.1.0':
     resolution: {integrity: sha512-DiJcXBOB9N6QM4d7hYPM9Ck/AUjzBl58XNQPxS74o7CuvIanjzrGgygP/70VsyEASeIJMazk1LrhwcNTR/eZGQ==}
@@ -1277,14 +1277,14 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@vercel/node@5.8.5':
-    resolution: {integrity: sha512-NoqElZnk/K5bVsZE2Z1Pi5m0QRbS5m6cYN1YBA5mHIF/JpnztA8miTH4bj7cGMpNGkjfayjVfQ/VpHH5HAJ35Q==}
+  '@vercel/node@5.8.6':
+    resolution: {integrity: sha512-bZ1XZADW7nTK6foB0PMk3u82RWwwl/GBTeMVUSCUhy6CWYak7URJD9oUeXhaX7y6lMNZX6kfJ5SBH6FeRxOdNQ==}
 
   '@vercel/python-analysis@0.11.1':
     resolution: {integrity: sha512-EPPLuXJQhIDUx08H9nG76AR2HSgBquwe3OAX5s2w20M923iaWeGGVkhX/4yZ89CJfXEZgE1Aj/mX7lVHOVIcYA==}
 
-  '@vercel/static-config@3.3.0':
-    resolution: {integrity: sha512-GpS3tPwUeDJCkrKbMNtS2XLRFgfxTlN7YNUL+Bo23+fGolrDw6Oq79R3yvxTYgqRaJMGSEqC7iMw6mj6I5loxg==}
+  '@vercel/static-config@3.4.0':
+    resolution: {integrity: sha512-wCq90CMUB//ggnFh77NQO1xaLFsS4LigQIqKrH6ohnr9Br/KI1FhlErx62WfCOuueWaW+LVsbLOqNXIUjK8t6A==}
 
   abbrev@3.0.1:
     resolution: {integrity: sha512-AO2ac6pjRB3SJmGJo+v5/aK6Omggp6fsLrs6wN9bd35ulu4cCwaAU9+7ZhXjeqHVkaHThLuzH0nZr0YpCDhygg==}
@@ -4807,7 +4807,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@vercel/build-utils@13.26.2':
+  '@vercel/build-utils@13.26.3':
     dependencies:
       '@vercel/python-analysis': 0.11.1
       cjs-module-lexer: 1.2.3
@@ -4834,16 +4834,16 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/node@5.8.5':
+  '@vercel/node@5.8.6':
     dependencies:
       '@edge-runtime/node-utils': 2.3.0
       '@edge-runtime/primitives': 4.1.0
       '@edge-runtime/vm': 3.2.0
       '@types/node': 20.11.0
-      '@vercel/build-utils': 13.26.2
+      '@vercel/build-utils': 13.26.3
       '@vercel/error-utils': 2.1.0
       '@vercel/nft': 1.5.0
-      '@vercel/static-config': 3.3.0
+      '@vercel/static-config': 3.4.0
       async-listen: 3.0.0
       cjs-module-lexer: 1.2.3
       edge-runtime: 2.5.9
@@ -4873,7 +4873,7 @@ snapshots:
       smol-toml: 1.5.2
       zod: 3.22.4
 
-  '@vercel/static-config@3.3.0':
+  '@vercel/static-config@3.4.0':
     dependencies:
       ajv: 8.6.3
       json-schema-to-ts: 1.6.4
