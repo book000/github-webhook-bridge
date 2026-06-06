@@ -33,8 +33,8 @@ importers:
         specifier: 24.12.4
         version: 24.12.4
       '@vercel/node':
-        specifier: 5.8.10
-        version: 5.8.10
+        specifier: 5.8.11
+        version: 5.8.11
       diff:
         specifier: 9.0.0
         version: 9.0.0
@@ -1130,8 +1130,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@vercel/build-utils@13.26.6':
-    resolution: {integrity: sha512-tL7N+pPEL8z0w7WxIdXue6XrhywmQUIkv7mSoidXDW+yqsfB0FEJ5vH2CM/7vQHHU0P0fUXTSUvRYFjIQ3mwcQ==}
+  '@vercel/build-utils@13.27.0':
+    resolution: {integrity: sha512-oPD9wDy1KgRWbV5VC5to76TlIV7n7134SgUKvEOCP+0aUlvOdTlK1CzdUJ+FCOM+mNNCRQz9mjqj3zZuG2HI3w==}
 
   '@vercel/error-utils@2.2.0':
     resolution: {integrity: sha512-WFWiRxfPzoYWYifaj4thSKvAaZZwUOqD4k5GINRIgZgCiS2E3iAJbWbIsIZmkQdTecWFHcWGA6q48CjisgpOBA==}
@@ -1141,8 +1141,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@vercel/node@5.8.10':
-    resolution: {integrity: sha512-zDqHw0Tv+c737AfydV2BjzsfhiTIoRSX2othpYcGqc1B66KmaMam2A+VQ5i/Ivv6WC1m1yxfewSp9Oqyl5AHSQ==}
+  '@vercel/node@5.8.11':
+    resolution: {integrity: sha512-NmZEoaDgxeJENIa/osVZOl90Br5Z2DMPFjogOW84j5oeBo0zwKz+oAD/jtgx3KDMg9WWVfTjY6cl6xvWFfQRSQ==}
 
   '@vercel/python-analysis@0.11.1':
     resolution: {integrity: sha512-EPPLuXJQhIDUx08H9nG76AR2HSgBquwe3OAX5s2w20M923iaWeGGVkhX/4yZ89CJfXEZgE1Aj/mX7lVHOVIcYA==}
@@ -4600,7 +4600,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.12.2':
     optional: true
 
-  '@vercel/build-utils@13.26.6':
+  '@vercel/build-utils@13.27.0':
     dependencies:
       '@vercel/python-analysis': 0.11.1
       cjs-module-lexer: 1.2.3
@@ -4627,13 +4627,13 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/node@5.8.10':
+  '@vercel/node@5.8.11':
     dependencies:
       '@edge-runtime/node-utils': 2.3.0
       '@edge-runtime/primitives': 4.1.0
       '@edge-runtime/vm': 3.2.0
       '@types/node': 20.11.0
-      '@vercel/build-utils': 13.26.6
+      '@vercel/build-utils': 13.27.0
       '@vercel/error-utils': 2.2.0
       '@vercel/nft': 1.10.0
       '@vercel/static-config': 3.4.0
