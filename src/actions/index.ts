@@ -55,10 +55,14 @@ export abstract class BaseAction<T extends Schema> {
     }
 
     // それ以外の場合は新規に送信する
+    // sendMessage() は Webhook が 204 No Content を返した場合に undefined を返すため、
+    // メッセージ ID が取得できた場合のみキャッシュに保存する
     const sentMessageId = await this.discord.sendMessage(message)
-    this.messageCache[key] = {
-      messageId: sentMessageId,
-      timestamp: Date.now(),
+    if (sentMessageId) {
+      this.messageCache[key] = {
+        messageId: sentMessageId,
+        timestamp: Date.now(),
+      }
     }
   }
 }
