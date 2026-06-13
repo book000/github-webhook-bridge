@@ -32,7 +32,7 @@ export class PushAction extends BaseAction<PushEvent> {
       .map((commit) => {
         const { id, url, message, author } = commit
         const firstLine = message.includes('\n')
-          ? message.split('\n')[0]
+          ? message.split('\n', 2)[0]
           : message
         const shortMessage =
           firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine
