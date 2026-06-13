@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "lib": ["ESNext", "esnext.AsyncIterable"],
     "outDir": "./dist",
     "removeComments": true,
@@ -22,9 +22,7 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "experimentalDecorators": true,
-    "baseUrl": ".",
     "rootDir": ".",
-    "ignoreDeprecations": "6.0",
     "types": ["node", "jest"],
     "newLine": "LF"
   },
