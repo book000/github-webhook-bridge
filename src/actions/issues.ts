@@ -505,8 +505,9 @@ export class IssuesAction extends BaseAction<IssuesEvent> {
     // プルリク作成時、再オープン時、アサイン時にメンションを付ける
     const assignees = issue.assignees
 
-    const isNeedAssigneeMention =
-      action === 'opened' || action === 'reopened' || action === 'assigned'
+    const isNeedAssigneeMention = ['opened', 'reopened', 'assigned'].includes(
+      action
+    )
 
     const assigneesMentions = isNeedAssigneeMention
       ? await getUsersMentions(sender, assignees)
