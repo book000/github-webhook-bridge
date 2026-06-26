@@ -23,9 +23,15 @@ public sealed class PingAction : BaseAction<PingEvent>
             title:       "Received a ping event",
             description: Event.Zen,
             fields: [
-                new("Hook ID", Event.HookId.ToString(), true),
+                new("Hook Type",    Event.Hook.Type,                                   true),
+                new("Hook ID",      Event.HookId.ToString(),                           true),
+                new("Events",       (Event.Hook.Events?.Count ?? 0).ToString(),        true),
+                new("Repository",   Event.Repository?.FullName ?? "N/A",              true),
+                new("Sender",       Event.Sender?.Login ?? "N/A",                     true),
+                new("Organization", Event.Organization?.Login ?? "N/A",               true),
             ]);
 
-        await SendMessageAsync($"ping-{Event.HookId}", new DiscordMessage(Embeds: [embed]));
+        var cacheKey = $"ping:{Event.Repository?.FullName ?? "N/A"}:{Event.Sender?.Login ?? "N/A"}:{Event.Organization?.Login ?? "N/A"}:{Event.Hook.Type}";
+        await SendMessageAsync(cacheKey, new DiscordMessage(Embeds: [embed]));
     }
 }

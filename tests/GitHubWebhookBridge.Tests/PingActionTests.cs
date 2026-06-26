@@ -62,11 +62,18 @@ public class PingActionTests
     }
 
     [Fact]
-    public async Task RunAsync_UsesHookIdAsKeyForCache()
+    public async Task RunAsync_UsesCompositeKeyForCache()
     {
         var (discord, cache, userMap) = CreateMocks();
 
-        var pingEvent = new PingEvent { Zen = "test", HookId = 9999 };
+        var pingEvent = new PingEvent
+        {
+            Zen    = "test",
+            HookId = 9999,
+            Hook   = new PingHook { Type = "Repository" },
+            Repository = new Repository { FullName = "owner/repo" },
+            Sender     = new User     { Login = "user1" },
+        };
 
         var action = new PingAction(
             discord.Object, "https://discord.test/webhook", "ping",
@@ -75,9 +82,9 @@ public class PingActionTests
 
         await action.RunAsync();
 
-        // キャッシュキーが hook_id を含むことを確認する
+        // キャッシュキーがリポジトリ・送信者・フックタイプの複合キーであることを確認する
         cache.Verify(
-            c => c.GetAsync("https://discord.test/webhook", "ping-9999"),
+            c => c.GetAsync("https://discord.test/webhook", "ping:owner/repo:user1:N/A:Repository"),
             Times.Once);
     }
 

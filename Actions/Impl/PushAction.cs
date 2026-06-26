@@ -17,15 +17,18 @@ public sealed class PushAction : BaseAction<PushEvent>
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        var commits = Event.Commits;
-        if (commits.Count == 0) return;
+        var allCommits = Event.Commits;
+        if (allCommits.Count == 0) return;
 
         // refs/heads/ や refs/tags/ を除去して短いブランチ名にする
         var shortRef = Event.Ref
             .Replace("refs/heads/", "")
             .Replace("refs/tags/", "");
 
-        var description = GetDescription(commits);
+        // 先頭 5 件のみ表示する（TypeScript 実装との統一）
+        const int CommitLimit = 5;
+        var commits = allCommits.Take(CommitLimit).ToList();
+        var description = GetDescription(commits, allCommits.Count);
 
         var author = new DiscordEmbedAuthor(
             Name:    Event.Sender.Login,
@@ -35,7 +38,7 @@ public sealed class PushAction : BaseAction<PushEvent>
         var embed = EmbedHelper.CreateEmbed(
             eventName:   EventName,
             color:       EmbedColors.Push,
-            title:       $"[{Event.Repository.FullName}:{shortRef}] {commits.Count} new commit(s)",
+            title:       $"[{Event.Repository.FullName}:{shortRef}] {allCommits.Count} new commit(s)",
             description: description,
             author:      author);
 
@@ -44,9 +47,11 @@ public sealed class PushAction : BaseAction<PushEvent>
     }
 
     /// <summary>コミット一覧の説明文を生成する。</summary>
-    private static string GetDescription(List<Commit> commits)
+    /// <param name="commits">表示するコミット一覧（最大 5 件）。</param>
+    /// <param name="totalCount">全コミット数。5 を超える場合は末尾に省略メッセージを付加する。</param>
+    private static string GetDescription(List<Commit> commits, int totalCount)
     {
-        return string.Join("\n", commits.Select(c =>
+        var lines = commits.Select(c =>
         {
             var shortSha = c.Id.Length >= 7 ? c.Id[..7] : c.Id;
             // 複数行メッセージは最初の行のみ使用する
@@ -57,6 +62,11 @@ public sealed class PushAction : BaseAction<PushEvent>
                 ? $"{firstLine[..50]}..."
                 : firstLine;
             return $"[`{shortSha}`]({c.Url}) {shortMessage} - {c.Author.Name}";
-        }));
+        }).ToList();
+
+        if (totalCount > commits.Count)
+            lines.Add($"...and {totalCount - commits.Count} more commit(s)");
+
+        return string.Join("\n", lines);
     }
 }

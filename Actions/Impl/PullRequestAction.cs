@@ -14,9 +14,19 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
     public PullRequestAction(IDiscordClient d, string wu, string en, PullRequestEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l)
         : base(d, wu, en, e, c, u, l) { }
 
+    /// <summary>タイトルが WIP（作業中）かどうかを判定します。</summary>
+    private static bool IsWipTitle(string title) =>
+        System.Text.RegularExpressions.Regex.IsMatch(title, @"\bwip\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
+        title.Contains("[WIP]", StringComparison.OrdinalIgnoreCase) ||
+        title.StartsWith("WIP:", StringComparison.OrdinalIgnoreCase) ||
+        title.StartsWith("wip ", StringComparison.OrdinalIgnoreCase);
+
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
+        // synchronize はコミット追加時に発生するが通知不要なためスキップ
+        if (Event.Action == "synchronize") return;
+
         var pr     = Event.PullRequest;
         var repo   = Event.Repository;
         var sender = Event.Sender;
@@ -45,7 +55,6 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
             "demilestoned"          => ("demilestoned",            EmbedColors.PullRequestDemilestoned),
             "enqueued"              => ("enqueued",                EmbedColors.PullRequestEnqueued),
             "dequeued"              => ("dequeued",                EmbedColors.PullRequestDequeued),
-            "synchronize"           => ("synchronized",            EmbedColors.PullRequestEdited),
             _                       => (Event.Action,             EmbedColors.Unknown),
         };
 
@@ -105,6 +114,28 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
                     var oldTitle = fromProp.GetString() ?? string.Empty;
                     var patch    = CreatePatch(oldTitle, pr.Title, "title");
                     description  = $"```diff\n{patch}```";
+                }
+            }
+        }
+
+        // edited の場合、WIP タイトルが解除されたらレビュアーへメンション
+        if (Event.Action == "edited" && Event.Changes.HasValue)
+        {
+            var changes = Event.Changes.Value;
+            if (changes.TryGetProperty("title", out var titleChangeProp) &&
+                titleChangeProp.TryGetProperty("from", out var previousTitleProp))
+            {
+                var previousTitle = previousTitleProp.GetString();
+                if (previousTitle is not null &&
+                    IsWipTitle(previousTitle) && !IsWipTitle(pr.Title))
+                {
+                    var reviewers = (pr.RequestedReviewers ?? [])
+                        .Select(u => (u.Id, u.Login));
+                    var wipMentions = await GetUsersMentionsAsync(sender.Id, reviewers);
+                    if (wipMentions.Length > 0)
+                        content = string.IsNullOrEmpty(content)
+                            ? wipMentions
+                            : $"{content} {wipMentions}";
                 }
             }
         }
