@@ -12,11 +12,8 @@ public static class SignatureValidator
     /// <summary>
     /// X-Hub-Signature-256 ヘッダーを raw リクエストボディと照合して検証する。
     /// タイミング攻撃を防ぐために <see cref="CryptographicOperations.FixedTimeEquals"/> を使用する。
+    /// 長さが異なる場合もダミー比較を行い、長さ情報をタイミングで漏洩しない。
     /// </summary>
-    /// <remarks>
-    /// computedBytes.Length は常に 64（HMAC-SHA256 hex の定数長）のため、
-    /// 長さ不一致のアーリーリターンは攻撃者にタイミング情報を与えない。
-    /// </remarks>
     public static bool Validate(byte[] rawBody, IHeaderDictionary headers, string secret)
     {
         var signatureHeader = headers["X-Hub-Signature-256"].ToString();
@@ -32,9 +29,15 @@ public static class SignatureValidator
         var computedBytes = Encoding.ASCII.GetBytes(computedHash);
         var receivedBytes = Encoding.ASCII.GetBytes(receivedHash);
 
-        if (computedBytes.Length != receivedBytes.Length)
-            return false;
+        // 長さが異なる場合もタイミング情報を漏洩しないよう、常に FixedTimeEquals を実行する。
+        // receivedBytes を computedBytes と同じ長さに正規化してから比較する。
+        var normalizedReceived = new byte[computedBytes.Length];
+        var copyLen = Math.Min(receivedBytes.Length, normalizedReceived.Length);
+        receivedBytes.AsSpan(0, copyLen).CopyTo(normalizedReceived);
 
-        return CryptographicOperations.FixedTimeEquals(computedBytes, receivedBytes);
+        var equal = CryptographicOperations.FixedTimeEquals(computedBytes, normalizedReceived);
+
+        // 長さが違う場合は false（正規化で内容が変わっているため）
+        return equal && receivedBytes.Length == computedBytes.Length;
     }
 }

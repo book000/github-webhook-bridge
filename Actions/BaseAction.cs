@@ -55,8 +55,17 @@ public abstract class BaseAction<TEvent> : IAction
         var cached = await _cache.GetAsync(WebhookUrl, key);
         if (cached is not null)
         {
-            await Discord.EditMessageAsync(WebhookUrl, cached.MessageId, message);
-            return;
+            try
+            {
+                await Discord.EditMessageAsync(WebhookUrl, cached.MessageId, message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                // 編集失敗時（メッセージ削除済み等）はキャッシュを破棄して新規送信にフォールバック
+                Logger.LogWarning(ex, "Failed to edit message {MessageId}, falling back to send.", cached.MessageId);
+                await _cache.DeleteAsync(WebhookUrl, key);
+            }
         }
 
         var messageId = await Discord.SendMessageAsync(WebhookUrl, message);

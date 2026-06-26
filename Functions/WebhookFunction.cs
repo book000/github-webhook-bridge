@@ -18,6 +18,7 @@ public class WebhookFunction
     private readonly IConfiguration          _config;
     private readonly ILogger<WebhookFunction> _logger;
 
+    /// <summary>依存サービスをコンストラクタインジェクションで受け取る。</summary>
     public WebhookFunction(
         IActionFactory          actionFactory,
         IMuteManager            muteManager,
@@ -30,6 +31,9 @@ public class WebhookFunction
         _logger        = logger;
     }
 
+    /// <summary>
+    /// GitHub Webhook リクエストを受け取り、署名検証・ミュートチェックを経て Discord に通知する。
+    /// </summary>
     [Function("GitHubWebhook")]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post",
@@ -106,9 +110,17 @@ public class WebhookFunction
                 return new ObjectResult(new { message = "Disabled event" }) { StatusCode = 202 };
         }
 
-        // 7. JSON デシリアライズ
-        var options = new JsonSerializerOptions { ReadCommentHandling = JsonCommentHandling.Skip };
-        var body    = JsonSerializer.Deserialize<JsonElement>(rawBody, options);
+        // 7. JSON デシリアライズ（不正 JSON は 400 を返す）
+        JsonElement body;
+        try
+        {
+            var options = new JsonSerializerOptions { ReadCommentHandling = JsonCommentHandling.Skip };
+            body = JsonSerializer.Deserialize<JsonElement>(rawBody, options);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new BadRequestObjectResult(new { message = "Bad Request: Invalid JSON body" });
+        }
 
         // 8. 送信者ミュートチェック
         await _muteManager.EnsureLoadedAsync();

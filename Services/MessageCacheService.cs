@@ -87,6 +87,21 @@ public class MessageCacheService : IMessageCacheService
         await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
     }
 
+    /// <summary>指定キーのキャッシュエントリを削除する。編集失敗時のフォールバック用。</summary>
+    public async Task DeleteAsync(string webhookUrl, string key)
+    {
+        var partitionKey = HashWebhookUrl(webhookUrl);
+        var rowKey       = SanitizeRowKey(key);
+        try
+        {
+            await _tableClient.DeleteEntityAsync(partitionKey, rowKey);
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            // エントリが既に存在しない場合は無視
+        }
+    }
+
     /// <summary>
     /// Azure Table Storage の RowKey に使用できない文字をエスケープする。
     /// 使用禁止文字: /, \, #, ? および制御文字。

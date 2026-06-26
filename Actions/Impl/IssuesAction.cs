@@ -88,7 +88,16 @@ public sealed class IssuesAction : BaseAction<IssuesEvent>
             author:      author,
             fields:      fields);
 
-        var key = $"{repo.FullName}-issue-{issue.Number}";
+        // アクション別キー（同一性質のペアは共通キーで編集対象を統一）
+        var keySuffix = Event.Action switch
+        {
+            "assigned"     or "unassigned"   => "assigned",
+            "labeled"      or "unlabeled"    => "label",
+            "locked"       or "unlocked"     => "locked",
+            "milestoned"   or "demilestoned" => "milestoned",
+            _                                => Event.Action,
+        };
+        var key = $"{repo.FullName}#{issue.Number}-{keySuffix}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 }
