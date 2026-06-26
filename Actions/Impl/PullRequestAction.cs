@@ -99,8 +99,9 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
             fields.Add(new("Requested Reviewer", Event.RequestedReviewer.Login, true));
 
         // PR 作成者への @mention が必要なアクションで通知する
+        // Draft PR はまだレビュー準備ができていないためメンションを抑制する
         string? content = null;
-        if (Event.Action is "review_requested" or "assigned")
+        if ((Event.Action is "review_requested" or "assigned") && !pr.Draft)
         {
             var targets = new List<(long, string)>();
 
@@ -136,7 +137,8 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
         }
 
         // edited の場合、WIP タイトルが解除されたらレビュアーへメンション
-        if (Event.Action == "edited" && Event.Changes.HasValue)
+        // Draft PR はまだレビュー準備ができていないためメンションを抑制する
+        if (Event.Action == "edited" && Event.Changes.HasValue && !pr.Draft)
         {
             var changes = Event.Changes.Value;
             if (changes.TryGetProperty("title", out var titleChangeProp) &&

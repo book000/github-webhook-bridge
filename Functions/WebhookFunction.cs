@@ -68,19 +68,22 @@ public class WebhookFunction
         var secret = _config["GITHUB_WEBHOOK_SECRET"]
             ?? throw new InvalidOperationException("GITHUB_WEBHOOK_SECRET not set");
         if (!SignatureValidator.Validate(rawBody, req.Headers, secret))
-            return new BadRequestObjectResult(new { message = "Bad Request: Invalid X-Hub-Signature" });
+            return new BadRequestObjectResult(new { message = "Bad Request: Invalid X-Hub-Signature-256" });
 
         // 4. X-GitHub-Event ヘッダー検証（ログインジェクション防止のためサニタイズ）
         var rawEventName = req.Headers["X-GitHub-Event"].ToString();
         if (string.IsNullOrEmpty(rawEventName))
             return new BadRequestObjectResult(new { message = "Bad Request: Missing X-GitHub-Event" });
 
-        var eventName = SanitizeEventName(rawEventName);
-        if (eventName != rawEventName)
+        var sanitized = SanitizeEventName(rawEventName);
+        if (sanitized != rawEventName)
         {
             _logger.LogWarning("Rejected request with invalid X-GitHub-Event header value");
             return new BadRequestObjectResult(new { message = "Bad Request: Invalid X-GitHub-Event" });
         }
+
+        // ActionFactory の switch 式は小文字前提のため小文字に正規化する
+        var eventName = rawEventName.ToLowerInvariant();
 
         // 5. ?url= — discord.com Webhook URL に限定（SSRF 対策）
         string webhookUrl;

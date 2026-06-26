@@ -64,11 +64,18 @@ public class MessageCacheService : IMessageCacheService
         if (!response.HasValue || response.Value is null)
             return null;
 
-        // TTL チェック — 期限切れはテーブルから削除
+        // TTL チェック — 期限切れはテーブルから削除（404 は並行削除などで無視）
         if (response.Value.Timestamp.HasValue
             && DateTimeOffset.UtcNow - response.Value.Timestamp.Value > CacheTtl)
         {
-            await _tableClient.DeleteEntityAsync(partitionKey, rowKey);
+            try
+            {
+                await _tableClient.DeleteEntityAsync(partitionKey, rowKey, ETag.All);
+            }
+            catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+            {
+                // 並行削除などでエントリが既に存在しない場合は無視
+            }
             return null;
         }
 

@@ -21,7 +21,8 @@ public static class SignatureValidator
             || !signatureHeader.StartsWith(SignaturePrefix, StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var receivedHash = signatureHeader[SignaturePrefix.Length..];
+        // クライアント実装差（大文字 HEX など）を吸収するため小文字に正規化する
+        var receivedHash = signatureHeader[SignaturePrefix.Length..].ToLowerInvariant();
 
         using var hmac        = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var       computedHash = Convert.ToHexString(hmac.ComputeHash(rawBody)).ToLowerInvariant();

@@ -4,6 +4,7 @@ using GitHubWebhookBridge.Services;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
 var builder = FunctionsApplication.CreateBuilder(args);
@@ -42,5 +43,8 @@ builder.Services
     .AddHostedService<TableStorageInitializer>()
     // Application Insights テレメトリ（サンプリングは host.json で設定）
     .AddApplicationInsightsTelemetryWorkerService();
+
+// Azure Functions Isolated ワーカー向け Application Insights の追加設定
+builder.Services.ConfigureFunctionsApplicationInsights();
 
 builder.Build().Run();

@@ -46,4 +46,16 @@ public class SignatureValidatorTests
             .Returns(Microsoft.Extensions.Primitives.StringValues.Empty);
         Assert.False(SignatureValidator.Validate([], mock.Object, "secret"));
     }
+
+    [Fact]
+    public void Validate_UppercaseHexSignature_ReturnsTrue()
+    {
+        var body   = Encoding.UTF8.GetBytes("hello");
+        var secret = "mysecret";
+        // 大文字 HEX で署名を生成してもクライアント実装差を吸収して検証に成功する
+        using var hmac    = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var computed      = Convert.ToHexString(hmac.ComputeHash(body)); // UpperInvariant
+        var sigUppercase  = $"sha256={computed}";
+        Assert.True(SignatureValidator.Validate(body, MakeHeaders(sigUppercase), secret));
+    }
 }
