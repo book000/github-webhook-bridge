@@ -104,16 +104,20 @@ public abstract class BaseManager<TData>
         return await http.GetStringAsync(url);
     }
 
-    private static async Task<string> LoadFromFileAsync(string path)
+    private async Task<string> LoadFromFileAsync(string path)
     {
         if (!File.Exists(path))
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
-            await File.WriteAllTextAsync(path, "[]");
-            return "[]";
+            var defaultContent = GetDefaultContent();
+            await File.WriteAllTextAsync(path, defaultContent);
+            return defaultContent;
         }
         return await File.ReadAllTextAsync(path);
     }
+
+    /// <summary>ファイルが存在しない場合に書き込むデフォルトの JSON 内容。</summary>
+    protected virtual string GetDefaultContent() => "[]";
 
     /// <summary>型パラメータ T を用いた汎用 JSON デシリアライズ。</summary>
     protected T? DeserializeJson<T>(string json)

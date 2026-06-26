@@ -75,5 +75,10 @@ public record MuteEvent(
     [property: JsonPropertyName("actions")] List<string>? Actions);
 
 /// <summary>ミュート方式。</summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum MuteType { Include, Exclude, All }
+[JsonConverter(typeof(JsonStringEnumConverter<MuteType>))]
+public enum MuteType
+{
+    [JsonStringEnumMemberName("include")] Include,
+    [JsonStringEnumMemberName("exclude")] Exclude,
+    [JsonStringEnumMemberName("all")]     All,
+}

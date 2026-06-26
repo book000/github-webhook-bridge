@@ -23,7 +23,7 @@ public class MuteManagerTests
     public void IsMuted_TypeAll_AlwaysTrue()
     {
         var mgr = CreateFromJson(
-            """[{"userId":1,"type":"All","events":[]}]""");
+            """[{"userId":1,"type":"all","events":[]}]""");
         Assert.True(mgr.IsMuted(1, "push", null));
         Assert.True(mgr.IsMuted(1, "issues", "opened"));
     }
@@ -32,7 +32,7 @@ public class MuteManagerTests
     public void IsMuted_TypeInclude_MatchingEvent_True()
     {
         var mgr = CreateFromJson(
-            """[{"userId":1,"type":"Include","events":[{"eventName":"push","actions":null}]}]""");
+            """[{"userId":1,"type":"include","events":[{"eventName":"push","actions":null}]}]""");
         Assert.True(mgr.IsMuted(1, "push", null));
     }
 
@@ -40,7 +40,7 @@ public class MuteManagerTests
     public void IsMuted_TypeInclude_WithActions_OnlyMatchingAction_True()
     {
         var mgr = CreateFromJson(
-            """[{"userId":1,"type":"Include","events":[{"eventName":"issues","actions":["opened"]}]}]""");
+            """[{"userId":1,"type":"include","events":[{"eventName":"issues","actions":["opened"]}]}]""");
         Assert.True(mgr.IsMuted(1, "issues", "opened"));
         Assert.False(mgr.IsMuted(1, "issues", "closed"));
     }
@@ -49,7 +49,7 @@ public class MuteManagerTests
     public void IsMuted_TypeExclude_NonExcludedEvent_True()
     {
         var mgr = CreateFromJson(
-            """[{"userId":1,"type":"Exclude","events":[{"eventName":"push","actions":["a"]}]}]""");
+            """[{"userId":1,"type":"exclude","events":[{"eventName":"push","actions":["a"]}]}]""");
         // push/a は除外 → ミュートされない
         Assert.False(mgr.IsMuted(1, "push", "a"));
         // issues はリストにない → ミュートされる
@@ -61,5 +61,15 @@ public class MuteManagerTests
     {
         var mgr = CreateFromJson("""[]""");
         Assert.False(mgr.IsMuted(999, "push", null));
+    }
+
+    [Fact]
+    public void IsMuted_TypeInclude_WithActionsList_NullAction_False()
+    {
+        // Include モード: actions リストが非 null だが action パラメータが null → ミュートされない
+        // TypeScript 版 mute.ts line ~72 相当: if (action === null) return false
+        var mgr = CreateFromJson(
+            """[{"userId":1,"type":"include","events":[{"eventName":"issues","actions":["opened"]}]}]""");
+        Assert.False(mgr.IsMuted(1, "issues", null));
     }
 }

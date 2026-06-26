@@ -29,6 +29,9 @@ public class GitHubUserMapManager : BaseManager<Dictionary<long, string>>, IGitH
 
     protected override string GetDefaultFilePath() => "data/github-user-map.json";
 
+    /// <summary>ユーザーマップのデフォルト内容は空オブジェクト。</summary>
+    protected override string GetDefaultContent() => "{}";
+
     protected override Dictionary<long, string>? Deserialize(string json)
         => DeserializeJson<Dictionary<long, string>>(json);
 
