@@ -13,6 +13,8 @@
   <ItemGroup>
     <!-- tests/ ディレクトリ内のファイルを暗黙的 glob から除外する -->
     <Compile Remove="tests/**" />
+    <!-- 自動生成モデルはコンパイル対象外（参照用）。使用する場合は using で取り込む -->
+    <Compile Remove="Models/GitHubWebhooks/Generated/**" />
   </ItemGroup>
 
   <ItemGroup>
