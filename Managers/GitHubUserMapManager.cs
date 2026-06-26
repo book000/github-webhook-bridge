@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -54,7 +55,15 @@ public class GitHubUserMapManager : BaseManager<Dictionary<long, string>>, IGitH
             return null;
 
         var http = _httpClientFactory.CreateClient("github");
-        var user = await http.GetFromJsonAsync<GitHubUserResponse>($"/users/{login}");
+        GitHubUserResponse? user;
+        try
+        {
+            user = await http.GetFromJsonAsync<GitHubUserResponse>($"/users/{login}");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
         if (user is null) return null;
         return Get(user.Id);
     }

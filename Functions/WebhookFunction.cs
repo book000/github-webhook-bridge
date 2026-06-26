@@ -128,7 +128,8 @@ public class WebhookFunction
         // 8. 送信者ミュートチェック
         await _muteManager.EnsureLoadedAsync();
         if (body.TryGetProperty("sender", out var sender)
-            && sender.TryGetProperty("id", out var senderId))
+            && sender.TryGetProperty("id", out var senderId)
+            && senderId.ValueKind == JsonValueKind.Number)
         {
             var actionProp = body.TryGetProperty("action", out var a) ? a.GetString() : null;
             if (_muteManager.IsMuted(senderId.GetInt64(), eventName, actionProp))

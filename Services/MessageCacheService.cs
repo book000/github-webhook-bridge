@@ -2,6 +2,7 @@ using Azure;
 using Azure.Data.Tables;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace GitHubWebhookBridge.Services;
 
@@ -23,12 +24,14 @@ public class MessageCacheService : IMessageCacheService
     private const  string    TableName = "MessageCache";
     private static readonly TimeSpan   CacheTtl  = TimeSpan.FromMinutes(5);
 
-    private readonly    TableClient   _tableClient;
-    private volatile    bool          _initialized;
-    private readonly    SemaphoreSlim _initLock = new(1, 1);
+    private readonly    TableClient                    _tableClient;
+    private readonly    ILogger<MessageCacheService>   _logger;
+    private volatile    bool                           _initialized;
+    private readonly    SemaphoreSlim                  _initLock = new(1, 1);
 
-    public MessageCacheService(IConfiguration config)
+    public MessageCacheService(IConfiguration config, ILogger<MessageCacheService> logger)
     {
+        _logger = logger;
         var connStr = config["AzureWebJobsStorage"]
             ?? throw new InvalidOperationException("AzureWebJobsStorage is not set");
         var serviceClient = new TableServiceClient(connStr);
@@ -91,7 +94,16 @@ public class MessageCacheService : IMessageCacheService
             RowKey       = SanitizeRowKey(key),
             MessageId    = messageId,
         };
-        await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        try
+        {
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
+        catch (Azure.RequestFailedException ex)
+        {
+            // キャッシュ書き込み失敗は警告に留め、処理を継続する
+            // （書き込み失敗でも Discord への通知は完了しているため）
+            _logger.LogWarning(ex, "Failed to write message cache for key {Key}", key);
+        }
     }
 
     /// <summary>指定キーのキャッシュエントリを削除する。編集失敗時のフォールバック用。</summary>
