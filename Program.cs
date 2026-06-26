@@ -4,6 +4,7 @@ using GitHubWebhookBridge.Services;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 builder.ConfigureFunctionsWebApplication();
@@ -38,6 +39,8 @@ builder.Services
     // アクションファクトリー
     .AddSingleton<IActionFactory, ActionFactory>()
     // テーブルストレージの初期化をホスト起動時に非同期実行
-    .AddHostedService<TableStorageInitializer>();
+    .AddHostedService<TableStorageInitializer>()
+    // Application Insights テレメトリ（サンプリングは host.json で設定）
+    .AddApplicationInsightsTelemetryWorkerService();
 
 builder.Build().Run();

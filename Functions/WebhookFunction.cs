@@ -38,9 +38,9 @@ public class WebhookFunction
         // リクエストボディの上限サイズ (10 MB)
         const long MaxBodyBytes = 10L * 1024 * 1024;
 
-        // 1. Content-Length 事前チェック
+        // 1. Content-Length 事前チェック（10MB 超過は Bad Request）
         if (req.ContentLength.HasValue && req.ContentLength.Value > MaxBodyBytes)
-            return new StatusCodeResult(413);
+            return new BadRequestObjectResult(new { message = "Bad Request: Body too large" });
 
         // 2. ボディを MaxBodyBytes まで逐次読み取り
         req.EnableBuffering();
@@ -51,7 +51,7 @@ public class WebhookFunction
         {
             ms.Write(chunk, 0, bytesRead);
             if (ms.Length > MaxBodyBytes)
-                return new StatusCodeResult(413);
+                return new BadRequestObjectResult(new { message = "Bad Request: Body too large" });
         }
         var rawBody = ms.ToArray();
 
@@ -121,7 +121,7 @@ public class WebhookFunction
         }
 
         // 9-10. アクションハンドラーへディスパッチ
-        IAction actionHandler;
+        IAction? actionHandler;
         try
         {
             actionHandler = _actionFactory.GetAction(eventName, body, webhookUrl);
@@ -130,6 +130,13 @@ public class WebhookFunction
         {
             // 未実装イベント（スタブ以外の未知のイベント）は 400 を返す
             _logger.LogWarning("Unknown event type: {EventName}", eventName);
+            return new BadRequestObjectResult(new { message = $"Bad Request: Unknown event '{eventName}'" });
+        }
+
+        // アクションが null の場合（未知のイベント）は 400 を返す
+        if (actionHandler is null)
+        {
+            _logger.LogWarning("ActionFactory returned null for event: {EventName}", eventName);
             return new BadRequestObjectResult(new { message = $"Bad Request: Unknown event '{eventName}'" });
         }
 
