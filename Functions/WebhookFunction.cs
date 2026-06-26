@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using GitHubWebhookBridge.Actions;
 using GitHubWebhookBridge.Managers;
@@ -7,38 +8,41 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace GitHubWebhookBridge.Functions;
 
 /// <summary>GitHub Webhook を受信し Discord に通知する Azure Function。</summary>
-public class WebhookFunction
+/// <remarks>依存サービスをコンストラクタインジェクションで受け取る。</remarks>
+public class WebhookFunction(
+    IActionFactory actionFactory,
+    IMuteManager muteManager,
+    IConfiguration config,
+    ILogger<WebhookFunction> logger)
 {
-    private readonly IActionFactory          _actionFactory;
-    private readonly IMuteManager            _muteManager;
-    private readonly IConfiguration          _config;
-    private readonly ILogger<WebhookFunction> _logger;
+    private readonly IActionFactory _actionFactory = actionFactory;
+    private readonly IMuteManager _muteManager = muteManager;
+    private readonly IConfiguration _config = config;
+    private readonly ILogger<WebhookFunction> _logger = logger;
 
-    /// <summary>依存サービスをコンストラクタインジェクションで受け取る。</summary>
-    public WebhookFunction(
-        IActionFactory          actionFactory,
-        IMuteManager            muteManager,
-        IConfiguration          config,
-        ILogger<WebhookFunction> logger)
+    // JSON デシリアライズオプション（キャッシュして再利用）
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
-        _actionFactory = actionFactory;
-        _muteManager   = muteManager;
-        _config        = config;
-        _logger        = logger;
-    }
+        ReadCommentHandling = JsonCommentHandling.Skip,
+    };
 
     /// <summary>
     /// GitHub Webhook リクエストを受け取り、署名検証・ミュートチェックを経て Discord に通知する。
     /// </summary>
     [Function("GitHubWebhook")]
+    [SuppressMessage("Naming", "IDE1006:NamingRuleViolation", Justification = "Azure Functions ランタイムが 'Run' という名前を要求するため変更不可")]
+    [SuppressMessage("Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Webhook エントリーポイントは必然的に多くの型を参照する")]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post",
             Route = "GitHubWebhook")] HttpRequest req)
     {
+        ArgumentNullException.ThrowIfNull(req);
+
         // リクエストボディの上限サイズ (10 MB)
         const long MaxBodyBytes = 10L * 1024 * 1024;
 
@@ -48,12 +52,12 @@ public class WebhookFunction
 
         // 2. ボディを MaxBodyBytes まで逐次読み取り
         req.EnableBuffering();
-        using var ms    = new MemoryStream();
-        var       chunk = new byte[81920];
+        using var ms = new MemoryStream();
+        var chunk = new byte[81920];
         int bytesRead;
         while ((bytesRead = await req.Body.ReadAsync(chunk)) > 0)
         {
-            ms.Write(chunk, 0, bytesRead);
+            await ms.WriteAsync(chunk.AsMemory(0, bytesRead));
             if (ms.Length > MaxBodyBytes)
                 return new BadRequestObjectResult(new { message = "Bad Request: Body too large" });
         }
@@ -83,26 +87,27 @@ public class WebhookFunction
         }
 
         // ActionFactory の switch 式は小文字前提のため小文字に正規化する
-        var eventName = rawEventName.ToLowerInvariant();
+        var eventName = NormalizeEventName(rawEventName);
 
         // 5. ?url= — discord.com Webhook URL に限定（SSRF 対策）
-        string webhookUrl;
-        if (req.Query.TryGetValue("url", out var urlParam) && !string.IsNullOrEmpty(urlParam))
+        Uri webhookUrl;
+        if (req.Query.TryGetValue("url", out StringValues urlParam) && !string.IsNullOrEmpty(urlParam))
         {
             var candidate = urlParam.ToString();
             if (!IsAllowedWebhookUrl(candidate))
                 return new BadRequestObjectResult(new { message = "Bad Request: Invalid url parameter" });
-            webhookUrl = candidate;
+            webhookUrl = new Uri(candidate);
         }
         else
         {
             // ?url= が省略された場合は環境変数のデフォルト Webhook URL を使用
-            webhookUrl = _config["DISCORD_WEBHOOK_URL"]
+            var defaultUrl = _config["DISCORD_WEBHOOK_URL"]
                 ?? throw new InvalidOperationException("DISCORD_WEBHOOK_URL not set");
+            webhookUrl = new Uri(defaultUrl);
         }
 
         // 6. ?disabled-events= チェック（カンマ区切り、イベント名が含まれる場合は 202 を返す）
-        var disabledEvents = req.Query.TryGetValue("disabled-events", out var deParam)
+        var disabledEvents = req.Query.TryGetValue("disabled-events", out StringValues deParam)
                              && !string.IsNullOrEmpty(deParam)
             ? deParam.ToString()
             : _config["DISABLED_EVENTS"];
@@ -117,21 +122,20 @@ public class WebhookFunction
         JsonElement body;
         try
         {
-            var options = new JsonSerializerOptions { ReadCommentHandling = JsonCommentHandling.Skip };
-            body = JsonSerializer.Deserialize<JsonElement>(rawBody, options);
+            body = JsonSerializer.Deserialize<JsonElement>(rawBody, _jsonOptions);
         }
-        catch (System.Text.Json.JsonException)
+        catch (JsonException)
         {
             return new BadRequestObjectResult(new { message = "Bad Request: Invalid JSON body" });
         }
 
         // 8. 送信者ミュートチェック
         await _muteManager.EnsureLoadedAsync();
-        if (body.TryGetProperty("sender", out var sender)
-            && sender.TryGetProperty("id", out var senderId)
+        if (body.TryGetProperty("sender", out JsonElement sender)
+            && sender.TryGetProperty("id", out JsonElement senderId)
             && senderId.ValueKind == JsonValueKind.Number)
         {
-            var actionProp = body.TryGetProperty("action", out var a) ? a.GetString() : null;
+            var actionProp = body.TryGetProperty("action", out JsonElement a) ? a.GetString() : null;
             if (_muteManager.IsMuted(senderId.GetInt64(), eventName, actionProp))
                 return new OkObjectResult(new { message = "Muted user" });
         }
@@ -181,8 +185,16 @@ public class WebhookFunction
     private static string SanitizeEventName(string raw)
         => System.Text.RegularExpressions.Regex.Replace(raw, "[^a-zA-Z0-9_-]", "");
 
+    /// <summary>
+    /// GitHub イベント名を小文字に正規化する。
+    /// GitHub のイベント名は仕様上小文字のため ToLowerInvariant を使用する。
+    /// </summary>
+    [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "GitHub イベント名は仕様上小文字のため ToLowerInvariant が正しい")]
+    private static string NormalizeEventName(string eventName)
+        => eventName.ToLowerInvariant();
+
     /// <summary>SSRF 対策: discord.com Webhook URL プレフィックスのみ許可。</summary>
     private static bool IsAllowedWebhookUrl(string url)
-        => url.StartsWith("https://discord.com/api/webhooks/",    StringComparison.OrdinalIgnoreCase)
+        => url.StartsWith("https://discord.com/api/webhooks/", StringComparison.OrdinalIgnoreCase)
         || url.StartsWith("https://discordapp.com/api/webhooks/", StringComparison.OrdinalIgnoreCase);
 }

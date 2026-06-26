@@ -4,6 +4,6 @@ namespace GitHubWebhookBridge.Managers;
 public interface IGitHubUserMapManager
 {
     Task EnsureLoadedAsync();
-    string? Get(long githubUserId);
+    string? GetById(long githubUserId);
     Task<string?> GetFromUsernameAsync(string login);
 }

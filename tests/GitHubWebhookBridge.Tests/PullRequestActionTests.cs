@@ -10,40 +10,42 @@ namespace GitHubWebhookBridge.Tests;
 
 public class PullRequestActionTests
 {
+    private static readonly Uri _webhookUri = new("https://discord.test/webhook");
+
     private static PullRequest MakePullRequest(bool merged = false, bool draft = false) => new()
     {
-        Number  = 42,
-        Title   = "Add awesome feature",
-        Body    = "This PR adds an awesome feature.",
-        State   = merged ? "closed" : "open",
-        HtmlUrl = "https://github.com/test/repo/pull/42",
-        User    = new User { Login = "pr-author", Id = 100, HtmlUrl = "https://github.com/pr-author" },
-        Draft   = draft,
-        Merged  = merged ? true : null,
-        Head    = new PullRequestRef { Ref = "feature/my-branch" },
-        Base    = new PullRequestRef { Ref = "main" },
+        Number = 42,
+        Title = "Add awesome feature",
+        Body = "This PR adds an awesome feature.",
+        State = merged ? "closed" : "open",
+        HtmlUrl = new Uri("https://github.com/test/repo/pull/42"),
+        User = new User { Login = "pr-author", Id = 100, HtmlUrl = new Uri("https://github.com/pr-author") },
+        Draft = draft,
+        Merged = merged ? true : null,
+        Head = new PullRequestRef { Ref = "feature/my-branch" },
+        Base = new PullRequestRef { Ref = "main" },
     };
 
     private static PullRequestEvent MakePrEvent(string action, bool merged = false, bool draft = false) => new()
     {
-        Action      = action,
-        Number      = 42,
+        Action = action,
+        Number = 42,
         PullRequest = MakePullRequest(merged, draft),
-        Repository  = new Repository { FullName = "test/repo", HtmlUrl = "https://github.com/test/repo" },
-        Sender      = new User { Login = "sender", Id = 200, HtmlUrl = "https://github.com/sender" },
+        Repository = new Repository { FullName = "test/repo", HtmlUrl = new Uri("https://github.com/test/repo") },
+        Sender = new User { Login = "sender", Id = 200, HtmlUrl = new Uri("https://github.com/sender") },
     };
 
     private static (Mock<IDiscordClient>, Mock<IMessageCacheService>, Mock<IGitHubUserMapManager>) CreateMocks()
     {
-        var discord = new Mock<IDiscordClient>();
-        var cache   = new Mock<IMessageCacheService>();
-        var userMap = new Mock<IGitHubUserMapManager>();
+        Mock<IDiscordClient> discord = new();
+        Mock<IMessageCacheService> cache = new();
+        Mock<IGitHubUserMapManager> userMap = new();
 
-        cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<string>()))
+        cache.Setup(c => c.GetAsync(It.IsAny<Uri>(), It.IsAny<string>()))
              .ReturnsAsync((CachedMessage?)null);
-        cache.Setup(c => c.SetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        cache.Setup(c => c.SetAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<string>()))
              .Returns(Task.CompletedTask);
-        discord.Setup(d => d.SendMessageAsync(It.IsAny<string>(), It.IsAny<DiscordMessage>()))
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .ReturnsAsync("msg-id");
         userMap.Setup(u => u.EnsureLoadedAsync()).Returns(Task.CompletedTask);
 
@@ -51,12 +53,12 @@ public class PullRequestActionTests
     }
 
     [Fact]
-    public async Task RunAsync_SendsMessageForOpenedEvent()
+    public async Task RunAsyncSendsMessageForOpenedEvent()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        var action = new PullRequestAction(
-            discord.Object, "https://discord.test/webhook", "pull_request",
+        PullRequestAction action = new(
+            discord.Object, _webhookUri, "pull_request",
             MakePrEvent("opened"), cache.Object, userMap.Object,
             Mock.Of<ILogger>());
 
@@ -64,7 +66,7 @@ public class PullRequestActionTests
 
         discord.Verify(
             d => d.SendMessageAsync(
-                It.IsAny<string>(),
+                It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m =>
                     m.Embeds != null &&
                     m.Embeds.Count == 1 &&
@@ -74,12 +76,12 @@ public class PullRequestActionTests
     }
 
     [Fact]
-    public async Task RunAsync_UsesMergedColorWhenClosed_AndMergedIsTrue()
+    public async Task RunAsyncUsesMergedColorWhenClosedAndMergedIsTrue()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        var action = new PullRequestAction(
-            discord.Object, "https://discord.test/webhook", "pull_request",
+        PullRequestAction action = new(
+            discord.Object, _webhookUri, "pull_request",
             MakePrEvent("closed", merged: true), cache.Object, userMap.Object,
             Mock.Of<ILogger>());
 
@@ -88,19 +90,19 @@ public class PullRequestActionTests
         // "merged" というテキストがタイトルに含まれることを確認する
         discord.Verify(
             d => d.SendMessageAsync(
-                It.IsAny<string>(),
+                It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m =>
                     m.Embeds![0].Title!.Contains("merged"))),
             Times.Once);
     }
 
     [Fact]
-    public async Task RunAsync_UsesClosedColorWhenClosed_AndMergedIsFalse()
+    public async Task RunAsyncUsesClosedColorWhenClosedAndMergedIsFalse()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        var action = new PullRequestAction(
-            discord.Object, "https://discord.test/webhook", "pull_request",
+        PullRequestAction action = new(
+            discord.Object, _webhookUri, "pull_request",
             MakePrEvent("closed", merged: false), cache.Object, userMap.Object,
             Mock.Of<ILogger>());
 
@@ -108,19 +110,19 @@ public class PullRequestActionTests
 
         discord.Verify(
             d => d.SendMessageAsync(
-                It.IsAny<string>(),
+                It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m =>
                     m.Embeds![0].Title!.Contains("closed"))),
             Times.Once);
     }
 
     [Fact]
-    public async Task RunAsync_IncludesBranchInfoInFields()
+    public async Task RunAsyncIncludesBranchInfoInFields()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        var action = new PullRequestAction(
-            discord.Object, "https://discord.test/webhook", "pull_request",
+        PullRequestAction action = new(
+            discord.Object, _webhookUri, "pull_request",
             MakePrEvent("opened"), cache.Object, userMap.Object,
             Mock.Of<ILogger>());
 
@@ -128,7 +130,7 @@ public class PullRequestActionTests
 
         discord.Verify(
             d => d.SendMessageAsync(
-                It.IsAny<string>(),
+                It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m =>
                     m.Embeds![0].Fields != null &&
                     m.Embeds![0].Fields!.Any(f => f.Value.Contains("feature/my-branch") && f.Value.Contains("main")))),
@@ -136,36 +138,36 @@ public class PullRequestActionTests
     }
 
     [Fact]
-    public async Task RunAsync_UsesPrNumberAsPartOfCacheKey()
+    public async Task RunAsyncUsesPrNumberAsPartOfCacheKey()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        var action = new PullRequestAction(
-            discord.Object, "https://discord.test/webhook", "pull_request",
+        PullRequestAction action = new(
+            discord.Object, _webhookUri, "pull_request",
             MakePrEvent("opened"), cache.Object, userMap.Object,
             Mock.Of<ILogger>());
 
         await action.RunAsync();
 
         cache.Verify(
-            c => c.GetAsync("https://discord.test/webhook", "test/repo#42-opened"),
+            c => c.GetAsync(_webhookUri, "test/repo#42-opened"),
             Times.Once);
     }
 
     [Fact]
-    public async Task RunAsync_SendsMentionForReviewRequestedEvent()
+    public async Task RunAsyncSendsMentionForReviewRequestedEvent()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        var reviewer = new User { Login = "reviewer-user", Id = 300 };
-        var prEvent  = MakePrEvent("review_requested");
+        User reviewer = new() { Login = "reviewer-user", Id = 300 };
+        PullRequestEvent prEvent = MakePrEvent("review_requested");
         prEvent.RequestedReviewer = reviewer;
 
         // レビュアーに Discord ID がマッピングされている場合
-        userMap.Setup(u => u.Get(300L)).Returns("discord-user-id-300");
+        userMap.Setup(u => u.GetById(300L)).Returns("discord-user-id-300");
 
-        var action = new PullRequestAction(
-            discord.Object, "https://discord.test/webhook", "pull_request",
+        PullRequestAction action = new(
+            discord.Object, _webhookUri, "pull_request",
             prEvent, cache.Object, userMap.Object,
             Mock.Of<ILogger>());
 
@@ -173,7 +175,7 @@ public class PullRequestActionTests
 
         discord.Verify(
             d => d.SendMessageAsync(
-                It.IsAny<string>(),
+                It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m =>
                     m.Content != null &&
                     m.Content.Contains("<@discord-user-id-300>"))),

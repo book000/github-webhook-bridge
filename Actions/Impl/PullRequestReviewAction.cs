@@ -8,29 +8,27 @@ using Microsoft.Extensions.Logging;
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub pull_request_review イベントを Discord に通知する。</summary>
-public sealed class PullRequestReviewAction : BaseAction<PullRequestReviewEvent>
+/// <inheritdoc cref="BaseAction{TEvent}"/>
+public sealed class PullRequestReviewAction(IDiscordClient d, Uri wu, string en, PullRequestReviewEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<PullRequestReviewEvent>(d, wu, en, e, c, u, l)
 {
-    /// <inheritdoc cref="BaseAction{TEvent}"/>
-    public PullRequestReviewAction(IDiscordClient d, string wu, string en, PullRequestReviewEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l)
-        : base(d, wu, en, e, c, u, l) { }
 
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        var review = Event.Review;
-        var pr     = Event.PullRequest;
-        var repo   = Event.Repository;
-        var sender = Event.Sender;
+        Review review = Event.Review;
+        PullRequest pr = Event.PullRequest;
+        Repository repo = Event.Repository;
+        User sender = Event.Sender;
 
         // レビュー状態とアクションを組み合わせて色とタイトルを決定する
-        var (titleVerb, color) = (Event.Action, review.State.ToUpperInvariant()) switch
+        (var titleVerb, var color) = (Event.Action, review.State.ToUpperInvariant()) switch
         {
-            ("submitted", "APPROVED")           => ("approved",           EmbedColors.PullRequestReviewApproved),
-            ("submitted", "CHANGES_REQUESTED")  => ("requested changes",  EmbedColors.PullRequestReviewChangesRequested),
-            ("submitted", _)                    => ("commented on",        EmbedColors.PullRequestReviewApproved),
-            ("edited",    _)                    => ("edited review on",    EmbedColors.PullRequestReviewEdited),
-            ("dismissed", _)                    => ("dismissed review on", EmbedColors.PullRequestReviewDismissed),
-            _                                   => (Event.Action,          EmbedColors.Unknown),
+            ("submitted", "APPROVED") => ("approved", EmbedColors.PullRequestReviewApproved),
+            ("submitted", "CHANGES_REQUESTED") => ("requested changes", EmbedColors.PullRequestReviewChangesRequested),
+            ("submitted", _) => ("commented on", EmbedColors.PullRequestReviewApproved),
+            ("edited", _) => ("edited review on", EmbedColors.PullRequestReviewEdited),
+            ("dismissed", _) => ("dismissed review on", EmbedColors.PullRequestReviewDismissed),
+            _ => (Event.Action, EmbedColors.Unknown),
         };
 
         var title = $"{sender.Login} {titleVerb} PR #{pr.Number}: {pr.Title}";
@@ -46,17 +44,17 @@ public sealed class PullRequestReviewAction : BaseAction<PullRequestReviewEvent>
         var content = mentions.Length > 0 ? mentions : null;
 
         var author = new DiscordEmbedAuthor(
-            Name:    sender.Login,
-            Url:     sender.HtmlUrl,
+            Name: sender.Login,
+            Url: sender.HtmlUrl,
             IconUrl: sender.AvatarUrl);
 
-        var embed = EmbedHelper.CreateEmbed(
-            eventName:   EventName,
-            color:       color,
-            title:       title,
+        DiscordEmbed embed = EmbedHelper.CreateEmbed(
+            eventName: EventName,
+            color: color,
+            title: title,
             description: body,
-            url:         review.HtmlUrl,
-            author:      author);
+            url: review.HtmlUrl,
+            author: author);
 
         var key = $"{repo.FullName}-pr-review-{review.Id}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));

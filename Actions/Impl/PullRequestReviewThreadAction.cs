@@ -8,25 +8,23 @@ using Microsoft.Extensions.Logging;
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub pull_request_review_thread イベントを Discord に通知する。</summary>
-public sealed class PullRequestReviewThreadAction : BaseAction<PullRequestReviewThreadEvent>
+/// <inheritdoc cref="BaseAction{TEvent}"/>
+public sealed class PullRequestReviewThreadAction(IDiscordClient d, Uri wu, string en, PullRequestReviewThreadEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<PullRequestReviewThreadEvent>(d, wu, en, e, c, u, l)
 {
-    /// <inheritdoc cref="BaseAction{TEvent}"/>
-    public PullRequestReviewThreadAction(IDiscordClient d, string wu, string en, PullRequestReviewThreadEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l)
-        : base(d, wu, en, e, c, u, l) { }
 
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        var thread = Event.Thread;
-        var pr     = Event.PullRequest;
-        var repo   = Event.Repository;
-        var sender = Event.Sender;
+        ReviewThread thread = Event.Thread;
+        PullRequest pr = Event.PullRequest;
+        Repository repo = Event.Repository;
+        User sender = Event.Sender;
 
-        var (titleVerb, color) = Event.Action switch
+        (var titleVerb, var color) = Event.Action switch
         {
-            "resolved"   => ("resolved review thread on",   EmbedColors.PullRequestReviewThreadResolved),
+            "resolved" => ("resolved review thread on", EmbedColors.PullRequestReviewThreadResolved),
             "unresolved" => ("unresolved review thread on", EmbedColors.PullRequestReviewThreadUnresolved),
-            _            => (Event.Action,                  EmbedColors.Unknown),
+            _ => (Event.Action, EmbedColors.Unknown),
         };
 
         var title = $"{sender.Login} {titleVerb} PR #{pr.Number}: {pr.Title}";
@@ -44,17 +42,17 @@ public sealed class PullRequestReviewThreadAction : BaseAction<PullRequestReview
         var content = mentions.Length > 0 ? mentions : null;
 
         var author = new DiscordEmbedAuthor(
-            Name:    sender.Login,
-            Url:     sender.HtmlUrl,
+            Name: sender.Login,
+            Url: sender.HtmlUrl,
             IconUrl: sender.AvatarUrl);
 
-        var embed = EmbedHelper.CreateEmbed(
+        DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
-            color:     color,
-            title:     title,
-            url:       pr.HtmlUrl,
-            author:    author,
-            fields:    fields);
+            color: color,
+            title: title,
+            url: pr.HtmlUrl,
+            author: author,
+            fields: fields);
 
         var key = $"{repo.FullName}-pr-review-thread-{thread.NodeId}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));

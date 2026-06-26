@@ -4,19 +4,11 @@ using Microsoft.Extensions.Configuration;
 namespace GitHubWebhookBridge.Managers;
 
 /// <summary>ユーザーミュート設定を管理する。</summary>
-public class MuteManager : BaseManager<List<MuteRecord>>, IMuteManager
+public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFactory) : BaseManager<List<MuteRecord>>(config, httpClientFactory), IMuteManager
 {
-    protected override string? FilePath { get; }
-    protected override string? FileUrl { get; }
-    protected override string? BlobPath { get; }
-
-    public MuteManager(IConfiguration config, IHttpClientFactory httpClientFactory)
-        : base(config, httpClientFactory)
-    {
-        FilePath = config["MUTES_FILE_PATH"];
-        FileUrl = config["MUTES_FILE_URL"];
-        BlobPath = config["MUTES_BLOB"];
-    }
+    protected override string? FilePath { get; } = config["MUTES_FILE_PATH"];
+    protected override Uri? FileUrl { get; } = config["MUTES_FILE_URL"] is string url ? new Uri(url) : null;
+    protected override string? BlobPath { get; } = config["MUTES_BLOB"];
 
     protected override string GetDefaultFilePath() => "data/mutes.json";
 
@@ -26,7 +18,7 @@ public class MuteManager : BaseManager<List<MuteRecord>>, IMuteManager
     /// <summary>テスト専用: JSON を直接ロードする。</summary>
     internal void LoadForTest(string json)
     {
-        var data = Deserialize(json)
+        List<MuteRecord> data = Deserialize(json)
             ?? throw new InvalidOperationException("Invalid test JSON");
         SetDataForTest(data);
     }
@@ -38,10 +30,12 @@ public class MuteManager : BaseManager<List<MuteRecord>>, IMuteManager
     public bool IsMuted(long userId, string eventName, string? action)
     {
         if (Data is null)
+        {
             throw new InvalidOperationException(
                 "MuteManager is not loaded. Call EnsureLoadedAsync() first.");
+        }
 
-        var record = Data.Find(r => r.UserId == userId);
+        MuteRecord? record = Data.Find(r => r.UserId == userId);
         if (record is null) return false;
         if (record.Type == MuteType.All) return true;
 
@@ -67,12 +61,12 @@ public class MuteManager : BaseManager<List<MuteRecord>>, IMuteManager
 public record MuteRecord(
     [property: JsonPropertyName("userId")] long UserId,
     [property: JsonPropertyName("type")] MuteType Type,
-    [property: JsonPropertyName("events")] List<MuteEvent> Events);
+    [property: JsonPropertyName("events")] IList<MuteEvent> Events);
 
 /// <summary>ミュート対象のイベント設定。</summary>
 public record MuteEvent(
     [property: JsonPropertyName("eventName")] string EventName,
-    [property: JsonPropertyName("actions")] List<string>? Actions);
+    [property: JsonPropertyName("actions")] IList<string>? Actions);
 
 /// <summary>ミュート方式。</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<MuteType>))]
@@ -80,5 +74,5 @@ public enum MuteType
 {
     [JsonStringEnumMemberName("include")] Include,
     [JsonStringEnumMemberName("exclude")] Exclude,
-    [JsonStringEnumMemberName("all")]     All,
+    [JsonStringEnumMemberName("all")] All,
 }

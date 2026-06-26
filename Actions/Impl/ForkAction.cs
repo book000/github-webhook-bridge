@@ -8,26 +8,24 @@ using Microsoft.Extensions.Logging;
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub fork イベントを Discord に通知する。</summary>
-public sealed class ForkAction : BaseAction<ForkEvent>
+/// <inheritdoc cref="BaseAction{TEvent}"/>
+public sealed class ForkAction(IDiscordClient d, Uri wu, string en, ForkEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<ForkEvent>(d, wu, en, e, c, u, l)
 {
-    /// <inheritdoc cref="BaseAction{TEvent}"/>
-    public ForkAction(IDiscordClient d, string wu, string en, ForkEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l)
-        : base(d, wu, en, e, c, u, l) { }
 
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
         var author = new DiscordEmbedAuthor(
-            Name:    Event.Sender.Login,
-            Url:     Event.Sender.HtmlUrl,
+            Name: Event.Sender.Login,
+            Url: Event.Sender.HtmlUrl,
             IconUrl: Event.Sender.AvatarUrl);
 
-        var embed = EmbedHelper.CreateEmbed(
+        DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
-            color:     EmbedColors.Fork,
-            title:     $"Forked {Event.Repository.FullName} by {Event.Sender.Login} to {Event.Forkee.FullName}",
-            url:       Event.Forkee.HtmlUrl,
-            author:    author);
+            color: EmbedColors.Fork,
+            title: $"Forked {Event.Repository.FullName} by {Event.Sender.Login} to {Event.Forkee.FullName}",
+            url: Event.Forkee.HtmlUrl,
+            author: author);
 
         var key = $"{Event.Repository.FullName}-fork-{Event.Sender.Login}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));

@@ -23,23 +23,23 @@ public class SignatureValidatorTests
     }
 
     [Fact]
-    public void Validate_ValidSignature_ReturnsTrue()
+    public void ValidateValidSignatureReturnsTrue()
     {
-        var body   = Encoding.UTF8.GetBytes("hello");
+        var body = Encoding.UTF8.GetBytes("hello");
         var secret = "mysecret";
-        var sig    = ComputeSignature(body, secret);
+        var sig = ComputeSignature(body, secret);
         Assert.True(SignatureValidator.Validate(body, MakeHeaders(sig), secret));
     }
 
     [Fact]
-    public void Validate_InvalidSignature_ReturnsFalse()
+    public void ValidateInvalidSignatureReturnsFalse()
     {
         var body = Encoding.UTF8.GetBytes("hello");
         Assert.False(SignatureValidator.Validate(body, MakeHeaders("sha256=000000"), "mysecret"));
     }
 
     [Fact]
-    public void Validate_MissingHeader_ReturnsFalse()
+    public void ValidateMissingHeaderReturnsFalse()
     {
         var mock = new Mock<IHeaderDictionary>();
         mock.Setup(h => h["X-Hub-Signature-256"])
@@ -48,14 +48,14 @@ public class SignatureValidatorTests
     }
 
     [Fact]
-    public void Validate_UppercaseHexSignature_ReturnsTrue()
+    public void ValidateUppercaseHexSignatureReturnsTrue()
     {
-        var body   = Encoding.UTF8.GetBytes("hello");
+        var body = Encoding.UTF8.GetBytes("hello");
         var secret = "mysecret";
         // 大文字 HEX で署名を生成してもクライアント実装差を吸収して検証に成功する
-        using var hmac    = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-        var computed      = Convert.ToHexString(hmac.ComputeHash(body)); // UpperInvariant
-        var sigUppercase  = $"sha256={computed}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var computed = Convert.ToHexString(hmac.ComputeHash(body)); // UpperInvariant
+        var sigUppercase = $"sha256={computed}";
         Assert.True(SignatureValidator.Validate(body, MakeHeaders(sigUppercase), secret));
     }
 }

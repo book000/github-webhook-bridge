@@ -8,26 +8,24 @@ using Microsoft.Extensions.Logging;
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub pull_request_review_comment イベントを Discord に通知する。</summary>
-public sealed class PullRequestReviewCommentAction : BaseAction<PullRequestReviewCommentEvent>
+/// <inheritdoc cref="BaseAction{TEvent}"/>
+public sealed class PullRequestReviewCommentAction(IDiscordClient d, Uri wu, string en, PullRequestReviewCommentEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<PullRequestReviewCommentEvent>(d, wu, en, e, c, u, l)
 {
-    /// <inheritdoc cref="BaseAction{TEvent}"/>
-    public PullRequestReviewCommentAction(IDiscordClient d, string wu, string en, PullRequestReviewCommentEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l)
-        : base(d, wu, en, e, c, u, l) { }
 
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        var comment = Event.Comment;
-        var pr      = Event.PullRequest;
-        var repo    = Event.Repository;
-        var sender  = Event.Sender;
+        ReviewComment comment = Event.Comment;
+        PullRequest pr = Event.PullRequest;
+        Repository repo = Event.Repository;
+        User sender = Event.Sender;
 
-        var (titleVerb, color) = Event.Action switch
+        (var titleVerb, var color) = Event.Action switch
         {
-            "created" => ("commented on",      EmbedColors.PullRequestReviewCommentCreated),
-            "edited"  => ("edited comment on", EmbedColors.PullRequestReviewCommentEdited),
-            "deleted" => ("deleted comment on",EmbedColors.PullRequestReviewCommentDeleted),
-            _         => (Event.Action,         EmbedColors.Unknown),
+            "created" => ("commented on", EmbedColors.PullRequestReviewCommentCreated),
+            "edited" => ("edited comment on", EmbedColors.PullRequestReviewCommentEdited),
+            "deleted" => ("deleted comment on", EmbedColors.PullRequestReviewCommentDeleted),
+            _ => (Event.Action, EmbedColors.Unknown),
         };
 
         var title = $"{sender.Login} {titleVerb} PR #{pr.Number}: {pr.Title}";
@@ -56,18 +54,18 @@ public sealed class PullRequestReviewCommentAction : BaseAction<PullRequestRevie
         var content = mentions.Length > 0 ? mentions : null;
 
         var author = new DiscordEmbedAuthor(
-            Name:    sender.Login,
-            Url:     sender.HtmlUrl,
+            Name: sender.Login,
+            Url: sender.HtmlUrl,
             IconUrl: sender.AvatarUrl);
 
-        var embed = EmbedHelper.CreateEmbed(
-            eventName:   EventName,
-            color:       color,
-            title:       title,
+        DiscordEmbed embed = EmbedHelper.CreateEmbed(
+            eventName: EventName,
+            color: color,
+            title: title,
             description: body,
-            url:         comment.HtmlUrl,
-            author:      author,
-            fields:      fields.Count > 0 ? fields : null);
+            url: comment.HtmlUrl,
+            author: author,
+            fields: fields.Count > 0 ? fields : null);
 
         var key = $"{repo.FullName}-pr-review-comment-{comment.Id}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));

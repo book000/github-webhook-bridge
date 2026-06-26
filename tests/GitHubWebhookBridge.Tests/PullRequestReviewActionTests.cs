@@ -13,17 +13,21 @@ namespace GitHubWebhookBridge.Tests;
 /// <summary>PullRequestReviewAction の色・タイトル検証テスト。</summary>
 public class PullRequestReviewActionTests
 {
+    private static readonly Uri _webhookUri = new("https://discord.com/api/webhooks/1/x");
+
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private static (Mock<IDiscordClient>, Mock<IMessageCacheService>, Mock<IGitHubUserMapManager>) CreateMocks()
     {
-        var discord = new Mock<IDiscordClient>();
-        var cache   = new Mock<IMessageCacheService>();
-        var userMap = new Mock<IGitHubUserMapManager>();
+        Mock<IDiscordClient> discord = new();
+        Mock<IMessageCacheService> cache = new();
+        Mock<IGitHubUserMapManager> userMap = new();
 
-        cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<string>()))
+        cache.Setup(c => c.GetAsync(It.IsAny<Uri>(), It.IsAny<string>()))
              .ReturnsAsync((CachedMessage?)null);
-        cache.Setup(c => c.SetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        cache.Setup(c => c.SetAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<string>()))
              .Returns(Task.CompletedTask);
-        discord.Setup(d => d.SendMessageAsync(It.IsAny<string>(), It.IsAny<DiscordMessage>()))
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .ReturnsAsync("msg-id");
         userMap.Setup(u => u.EnsureLoadedAsync()).Returns(Task.CompletedTask);
 
@@ -79,8 +83,7 @@ public class PullRequestReviewActionTests
             }
         }
         """;
-        return JsonSerializer.Deserialize<PullRequestReviewEvent>(json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        return JsonSerializer.Deserialize<PullRequestReviewEvent>(json, _jsonOptions)!;
     }
 
     /// <summary>キャプチャされた Embed の色を取得するヘルパー。</summary>
@@ -91,20 +94,20 @@ public class PullRequestReviewActionTests
         string action,
         string state)
     {
-        var prEvent = MakePrReviewEvent(action, state);
+        PullRequestReviewEvent prEvent = MakePrReviewEvent(action, state);
 
-        var reviewAction = new PullRequestReviewAction(
+        PullRequestReviewAction reviewAction = new(
             discord.Object,
-            "https://discord.com/api/webhooks/1/x",
+            _webhookUri,
             "pull_request_review",
             prEvent,
             cache.Object,
             userMap.Object,
             Mock.Of<ILogger>());
 
-        int capturedColor = -1;
-        discord.Setup(d => d.SendMessageAsync(It.IsAny<string>(), It.IsAny<DiscordMessage>()))
-               .Callback<string, DiscordMessage>((_, msg) =>
+        var capturedColor = -1;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) =>
                {
                    capturedColor = msg.Embeds?.FirstOrDefault()?.Color ?? -1;
                })
@@ -116,9 +119,9 @@ public class PullRequestReviewActionTests
 
     /// <summary>submitted + APPROVED のレビューは PullRequestReviewApproved 色を使用する。</summary>
     [Fact]
-    public async Task RunAsync_SubmittedApproved_UsesApprovedColor()
+    public async Task RunAsyncSubmittedApprovedUsesApprovedColor()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         var color = await RunAndCaptureColor(discord, cache, userMap, "submitted", "APPROVED");
 
@@ -127,9 +130,9 @@ public class PullRequestReviewActionTests
 
     /// <summary>submitted + CHANGES_REQUESTED は PullRequestReviewChangesRequested 色を使用する。</summary>
     [Fact]
-    public async Task RunAsync_SubmittedChangesRequested_UsesChangesRequestedColor()
+    public async Task RunAsyncSubmittedChangesRequestedUsesChangesRequestedColor()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         var color = await RunAndCaptureColor(discord, cache, userMap, "submitted", "CHANGES_REQUESTED");
 
@@ -138,9 +141,9 @@ public class PullRequestReviewActionTests
 
     /// <summary>dismissed は PullRequestReviewDismissed 色を使用する。</summary>
     [Fact]
-    public async Task RunAsync_Dismissed_UsesDismissedColor()
+    public async Task RunAsyncDismissedUsesDismissedColor()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         var color = await RunAndCaptureColor(discord, cache, userMap, "dismissed", "APPROVED");
 
@@ -154,9 +157,9 @@ public class PullRequestReviewActionTests
     /// このテストは現在の（バグのある）挙動を文書化する。
     /// </summary>
     [Fact]
-    public async Task RunAsync_SubmittedCommented_UsesApprovedColorIncorrectly_KnownBug()
+    public async Task RunAsyncSubmittedCommentedUsesApprovedColorIncorrectlyKnownBug()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         // NOTE: これは既知のバグ (B2) です。
         // COMMENTED レビューが PullRequestReviewApproved (緑) で表示されてしまう。
@@ -169,22 +172,22 @@ public class PullRequestReviewActionTests
 
     /// <summary>approved アクションのタイトルに "approved" が含まれる。</summary>
     [Fact]
-    public async Task RunAsync_SubmittedApproved_TitleContainsApproved()
+    public async Task RunAsyncSubmittedApprovedTitleContainsApproved()
     {
-        var (discord, cache, userMap) = CreateMocks();
-        var prEvent = MakePrReviewEvent("submitted", "APPROVED");
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        PullRequestReviewEvent prEvent = MakePrReviewEvent("submitted", "APPROVED");
 
         string? capturedTitle = null;
-        discord.Setup(d => d.SendMessageAsync(It.IsAny<string>(), It.IsAny<DiscordMessage>()))
-               .Callback<string, DiscordMessage>((_, msg) =>
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) =>
                {
                    capturedTitle = msg.Embeds?.FirstOrDefault()?.Title;
                })
                .ReturnsAsync("msg-id");
 
-        var action = new PullRequestReviewAction(
+        PullRequestReviewAction action = new(
             discord.Object,
-            "https://discord.com/api/webhooks/1/x",
+            _webhookUri,
             "pull_request_review",
             prEvent,
             cache.Object,
@@ -199,22 +202,22 @@ public class PullRequestReviewActionTests
 
     /// <summary>changes_requested アクションのタイトルに "changes" が含まれる。</summary>
     [Fact]
-    public async Task RunAsync_SubmittedChangesRequested_TitleContainsChanges()
+    public async Task RunAsyncSubmittedChangesRequestedTitleContainsChanges()
     {
-        var (discord, cache, userMap) = CreateMocks();
-        var prEvent = MakePrReviewEvent("submitted", "CHANGES_REQUESTED");
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        PullRequestReviewEvent prEvent = MakePrReviewEvent("submitted", "CHANGES_REQUESTED");
 
         string? capturedTitle = null;
-        discord.Setup(d => d.SendMessageAsync(It.IsAny<string>(), It.IsAny<DiscordMessage>()))
-               .Callback<string, DiscordMessage>((_, msg) =>
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) =>
                {
                    capturedTitle = msg.Embeds?.FirstOrDefault()?.Title;
                })
                .ReturnsAsync("msg-id");
 
-        var action = new PullRequestReviewAction(
+        PullRequestReviewAction action = new(
             discord.Object,
-            "https://discord.com/api/webhooks/1/x",
+            _webhookUri,
             "pull_request_review",
             prEvent,
             cache.Object,
@@ -229,22 +232,22 @@ public class PullRequestReviewActionTests
 
     /// <summary>dismissed アクションのタイトルに "dismissed" が含まれる。</summary>
     [Fact]
-    public async Task RunAsync_Dismissed_TitleContainsDismissed()
+    public async Task RunAsyncDismissedTitleContainsDismissed()
     {
-        var (discord, cache, userMap) = CreateMocks();
-        var prEvent = MakePrReviewEvent("dismissed", "APPROVED");
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        PullRequestReviewEvent prEvent = MakePrReviewEvent("dismissed", "APPROVED");
 
         string? capturedTitle = null;
-        discord.Setup(d => d.SendMessageAsync(It.IsAny<string>(), It.IsAny<DiscordMessage>()))
-               .Callback<string, DiscordMessage>((_, msg) =>
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) =>
                {
                    capturedTitle = msg.Embeds?.FirstOrDefault()?.Title;
                })
                .ReturnsAsync("msg-id");
 
-        var action = new PullRequestReviewAction(
+        PullRequestReviewAction action = new(
             discord.Object,
-            "https://discord.com/api/webhooks/1/x",
+            _webhookUri,
             "pull_request_review",
             prEvent,
             cache.Object,

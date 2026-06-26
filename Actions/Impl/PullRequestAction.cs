@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Models.GitHubWebhooks;
@@ -8,23 +9,21 @@ using Microsoft.Extensions.Logging;
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub pull_request イベントを Discord に通知する。</summary>
-public sealed class PullRequestAction : BaseAction<PullRequestEvent>
+/// <inheritdoc cref="BaseAction{TEvent}"/>
+public sealed class PullRequestAction(IDiscordClient d, Uri wu, string en, PullRequestEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<PullRequestEvent>(d, wu, en, e, c, u, l)
 {
-    /// <inheritdoc cref="BaseAction{TEvent}"/>
-    public PullRequestAction(IDiscordClient d, string wu, string en, PullRequestEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l)
-        : base(d, wu, en, e, c, u, l) { }
 
     /// <summary>アクションに対応するキャッシュキーのサフィックスを取得します。</summary>
     private string GetCacheKeySuffix() => Event.Action switch
     {
-        "assigned" or "unassigned"                           => "assigned",
-        "labeled" or "unlabeled"                             => "label",
-        "locked" or "unlocked"                               => "locked",
-        "auto_merge_enabled" or "auto_merge_disabled"        => "auto_merge_enabled",
-        "milestoned" or "demilestoned"                       => "milestoned",
-        "review_requested" or "review_request_removed"       => "review_requested",
-        "enqueued" or "dequeued"                             => "enqueued",
-        _                                                    => Event.Action,
+        "assigned" or "unassigned" => "assigned",
+        "labeled" or "unlabeled" => "label",
+        "locked" or "unlocked" => "locked",
+        "auto_merge_enabled" or "auto_merge_disabled" => "auto_merge_enabled",
+        "milestoned" or "demilestoned" => "milestoned",
+        "review_requested" or "review_request_removed" => "review_requested",
+        "enqueued" or "dequeued" => "enqueued",
+        _ => Event.Action,
     };
 
     /// <summary>PR とアクションに対応するキャッシュキーを取得します。</summary>
@@ -39,40 +38,41 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
         title.StartsWith("wip ", StringComparison.OrdinalIgnoreCase);
 
     /// <inheritdoc/>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "PR イベントアクションの種類が多く、switch 式で列挙するため必然的に複雑度が高い")]
     public override async Task RunAsync()
     {
         // synchronize はコミット追加時に発生するが通知不要なためスキップ
         if (Event.Action == "synchronize") return;
 
-        var pr     = Event.PullRequest;
-        var repo   = Event.Repository;
-        var sender = Event.Sender;
+        PullRequest pr = Event.PullRequest;
+        Repository repo = Event.Repository;
+        User sender = Event.Sender;
 
-        var (titleVerb, color) = Event.Action switch
+        (var titleVerb, var color) = Event.Action switch
         {
-            "opened"                => ("opened",                  EmbedColors.PullRequestOpened),
+            "opened" => ("opened", EmbedColors.PullRequestOpened),
             "closed" when pr.Merged == true
-                                    => ("merged",                  EmbedColors.PullRequestMerged),
-            "closed"                => ("closed",                  EmbedColors.PullRequestClosed),
-            "reopened"              => ("reopened",                EmbedColors.PullRequestReopened),
-            "assigned"              => ("assigned",                EmbedColors.PullRequestAssigned),
-            "unassigned"            => ("unassigned",              EmbedColors.PullRequestUnassigned),
-            "review_requested"      => ("review requested",        EmbedColors.PullRequestReviewRequested),
-            "review_request_removed"=> ("review request removed",  EmbedColors.PullRequestReviewRequestRemoved),
-            "labeled"               => ("labeled",                 EmbedColors.PullRequestLabeled),
-            "unlabeled"             => ("unlabeled",               EmbedColors.PullRequestUnlabeled),
-            "edited"                => ("edited",                  EmbedColors.PullRequestEdited),
-            "ready_for_review"      => ("ready for review",        EmbedColors.PullRequestReadyForReview),
-            "converted_to_draft"    => ("converted to draft",      EmbedColors.PullRequestConvertedToDraft),
-            "locked"                => ("locked",                  EmbedColors.PullRequestLocked),
-            "unlocked"              => ("unlocked",                EmbedColors.PullRequestUnlocked),
-            "auto_merge_enabled"    => ("auto merge enabled",      EmbedColors.PullRequestAutoMergeEnabled),
-            "auto_merge_disabled"   => ("auto merge disabled",     EmbedColors.PullRequestAutoMergeDisabled),
-            "milestoned"            => ("milestoned",              EmbedColors.PullRequestMilestoned),
-            "demilestoned"          => ("demilestoned",            EmbedColors.PullRequestDemilestoned),
-            "enqueued"              => ("enqueued",                EmbedColors.PullRequestEnqueued),
-            "dequeued"              => ("dequeued",                EmbedColors.PullRequestDequeued),
-            _                       => (Event.Action,             EmbedColors.Unknown),
+                                    => ("merged", EmbedColors.PullRequestMerged),
+            "closed" => ("closed", EmbedColors.PullRequestClosed),
+            "reopened" => ("reopened", EmbedColors.PullRequestReopened),
+            "assigned" => ("assigned", EmbedColors.PullRequestAssigned),
+            "unassigned" => ("unassigned", EmbedColors.PullRequestUnassigned),
+            "review_requested" => ("review requested", EmbedColors.PullRequestReviewRequested),
+            "review_request_removed" => ("review request removed", EmbedColors.PullRequestReviewRequestRemoved),
+            "labeled" => ("labeled", EmbedColors.PullRequestLabeled),
+            "unlabeled" => ("unlabeled", EmbedColors.PullRequestUnlabeled),
+            "edited" => ("edited", EmbedColors.PullRequestEdited),
+            "ready_for_review" => ("ready for review", EmbedColors.PullRequestReadyForReview),
+            "converted_to_draft" => ("converted to draft", EmbedColors.PullRequestConvertedToDraft),
+            "locked" => ("locked", EmbedColors.PullRequestLocked),
+            "unlocked" => ("unlocked", EmbedColors.PullRequestUnlocked),
+            "auto_merge_enabled" => ("auto merge enabled", EmbedColors.PullRequestAutoMergeEnabled),
+            "auto_merge_disabled" => ("auto merge disabled", EmbedColors.PullRequestAutoMergeDisabled),
+            "milestoned" => ("milestoned", EmbedColors.PullRequestMilestoned),
+            "demilestoned" => ("demilestoned", EmbedColors.PullRequestDemilestoned),
+            "enqueued" => ("enqueued", EmbedColors.PullRequestEnqueued),
+            "dequeued" => ("dequeued", EmbedColors.PullRequestDequeued),
+            _ => (Event.Action, EmbedColors.Unknown),
         };
 
         var title = $"PR {titleVerb}: #{pr.Number} {pr.Title}";
@@ -125,13 +125,13 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
             // edited の場合、タイトル変更の diff を生成する
             if (Event.Action == "edited" && Event.Changes.HasValue)
             {
-                var changes = Event.Changes.Value;
-                if (changes.TryGetProperty("title", out var titleChange) &&
-                    titleChange.TryGetProperty("from", out var fromProp))
+                JsonElement changes = Event.Changes.Value;
+                if (changes.TryGetProperty("title", out JsonElement titleChange) &&
+                    titleChange.TryGetProperty("from", out JsonElement fromProp))
                 {
                     var oldTitle = fromProp.GetString() ?? string.Empty;
-                    var patch    = CreatePatch(oldTitle, pr.Title, "title");
-                    description  = $"```diff\n{patch}```";
+                    var patch = CreatePatch(oldTitle, pr.Title, "title");
+                    description = $"```diff\n{patch}```";
                 }
             }
         }
@@ -140,38 +140,40 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
         // Draft PR はまだレビュー準備ができていないためメンションを抑制する
         if (Event.Action == "edited" && Event.Changes.HasValue && !pr.Draft)
         {
-            var changes = Event.Changes.Value;
-            if (changes.TryGetProperty("title", out var titleChangeProp) &&
-                titleChangeProp.TryGetProperty("from", out var previousTitleProp))
+            JsonElement changes = Event.Changes.Value;
+            if (changes.TryGetProperty("title", out JsonElement titleChangeProp) &&
+                titleChangeProp.TryGetProperty("from", out JsonElement previousTitleProp))
             {
                 var previousTitle = previousTitleProp.GetString();
                 if (previousTitle is not null &&
                     IsWipTitle(previousTitle) && !IsWipTitle(pr.Title))
                 {
-                    var reviewers = (pr.RequestedReviewers ?? [])
+                    IEnumerable<(long Id, string Login)> reviewers = (pr.RequestedReviewers ?? [])
                         .Select(u => (u.Id, u.Login));
                     var wipMentions = await GetUsersMentionsAsync(sender.Id, reviewers);
                     if (wipMentions.Length > 0)
+                    {
                         content = string.IsNullOrEmpty(content)
                             ? wipMentions
                             : $"{content} {wipMentions}";
+                    }
                 }
             }
         }
 
         var author = new DiscordEmbedAuthor(
-            Name:    sender.Login,
-            Url:     sender.HtmlUrl,
+            Name: sender.Login,
+            Url: sender.HtmlUrl,
             IconUrl: sender.AvatarUrl);
 
-        var embed = EmbedHelper.CreateEmbed(
-            eventName:   EventName,
-            color:       color,
-            title:       title,
+        DiscordEmbed embed = EmbedHelper.CreateEmbed(
+            eventName: EventName,
+            color: color,
+            title: title,
             description: description,
-            url:         pr.HtmlUrl,
-            author:      author,
-            fields:      fields);
+            url: pr.HtmlUrl,
+            author: author,
+            fields: fields);
 
         var key = GetCacheKey();
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));

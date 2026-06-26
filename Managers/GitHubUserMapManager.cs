@@ -7,26 +7,17 @@ using Microsoft.Extensions.Configuration;
 namespace GitHubWebhookBridge.Managers;
 
 /// <summary>GitHub ユーザー ID から Discord ユーザー ID へのマッピングを管理する。</summary>
-public class GitHubUserMapManager : BaseManager<Dictionary<long, string>>, IGitHubUserMapManager
+public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory httpClientFactory) : BaseManager<Dictionary<long, string>>(config, httpClientFactory), IGitHubUserMapManager
 {
-    protected override string? FilePath { get; }
-    protected override string? FileUrl { get; }
-    protected override string? BlobPath { get; }
+    protected override string? FilePath { get; } = config["GITHUB_USER_MAP_FILE_PATH"];
+    protected override Uri? FileUrl { get; } = config["GITHUB_USER_MAP_FILE_URL"] is string url ? new Uri(url) : null;
+    protected override string? BlobPath { get; } = config["GITHUB_USER_MAP_BLOB"];
 
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
     // GitHub ログイン名の仕様: 英数字とハイフンのみ、先頭は英数字、最大 39 文字
-    private static readonly Regex LoginRegex =
+    private static readonly Regex _loginRegex =
         new(@"^[a-zA-Z0-9][a-zA-Z0-9-]{0,38}$", RegexOptions.Compiled);
-
-    public GitHubUserMapManager(IConfiguration config, IHttpClientFactory httpClientFactory)
-        : base(config, httpClientFactory)
-    {
-        FilePath = config["GITHUB_USER_MAP_FILE_PATH"];
-        FileUrl = config["GITHUB_USER_MAP_FILE_URL"];
-        BlobPath = config["GITHUB_USER_MAP_BLOB"];
-        _httpClientFactory = httpClientFactory;
-    }
 
     protected override string GetDefaultFilePath() => "data/github-user-map.json";
 
@@ -37,11 +28,14 @@ public class GitHubUserMapManager : BaseManager<Dictionary<long, string>>, IGitH
         => DeserializeJson<Dictionary<long, string>>(json);
 
     /// <summary>GitHub ユーザー ID から Discord ユーザー ID を取得する。</summary>
-    public string? Get(long githubUserId)
+    public string? GetById(long githubUserId)
     {
         if (Data is null)
+        {
             throw new InvalidOperationException(
                 "GitHubUserMapManager is not loaded. Call EnsureLoadedAsync() first.");
+        }
+
         return Data.TryGetValue(githubUserId, out var discordId) ? discordId : null;
     }
 
@@ -51,10 +45,10 @@ public class GitHubUserMapManager : BaseManager<Dictionary<long, string>>, IGitH
     /// </summary>
     public async Task<string?> GetFromUsernameAsync(string login)
     {
-        if (!LoginRegex.IsMatch(login))
+        if (!_loginRegex.IsMatch(login))
             return null;
 
-        var http = _httpClientFactory.CreateClient("github");
+        HttpClient http = _httpClientFactory.CreateClient("github");
         GitHubUserResponse? user;
         try
         {
@@ -65,7 +59,7 @@ public class GitHubUserMapManager : BaseManager<Dictionary<long, string>>, IGitH
             return null;
         }
         if (user is null) return null;
-        return Get(user.Id);
+        return GetById(user.Id);
     }
 
     private record GitHubUserResponse(

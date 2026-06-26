@@ -1,5 +1,7 @@
 using System.Text.Json;
+using Azure;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Configuration;
 
 namespace GitHubWebhookBridge.Managers;
@@ -8,13 +10,13 @@ namespace GitHubWebhookBridge.Managers;
 /// 設定ファイルを Blob / HTTPS URL / ローカルファイルから読み込む抽象基底クラス。
 /// 優先順位: Blob > HTTPS URL > ローカルファイル
 /// </summary>
-public abstract class BaseManager<TData>
+public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFactory httpClientFactory) : IDisposable
 {
     /// <summary>ローカルファイルパス（環境変数から設定）。</summary>
     protected abstract string? FilePath { get; }
 
     /// <summary>設定ファイルの HTTPS URL（HTTPS のみ許可）。</summary>
-    protected abstract string? FileUrl { get; }
+    protected abstract Uri? FileUrl { get; }
 
     /// <summary>
     /// Blob のパス。形式: "container/path/to/file.json"
@@ -34,14 +36,8 @@ public abstract class BaseManager<TData>
         PropertyNameCaseInsensitive = true,
     };
 
-    private readonly IConfiguration _config;
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    protected BaseManager(IConfiguration config, IHttpClientFactory httpClientFactory)
-    {
-        _config = config;
-        _httpClientFactory = httpClientFactory;
-    }
+    private readonly IConfiguration _config = config;
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
     /// <summary>初回呼び出し時のみデータをロードする（二重初期化防止）。</summary>
     public async Task EnsureLoadedAsync()
@@ -80,8 +76,10 @@ public abstract class BaseManager<TData>
         // "container/path/to/file.json" 形式をパース
         var slashIndex = blobPath.IndexOf('/');
         if (slashIndex < 0)
+        {
             throw new InvalidOperationException(
                 $"BlobPath must be 'container/blob', got: {blobPath}");
+        }
 
         var containerName = blobPath[..slashIndex];
         var blobName = blobPath[(slashIndex + 1)..];
@@ -90,17 +88,17 @@ public abstract class BaseManager<TData>
             ?? throw new InvalidOperationException("AzureWebJobsStorage is not set");
 
         var blobClient = new BlobClient(connStr, containerName, blobName);
-        var download = await blobClient.DownloadContentAsync();
+        Response<BlobDownloadResult> download = await blobClient.DownloadContentAsync();
         return download.Value.Content.ToString();
     }
 
-    private async Task<string> LoadFromHttpAsync(string url)
+    private async Task<string> LoadFromHttpAsync(Uri url)
     {
         // 設定ファイルは HTTPS 経由のみ許可（平文 HTTP は中間者攻撃のリスク）
-        if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(url.Scheme, "https", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Config URL must use HTTPS: {url}");
 
-        var http = _httpClientFactory.CreateClient("config");
+        HttpClient http = _httpClientFactory.CreateClient("config");
         return await http.GetStringAsync(url);
     }
 
@@ -128,5 +126,19 @@ public abstract class BaseManager<TData>
     {
         Data = data;
         _loaded = true;
+    }
+
+    /// <summary>マネージドリソースを解放する。</summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+            _lock.Dispose();
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

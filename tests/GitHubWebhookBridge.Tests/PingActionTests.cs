@@ -10,20 +10,22 @@ namespace GitHubWebhookBridge.Tests;
 
 public class PingActionTests
 {
+    private static readonly Uri _webhookUri = new("https://discord.test/webhook");
+
     private static (Mock<IDiscordClient>, Mock<IMessageCacheService>, Mock<IGitHubUserMapManager>) CreateMocks()
     {
-        var discord   = new Mock<IDiscordClient>();
-        var cache     = new Mock<IMessageCacheService>();
-        var userMap   = new Mock<IGitHubUserMapManager>();
+        Mock<IDiscordClient> discord = new();
+        Mock<IMessageCacheService> cache = new();
+        Mock<IGitHubUserMapManager> userMap = new();
 
         // キャッシュはデフォルトで null（新規送信）を返す
-        cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<string>()))
+        cache.Setup(c => c.GetAsync(It.IsAny<Uri>(), It.IsAny<string>()))
              .ReturnsAsync((CachedMessage?)null);
-        cache.Setup(c => c.SetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        cache.Setup(c => c.SetAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<string>()))
              .Returns(Task.CompletedTask);
 
         // Discord 送信は常にダミーのメッセージ ID を返す
-        discord.Setup(d => d.SendMessageAsync(It.IsAny<string>(), It.IsAny<DiscordMessage>()))
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .ReturnsAsync("test-message-id");
 
         userMap.Setup(u => u.EnsureLoadedAsync()).Returns(Task.CompletedTask);
@@ -32,18 +34,18 @@ public class PingActionTests
     }
 
     [Fact]
-    public async Task RunAsync_SendsMessageWithPingEmbed()
+    public async Task RunAsyncSendsMessageWithPingEmbed()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        var pingEvent = new PingEvent
+        PingEvent pingEvent = new()
         {
-            Zen    = "Non-blocking is better than blocking.",
+            Zen = "Non-blocking is better than blocking.",
             HookId = 12345,
         };
 
-        var action = new PingAction(
-            discord.Object, "https://discord.test/webhook", "ping",
+        PingAction action = new(
+            discord.Object, _webhookUri, "ping",
             pingEvent, cache.Object, userMap.Object,
             Mock.Of<ILogger>());
 
@@ -52,7 +54,7 @@ public class PingActionTests
         // Discord にメッセージが送信されたことを確認する
         discord.Verify(
             d => d.SendMessageAsync(
-                "https://discord.test/webhook",
+                _webhookUri,
                 It.Is<DiscordMessage>(m =>
                     m.Embeds != null &&
                     m.Embeds.Count == 1 &&
@@ -62,21 +64,21 @@ public class PingActionTests
     }
 
     [Fact]
-    public async Task RunAsync_UsesCompositeKeyForCache()
+    public async Task RunAsyncUsesCompositeKeyForCache()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        var pingEvent = new PingEvent
+        PingEvent pingEvent = new()
         {
-            Zen    = "test",
+            Zen = "test",
             HookId = 9999,
-            Hook   = new PingHook { Type = "Repository" },
+            Hook = new PingHook { Type = "Repository" },
             Repository = new Repository { FullName = "owner/repo" },
-            Sender     = new User     { Login = "user1" },
+            Sender = new User { Login = "user1" },
         };
 
-        var action = new PingAction(
-            discord.Object, "https://discord.test/webhook", "ping",
+        PingAction action = new(
+            discord.Object, _webhookUri, "ping",
             pingEvent, cache.Object, userMap.Object,
             Mock.Of<ILogger>());
 
@@ -84,23 +86,23 @@ public class PingActionTests
 
         // キャッシュキーがリポジトリ・送信者・フックタイプの複合キーであることを確認する
         cache.Verify(
-            c => c.GetAsync("https://discord.test/webhook", "ping:owner/repo:user1:N/A:Repository"),
+            c => c.GetAsync(_webhookUri, "ping:owner/repo:user1:N/A:Repository"),
             Times.Once);
     }
 
     [Fact]
-    public async Task RunAsync_EditsMessageWhenCachedMessageExists()
+    public async Task RunAsyncEditsMessageWhenCachedMessageExists()
     {
-        var (discord, cache, userMap) = CreateMocks();
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         // キャッシュにメッセージが存在する場合
-        cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<string>()))
+        cache.Setup(c => c.GetAsync(It.IsAny<Uri>(), It.IsAny<string>()))
              .ReturnsAsync(new CachedMessage("existing-message-id"));
 
-        var pingEvent = new PingEvent { Zen = "Speak friend and enter.", HookId = 1 };
+        PingEvent pingEvent = new() { Zen = "Speak friend and enter.", HookId = 1 };
 
-        var action = new PingAction(
-            discord.Object, "https://discord.test/webhook", "ping",
+        PingAction action = new(
+            discord.Object, _webhookUri, "ping",
             pingEvent, cache.Object, userMap.Object,
             Mock.Of<ILogger>());
 
@@ -109,12 +111,12 @@ public class PingActionTests
         // 新規送信ではなく編集が呼ばれることを確認する
         discord.Verify(
             d => d.EditMessageAsync(
-                "https://discord.test/webhook",
+                _webhookUri,
                 "existing-message-id",
                 It.IsAny<DiscordMessage>()),
             Times.Once);
         discord.Verify(
-            d => d.SendMessageAsync(It.IsAny<string>(), It.IsAny<DiscordMessage>()),
+            d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()),
             Times.Never);
     }
 }

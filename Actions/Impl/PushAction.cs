@@ -8,16 +8,14 @@ using Microsoft.Extensions.Logging;
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub push イベントを Discord に通知する。</summary>
-public sealed class PushAction : BaseAction<PushEvent>
+/// <inheritdoc cref="BaseAction{TEvent}"/>
+public sealed class PushAction(IDiscordClient d, Uri wu, string en, PushEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<PushEvent>(d, wu, en, e, c, u, l)
 {
-    /// <inheritdoc cref="BaseAction{TEvent}"/>
-    public PushAction(IDiscordClient d, string wu, string en, PushEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l)
-        : base(d, wu, en, e, c, u, l) { }
 
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        var allCommits = Event.Commits;
+        IList<Commit> allCommits = Event.Commits;
         if (allCommits.Count == 0) return;
 
         // refs/heads/ や refs/tags/ を除去して短いブランチ名にする
@@ -31,16 +29,16 @@ public sealed class PushAction : BaseAction<PushEvent>
         var description = GetDescription(commits, allCommits.Count);
 
         var author = new DiscordEmbedAuthor(
-            Name:    Event.Sender.Login,
-            Url:     Event.Sender.HtmlUrl,
+            Name: Event.Sender.Login,
+            Url: Event.Sender.HtmlUrl,
             IconUrl: Event.Sender.AvatarUrl);
 
-        var embed = EmbedHelper.CreateEmbed(
-            eventName:   EventName,
-            color:       EmbedColors.Push,
-            title:       $"[{Event.Repository.FullName}:{shortRef}] {allCommits.Count} new commit(s)",
+        DiscordEmbed embed = EmbedHelper.CreateEmbed(
+            eventName: EventName,
+            color: EmbedColors.Push,
+            title: $"[{Event.Repository.FullName}:{shortRef}] {allCommits.Count} new commit(s)",
             description: description,
-            author:      author);
+            author: author);
 
         var key = $"{Event.Repository.FullName}:{Event.Ref}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));

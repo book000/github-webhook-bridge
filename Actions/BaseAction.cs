@@ -11,33 +11,22 @@ namespace GitHubWebhookBridge.Actions;
 /// 全 Action ハンドラーの抽象基底クラス。
 /// Discord メッセージの送信と 5 分間キャッシュによる編集機能を提供する。
 /// </summary>
-public abstract class BaseAction<TEvent> : IAction
+public abstract class BaseAction<TEvent>(
+    IDiscordClient discord,
+    Uri webhookUrl,
+    string eventName,
+    TEvent @event,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger logger) : IAction
 {
-    protected readonly IDiscordClient        Discord;
-    protected readonly string                WebhookUrl;
-    protected readonly string                EventName;
-    protected readonly TEvent                Event;
-    protected readonly IGitHubUserMapManager UserMapManager;
-    protected readonly ILogger               Logger;
-    private   readonly IMessageCacheService  _cache;
-
-    protected BaseAction(
-        IDiscordClient        discord,
-        string                webhookUrl,
-        string                eventName,
-        TEvent                @event,
-        IMessageCacheService  cache,
-        IGitHubUserMapManager userMapManager,
-        ILogger               logger)
-    {
-        Discord        = discord;
-        WebhookUrl     = webhookUrl;
-        EventName      = eventName;
-        Event          = @event;
-        _cache         = cache;
-        UserMapManager = userMapManager;
-        Logger         = logger;
-    }
+    protected IDiscordClient Discord { get; } = discord;
+    protected Uri WebhookUrl { get; } = webhookUrl;
+    protected string EventName { get; } = eventName;
+    protected TEvent Event { get; } = @event;
+    protected IGitHubUserMapManager UserMapManager { get; } = userMapManager;
+    protected ILogger Logger { get; } = logger;
+    private readonly IMessageCacheService _cache = cache;
 
     /// <summary>イベント処理を実行する。各サブクラスで実装する。</summary>
     public abstract Task RunAsync();
@@ -49,10 +38,12 @@ public abstract class BaseAction<TEvent> : IAction
     /// </summary>
     protected async Task SendMessageAsync(string key, DiscordMessage message)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         // SuppressNotifications フラグを付加（既存フラグは保持）
         message = message with { Flags = message.Flags | DiscordMessageFlags.SuppressNotifications };
 
-        var cached = await _cache.GetAsync(WebhookUrl, key);
+        CachedMessage? cached = await _cache.GetAsync(WebhookUrl, key);
         if (cached is not null)
         {
             try
@@ -81,9 +72,9 @@ public abstract class BaseAction<TEvent> : IAction
         IEnumerable<(long Id, string Login)> users)
     {
         await UserMapManager.EnsureLoadedAsync();
-        var mentions = users
+        IEnumerable<string> mentions = users
             .Where(u => u.Id != senderId)
-            .Select(u => UserMapManager.Get(u.Id))
+            .Select(u => UserMapManager.GetById(u.Id))
             .Where(discordId => discordId is not null)
             .Select(discordId => $"<@{discordId}>");
         return string.Join(" ", mentions);
@@ -96,20 +87,23 @@ public abstract class BaseAction<TEvent> : IAction
     /// </summary>
     protected static string CreatePatch(string oldText, string newText, string fileName = "file")
     {
-        var diff = InlineDiffBuilder.Diff(oldText, newText);
-        var sb   = new System.Text.StringBuilder();
-        sb.AppendLine($"--- {fileName}");
-        sb.AppendLine($"+++ {fileName}");
+        DiffPaneModel diff = InlineDiffBuilder.Diff(oldText, newText);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"--- {fileName}");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"+++ {fileName}");
 
-        foreach (var line in diff.Lines)
+        foreach (DiffPiece? line in diff.Lines)
         {
             var prefix = line.Type switch
             {
                 ChangeType.Inserted => "+",
-                ChangeType.Deleted  => "-",
-                _                   => " ",
+                ChangeType.Deleted => "-",
+                ChangeType.Unchanged => throw new NotImplementedException(),
+                ChangeType.Imaginary => throw new NotImplementedException(),
+                ChangeType.Modified => throw new NotImplementedException(),
+                _ => " ",
             };
-            sb.AppendLine($"{prefix} {line.Text}");
+            sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"{prefix} {line.Text}");
         }
 
         return sb.ToString();

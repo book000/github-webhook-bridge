@@ -8,35 +8,33 @@ using Microsoft.Extensions.Logging;
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub discussion イベントを Discord に通知する。</summary>
-public sealed class DiscussionAction : BaseAction<DiscussionEvent>
+/// <inheritdoc cref="BaseAction{TEvent}"/>
+public sealed class DiscussionAction(IDiscordClient d, Uri wu, string en, DiscussionEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<DiscussionEvent>(d, wu, en, e, c, u, l)
 {
-    /// <inheritdoc cref="BaseAction{TEvent}"/>
-    public DiscussionAction(IDiscordClient d, string wu, string en, DiscussionEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l)
-        : base(d, wu, en, e, c, u, l) { }
 
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        var discussion = Event.Discussion;
-        var repo       = Event.Repository;
-        var sender     = Event.Sender;
+        Discussion discussion = Event.Discussion;
+        Repository repo = Event.Repository;
+        User sender = Event.Sender;
 
-        var (titleVerb, color) = Event.Action switch
+        (var titleVerb, var color) = Event.Action switch
         {
-            "created"          => ("created",          EmbedColors.DiscussionCreated),
-            "edited"           => ("edited",            EmbedColors.DiscussionEdited),
-            "deleted"          => ("deleted",           EmbedColors.DiscussionDeleted),
-            "pinned"           => ("pinned",            EmbedColors.DiscussionPinned),
-            "unpinned"         => ("unpinned",          EmbedColors.DiscussionUnpinned),
-            "locked"           => ("locked",            EmbedColors.DiscussionLocked),
-            "unlocked"         => ("unlocked",          EmbedColors.DiscussionUnlocked),
-            "transferred"      => ("transferred",       EmbedColors.DiscussionTransferred),
-            "answered"         => ("answered",          EmbedColors.DiscussionAnswered),
-            "unanswered"       => ("unanswered",        EmbedColors.DiscussionUnanswered),
-            "labeled"          => ("labeled",           EmbedColors.DiscussionLabeled),
-            "unlabeled"        => ("unlabeled",         EmbedColors.DiscussionUnlabeled),
+            "created" => ("created", EmbedColors.DiscussionCreated),
+            "edited" => ("edited", EmbedColors.DiscussionEdited),
+            "deleted" => ("deleted", EmbedColors.DiscussionDeleted),
+            "pinned" => ("pinned", EmbedColors.DiscussionPinned),
+            "unpinned" => ("unpinned", EmbedColors.DiscussionUnpinned),
+            "locked" => ("locked", EmbedColors.DiscussionLocked),
+            "unlocked" => ("unlocked", EmbedColors.DiscussionUnlocked),
+            "transferred" => ("transferred", EmbedColors.DiscussionTransferred),
+            "answered" => ("answered", EmbedColors.DiscussionAnswered),
+            "unanswered" => ("unanswered", EmbedColors.DiscussionUnanswered),
+            "labeled" => ("labeled", EmbedColors.DiscussionLabeled),
+            "unlabeled" => ("unlabeled", EmbedColors.DiscussionUnlabeled),
             "category_changed" => ("changed category", EmbedColors.DiscussionCategoryChanged),
-            _                  => (Event.Action,        EmbedColors.Unknown),
+            _ => (Event.Action, EmbedColors.Unknown),
         };
 
         var title = $"Discussion {titleVerb}: #{discussion.Number} {discussion.Title}";
@@ -70,18 +68,18 @@ public sealed class DiscussionAction : BaseAction<DiscussionEvent>
         }
 
         var author = new DiscordEmbedAuthor(
-            Name:    sender.Login,
-            Url:     sender.HtmlUrl,
+            Name: sender.Login,
+            Url: sender.HtmlUrl,
             IconUrl: sender.AvatarUrl);
 
-        var embed = EmbedHelper.CreateEmbed(
-            eventName:   EventName,
-            color:       color,
-            title:       title,
+        DiscordEmbed embed = EmbedHelper.CreateEmbed(
+            eventName: EventName,
+            color: color,
+            title: title,
             description: description,
-            url:         discussion.HtmlUrl,
-            author:      author,
-            fields:      fields);
+            url: discussion.HtmlUrl,
+            author: author,
+            fields: fields);
 
         var key = $"{repo.FullName}-discussion-{discussion.Number}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));

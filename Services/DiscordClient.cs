@@ -4,29 +4,28 @@ using GitHubWebhookBridge.Models.Discord;
 namespace GitHubWebhookBridge.Services;
 
 /// <summary>Discord Webhook API クライアント実装。</summary>
-public class DiscordClient : IDiscordClient
+public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClient
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
-    public DiscordClient(IHttpClientFactory httpClientFactory)
-        => _httpClientFactory = httpClientFactory;
-
-    public async Task<string> SendMessageAsync(string webhookUrl, DiscordMessage message)
+    public async Task<string> SendMessageAsync(Uri webhookUrl, DiscordMessage message)
     {
-        var http = _httpClientFactory.CreateClient("discord");
+        ArgumentNullException.ThrowIfNull(webhookUrl);
+        HttpClient http = _httpClientFactory.CreateClient("discord");
         // ?wait=true で Discord がメッセージオブジェクト (id 含む) を返す
-        var response = await http.PostAsJsonAsync(BuildSendUrl(webhookUrl), message);
+        HttpResponseMessage response = await http.PostAsJsonAsync(BuildSendUrl(webhookUrl), message);
         EnsureSuccess(response);
-        var result = await response.Content.ReadFromJsonAsync<DiscordMessageResponse>()
+        DiscordMessageResponse result = await response.Content.ReadFromJsonAsync<DiscordMessageResponse>()
             ?? throw new InvalidOperationException("Discord returned null message response");
         return result.Id;
     }
 
-    public async Task EditMessageAsync(string webhookUrl, string messageId, DiscordMessage message)
+    public async Task EditMessageAsync(Uri webhookUrl, string messageId, DiscordMessage message)
     {
-        var http     = _httpClientFactory.CreateClient("discord");
-        var editUrl  = BuildEditUrl(webhookUrl, messageId);
-        var response = await http.PatchAsJsonAsync(editUrl, message);
+        ArgumentNullException.ThrowIfNull(webhookUrl);
+        HttpClient http = _httpClientFactory.CreateClient("discord");
+        Uri editUrl = BuildEditUrl(webhookUrl, messageId);
+        HttpResponseMessage response = await http.PatchAsJsonAsync(editUrl, message);
         EnsureSuccess(response);
     }
 
@@ -34,23 +33,19 @@ public class DiscordClient : IDiscordClient
     /// webhookUrl に ?wait=true を安全に付加する。
     /// 既にクエリパラメータが存在する場合は &amp; で連結する。
     /// </summary>
-    private static string BuildSendUrl(string webhookUrl)
+    private static Uri BuildSendUrl(Uri webhookUrl)
     {
-        var uri      = new Uri(webhookUrl);
-        var query    = uri.Query; // "" または "?key=val"
-        var suffix   = query.Length == 0 ? "?wait=true" : "&wait=true";
-        return $"{uri.GetLeftPart(UriPartial.Path)}{query}{suffix}";
+        var query = webhookUrl.Query; // "" または "?key=val"
+        var suffix = query.Length == 0 ? "?wait=true" : "&wait=true";
+        return new Uri($"{webhookUrl.GetLeftPart(UriPartial.Path)}{query}{suffix}");
     }
 
     /// <summary>
     /// webhookUrl のパス部分に /messages/{messageId} を付加し、クエリを保持する。
     /// クエリがある URL（例: ?thread_id=...）に対しても正しい URL を生成する。
     /// </summary>
-    private static string BuildEditUrl(string webhookUrl, string messageId)
-    {
-        var uri = new Uri(webhookUrl);
-        return $"{uri.GetLeftPart(UriPartial.Path)}/messages/{messageId}{uri.Query}";
-    }
+    private static Uri BuildEditUrl(Uri webhookUrl, string messageId)
+        => new($"{webhookUrl.GetLeftPart(UriPartial.Path)}/messages/{messageId}{webhookUrl.Query}");
 
     /// <summary>
     /// Discord Webhook トークンが Application Insights テレメトリに漏洩しないよう、
@@ -59,7 +54,9 @@ public class DiscordClient : IDiscordClient
     private static void EnsureSuccess(HttpResponseMessage response)
     {
         if (!response.IsSuccessStatusCode)
+        {
             throw new HttpRequestException(
                 $"Discord API error: {(int)response.StatusCode} {response.ReasonPhrase}");
+        }
     }
 }

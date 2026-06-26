@@ -4,5 +4,5 @@ namespace GitHubWebhookBridge.Models.Discord;
 
 /// <summary>Discord Embed フッター。</summary>
 public record DiscordEmbedFooter(
-    [property: JsonPropertyName("text")]     string  Text,
-    [property: JsonPropertyName("icon_url")] string? IconUrl = null);
+    [property: JsonPropertyName("text")] string Text,
+    [property: JsonPropertyName("icon_url")] Uri? IconUrl = null);
