@@ -14,6 +14,23 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
     public PullRequestAction(IDiscordClient d, string wu, string en, PullRequestEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l)
         : base(d, wu, en, e, c, u, l) { }
 
+    /// <summary>アクションに対応するキャッシュキーのサフィックスを取得します。</summary>
+    private string GetCacheKeySuffix() => Event.Action switch
+    {
+        "assigned" or "unassigned"                           => "assigned",
+        "labeled" or "unlabeled"                             => "label",
+        "locked" or "unlocked"                               => "locked",
+        "auto_merge_enabled" or "auto_merge_disabled"        => "auto_merge_enabled",
+        "milestoned" or "demilestoned"                       => "milestoned",
+        "review_requested" or "review_request_removed"       => "review_requested",
+        "enqueued" or "dequeued"                             => "enqueued",
+        _                                                    => Event.Action,
+    };
+
+    /// <summary>PR とアクションに対応するキャッシュキーを取得します。</summary>
+    private string GetCacheKey() =>
+        $"{Event.Repository.FullName}#{Event.PullRequest.Number}-{GetCacheKeySuffix()}";
+
     /// <summary>タイトルが WIP（作業中）かどうかを判定します。</summary>
     private static bool IsWipTitle(string title) =>
         System.Text.RegularExpressions.Regex.IsMatch(title, @"\bwip\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
@@ -154,7 +171,7 @@ public sealed class PullRequestAction : BaseAction<PullRequestEvent>
             author:      author,
             fields:      fields);
 
-        var key = $"{repo.FullName}-pr-{pr.Number}";
+        var key = GetCacheKey();
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 }

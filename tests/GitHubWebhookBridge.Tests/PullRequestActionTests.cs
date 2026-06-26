@@ -148,7 +148,7 @@ public class PullRequestActionTests
         await action.RunAsync();
 
         cache.Verify(
-            c => c.GetAsync("https://discord.test/webhook", "test/repo-pr-42"),
+            c => c.GetAsync("https://discord.test/webhook", "test/repo#42-opened"),
             Times.Once);
     }
 
