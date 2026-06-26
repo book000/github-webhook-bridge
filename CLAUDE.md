@@ -19,13 +19,13 @@
 ## プロジェクト概要
 
 - **目的**: GitHub の Webhook を受信し、Discord に通知メッセージを送信する
+- **技術スタック**: C#、.NET 10、Azure Functions v4 Isolated、Azure Table Storage
 - **主な機能**:
-  - 59 種類の GitHub Webhook イベントタイプをサポート
+  - 12 種類の GitHub Webhook イベントを完全実装、47 種類はスタブ（HTTP 406）
   - Discord Embed メッセージのフォーマット
   - ユーザーミュート機能（include/exclude/all モード）
   - GitHub から Discord へのユーザーマッピング
   - イベントフィルタリング・無効化機能
-  - メッセージキャッシュと編集機能（5 分間）
   - HMAC-SHA256 による Webhook 署名検証
 
 ## 重要ルール
@@ -48,8 +48,7 @@
 
 - **日本語と英数字の間**: 半角スペースを挿入する
 - **エラーメッセージの絵文字**: 既存のエラーメッセージに絵文字がある場合、全体で統一する
-- **TypeScript の skipLibCheck**: 有効にして回避することは禁止
-- **docstring**: 関数やインターフェースに JSDoc を日本語で記載・更新する
+- **docstring**: クラスや公開メソッドに XML ドキュメントコメント（`///`）を日本語で記載・更新する
 
 ## 相談ルール
 
@@ -83,123 +82,108 @@
 ## 開発コマンド
 
 ```bash
-# 依存関係のインストール
-pnpm install
-
-# 開発サーバー起動
-pnpm start          # main.ts を実行
-pnpm dev            # watch モードで実行
-pnpm vercel         # Vercel ローカル開発環境
+# 依存パッケージを復元
+dotnet restore
 
 # ビルド
-pnpm build          # TypeScript を dist/ にコンパイル
+dotnet build
 
 # テスト
-pnpm test           # Jest でテストを実行
+dotnet test
 
-# Lint / Format
-pnpm lint           # 全 Linter 実行（prettier + eslint + tsc）
-pnpm lint:prettier  # フォーマットチェック
-pnpm lint:eslint    # ESLint 実行
-pnpm lint:tsc       # 型チェックのみ
-
-pnpm fix            # 自動修正（prettier + eslint）
-pnpm fix:prettier   # 自動フォーマット
-pnpm fix:eslint     # ESLint 自動修正
+# Azure Functions ローカル起動
+func start
 ```
 
 ## アーキテクチャと主要ファイル
 
 ### アーキテクチャサマリー
 
-- **Factory パターン**: `getAction()` が Webhook イベントを Action クラスにマップ
-- **Abstract Base Class パターン**: `BaseAction<T>` が全 Action の共通機能を提供
-  - `sendMessage()` で 5 分間のメッセージキャッシュを提供
-  - メッセージ編集機能（同じキーのメッセージ）
+- **Azure Functions v4 Isolated**: `Functions/WebhookFunction.cs` が HTTP トリガーのエントリーポイント
+- **Factory パターン**: `Actions/ActionFactory.cs` が Webhook イベントを Action クラスにマップ
+- **Abstract Base Class パターン**: `Actions/BaseAction.cs` が全 Action の共通機能を提供
 - **Manager パターン**:
-  - `BaseRecordManager<T, U>` - Key-value ストアマネージャー
-  - `BaseSetManager<T>` - セットベースマネージャー
-  - ファイルまたは HTTP URL からロード可能
-- **Middleware/Pipeline**: Fastify フックで署名検証とミュートデータロードを実行
+  - `Managers/MuteManager.cs` - ミュートルール管理（include/exclude/all モード）
+  - `Managers/GitHubUserMapManager.cs` - GitHub→Discord ユーザーマッピング
+  - ファイル・Blob・HTTP URL からロード可能
+- **署名検証**: `Utils/SignatureValidator.cs` で HMAC-SHA256 タイミングセーフ検証
 
 ### 主要ディレクトリ
 
 ```
-src/
-├── main.ts                 # エントリーポイント（Fastify サーバー）
-├── get-action.ts           # Action ファクトリー（60+ switch cases）
-├── environments.ts         # 環境変数管理（型安全）
-├── utils.ts                # ユーティリティ（署名検証、Embed、メンション）
-├── embed-colors.ts         # Discord Embed カラー定数
-├── actions/                # 59 個の Action ハンドラーファイル
-│   ├── index.ts            # BaseAction 抽象クラス
-│   ├── pull-request.ts     # PR イベントハンドラー（複雑なロジック）
-│   ├── issues.ts           # Issue イベントハンドラー
-│   └── ...                 # その他のイベント
-├── manager/                # データ管理レイヤー
-│   ├── base-record.ts      # 汎用レコードマネージャー（Map-like）
-│   ├── base-set.ts         # 汎用セットマネージャー
-│   ├── github-user.ts      # GitHub→Discord ユーザーマッピング
-│   └── mute.ts             # 通知ミュートルール
-└── tests/                  # Jest テストファイル
+./
+├── Program.cs                      # Azure Functions エントリーポイント
+├── GitHubWebhookBridge.csproj      # プロジェクトファイル
+├── host.json                       # Azure Functions ホスト設定
+├── Functions/
+│   └── WebhookFunction.cs          # HTTP トリガー関数
+├── Actions/
+│   ├── IAction.cs                  # Action インターフェース
+│   ├── IActionFactory.cs           # Factory インターフェース
+│   ├── BaseAction.cs               # 抽象基底クラス
+│   ├── ActionFactory.cs            # イベント→Action マッピング
+│   ├── Impl/                       # 実装済み 12 Action
+│   └── Stubs/                      # スタブ 47 Action（HTTP 406）
+├── Managers/
+│   ├── MuteManager.cs              # ミュートルール管理
+│   └── GitHubUserMapManager.cs     # ユーザーマッピング管理
+├── Models/                         # GitHub Webhook ペイロードモデル
+├── Services/
+│   ├── DiscordClient.cs            # Discord Webhook 送信クライアント
+│   └── MessageCacheService.cs      # Azure Table Storage メッセージキャッシュ
+├── Utils/
+│   ├── SignatureValidator.cs        # HMAC-SHA256 署名検証
+│   ├── EmbedColors.cs              # Discord Embed カラー定数
+│   └── EmbedHelper.cs              # Embed ビルダーヘルパー
+└── tests/
+    └── GitHubWebhookBridge.Tests/  # xUnit テストプロジェクト
 ```
 
 ### データフロー
 
-1. Webhook を POST `/` で受信
-2. HMAC-SHA256 署名検証（`utils.ts` の `isSignatureValid`）
-3. Mute マネージャーでユーザー・イベントをフィルタリング
-4. Action ファクトリーで適切なハンドラー作成
-5. Discord Embed メッセージを送信
-6. 5 分間キャッシュし、同じキーのメッセージは編集
+1. Webhook を `POST /GitHubWebhook` で受信
+2. HMAC-SHA256 署名検証（`SignatureValidator`）
+3. `x-github-event` ヘッダーでイベントタイプを判定
+4. `ActionFactory` で適切な Action インスタンスを生成
+5. `MuteManager` でミュートチェック後、Discord Embed メッセージを送信
 
 ## 実装パターン
 
 ### 推奨パターン
 
 - **新しい Action の追加**:
-  1. `src/actions/` に新しいファイルを作成する（例: `src/actions/push.ts` と同じ構成）
-  2. 既存の Action（例: `src/actions/push.ts`）と同様に `BaseAction<TEvent>` を継承したクラスを定義する
-  3. `BaseAction` のコンストラクタは `(discord: Discord, eventName: string, event: T)` の形式で受け取る。`super(discord, eventName, event)` で親クラスのコンストラクタを呼び出す
-  4. `BaseAction` が abstract で要求している `public run(): Promise<void>` メソッドを実装する
-  5. `src/actions/index.ts` に新しい Action クラスを export として追加する
-  6. `src/get-action.ts` の Action ファクトリ（switch 文）に、新しいイベントタイプ用のケースを追加し、`new YourAction(discord, eventName, event as YourEventType)` の形式でインスタンスを生成して返す
-- **型安全な環境変数**: `GWBEnvironment` クラスを使用
-- **Logger 使用**: `@book000/node-utils` の Logger で構造化ログ
-- **Discord メッセージ**: `@book000/node-utils` の Discord ラッパーを使用
+  1. `Actions/Impl/` に新しいファイルを作成する（例: `PushAction.cs` と同じ構成）
+  2. `BaseAction` を継承し、`ExecuteAsync(JsonElement payload)` メソッドを実装する
+  3. `Actions/ActionFactory.cs` の switch 文に新しいイベントタイプのケースを追加する
+  4. `Actions/Stubs/StubActions.cs` にスタブが残っている場合は削除する
+- **環境変数**: `Environment.GetEnvironmentVariable()` または DI で注入された `IConfiguration` を使用する
+- **Discord メッセージ**: `Services/DiscordClient.cs` を使用する（直接 HTTP クライアントを使用しない）
 
 ### 非推奨パターン
 
-- `skipLibCheck` を有効にして型エラーを回避する
-- discord.js を直接使用する（`@book000/node-utils` を使用）
-- 環境変数を直接 `process.env` から取得する（`GWBEnvironment` を使用）
+- `#pragma warning disable` で型エラーを無視する
+- HttpClient を直接インスタンス化する（DI 経由で `IHttpClientFactory` を使用）
+- Azure Functions バインディングを使わず独自に Azure SDK を呼ぶ（`MessageCacheService` を使用）
 
 ## テスト
 
 ### テスト方針
 
-- **テストフレームワーク**: Jest 30.2.0
-- **テストトランスフォーマー**: ts-jest 29.4.6
-- **テストパターン**: `**/*.test.ts`
-- **配置場所**: `src/tests/`
+- **テストフレームワーク**: xUnit
+- **テストプロジェクト**: `tests/GitHubWebhookBridge.Tests/`
+- **実行コマンド**: `dotnet test`
 
 ### 追加テスト条件
 
 - 新機能追加時はテストを追加する
 - 既存テストが失敗しないことを確認する
-- 以下のフラグで実行:
-  - `--runInBand`: 順次実行
-  - `--passWithNoTests`: テストなしで許可
-  - `--detectOpenHandles`: リーク検出
-  - `--forceExit`: 強制終了
 
 ## ドキュメント更新ルール
 
 ### 更新対象
 
 - `README.md`: プロジェクト概要、使用方法、環境変数
-- `docs/`: イベントタイプ毎のドキュメント（自動生成）
-- JSDoc コメント: 関数・インターフェースの docstring
+- XML ドキュメントコメント: クラスや公開メソッドの docstring
 
 ### 更新タイミング
 
@@ -215,14 +199,15 @@ src/
 2. 作業を行うブランチが適切であることを確認する（すでに PR を提出しクローズされたブランチでないこと）
 3. 最新のリモートブランチに基づいた新規ブランチであることを確認する
 4. PR がクローズされ、不要となったブランチは削除されている
-5. プロジェクトで指定されたパッケージマネージャー（pnpm）により、依存パッケージをインストールする
+5. `dotnet restore` で依存パッケージをインストールする
 
 ### コミット・プッシュする前
 
 1. コミットメッセージが Conventional Commits に従っている（`<description>` は日本語）
 2. コミット内容にセンシティブな情報が含まれていない
-3. Lint / Format エラーが発生しない（`pnpm lint` が成功する）
-4. 動作確認を行い、期待通り動作する
+3. `dotnet build` でビルドエラーが発生しない
+4. `dotnet test` でテストが全て PASS する
+5. 動作確認を行い、期待通り動作する
 
 ### プルリクエストを作成する前
 
@@ -245,20 +230,16 @@ src/
 
 ### デプロイ環境
 
-- **Vercel Serverless**: `vercel.json` で全リクエストを `/api/serverless.ts` にルーティング
-- **Production URL**: https://github-webhook-bridge.vercel.app
+- **Azure Functions v4 Isolated**: `Functions/WebhookFunction.cs` が HTTP トリガー
+- **エンドポイント**: `POST /GitHubWebhook`
 
 ### パッケージマネージャー
 
-- **pnpm のみ使用**: preinstall フックで npm/yarn を禁止
-- **バージョン**: 10.28.1+
+- **dotnet CLI を使用**: `dotnet restore`、`dotnet build`、`dotnet test`
 
 ### CI/CD
 
-- `nodejs-ci-pnpm.yml`: メイン CI（book000/templates の再利用テンプレート）
-- `check-import.yml`: Import 検証
-- `docker.yml`: Docker イメージビルド
-- `generate-docs.yml`: ドキュメント自動生成
+- `dotnet-ci.yml`: メイン CI（ビルド・テスト）
 
 ### セキュリティ
 
@@ -267,13 +248,12 @@ src/
   - シークレット: `GITHUB_WEBHOOK_SECRET` 環境変数
   - タイミングセーフ比較を使用
 - **環境変数**: 認証情報は環境変数で管理
-  - 必須: `GITHUB_WEBHOOK_SECRET`, `DISCORD_WEBHOOK_URL`
-  - オプション: `API_PORT`, `GITHUB_USER_MAP_FILE_PATH`, `MUTES_FILE_PATH` など
+  - 必須: `GITHUB_WEBHOOK_SECRET`、`AzureWebJobsStorage`
+  - オプション: `DISCORD_WEBHOOK_URL`、`GITHUB_USER_MAP_FILE_PATH`、`MUTES_FILE_PATH` など
+- **URL 検証**: `?url=` パラメータは `https://discord.com/api/webhooks/` または `https://discordapp.com/api/webhooks/` プレフィックスのみ許可
 
 ### その他の制約
 
-- **59 種類の GitHub Webhook イベントタイプ**: `@octokit/webhooks-types` で型安全
-- **DevContainer サポート**: TypeScript/Node 18 ベースイメージ
+- **59 種類の GitHub Webhook イベントタイプ**: 12 種実装済み、47 種スタブ（HTTP 406）
 - **Renovate**: 依存関係を自動更新（base-public config）
 - **ブランチ保護**: main/master ブランチは保護される
-- **Discord 統合**: `@book000/node-utils` の Discord ラッパーを使用（discord.js を直接使用しない）
