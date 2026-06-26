@@ -1,0 +1,8 @@
+using System.Text.Json.Serialization;
+
+namespace GitHubWebhookBridge.Models.Discord;
+
+/// <summary>Discord Embed フッター。</summary>
+public record DiscordEmbedFooter(
+    [property: JsonPropertyName("text")]     string  Text,
+    [property: JsonPropertyName("icon_url")] string? IconUrl = null);
