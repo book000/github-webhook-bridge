@@ -1,0 +1,79 @@
+name: Deploy to Azure Functions
+
+# master ブランチへの push 時にのみ実行する。
+# PR からの直接デプロイは行わない（branch protection で CI 通過必須にすること）。
+on:
+  push:
+    branches:
+      - master
+
+# ジョブレベルで最小権限を付与するため、ここでは全権限を拒否する。
+permissions: {}
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  # dotnet publish の出力ディレクトリ
+  PUBLISH_OUTPUT_DIR: ./output
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    # GitHub Environment "production" を使用して、デプロイ前の承認ゲートを設定できる。
+    # リポジトリの Settings > Environments > production で Required reviewers を設定すること。
+    environment:
+      name: production
+      url: https://${{ vars.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net
+
+    # OIDC トークン発行に id-token: write が必須。
+    # azure/login@v2 が GitHub OIDC プロバイダーからトークンを取得し Azure へ認証する。
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Azure 認証 (OIDC / Workload Identity Federation) ────────────────────
+      # シークレットを一切持たない認証方式。
+      # 事前に Microsoft Entra アプリ・サービスプリンシパル・フェデレーション資格情報を作成し、
+      # 以下のシークレットをリポジトリに登録すること（値自体は秘密情報ではないが GitHub Secrets 推奨）。
+      #   AZURE_CLIENT_ID      : Microsoft Entra アプリの appId
+      #   AZURE_TENANT_ID      : Microsoft Entra ディレクトリの tenantId
+      #   AZURE_SUBSCRIPTION_ID: デプロイ先の Azure サブスクリプション ID
+      # ロール割り当て: 対象 Function App リソースに "Website Contributor" を付与すること。
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ── ビルド ──────────────────────────────────────────────────────────────
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish
+        run: dotnet publish --configuration Release --no-restore --output ${{ env.PUBLISH_OUTPUT_DIR }}
+
+      # ── デプロイ ────────────────────────────────────────────────────────────
+      # AZURE_FUNCTIONAPP_NAME は GitHub Variables (Settings > Variables) に登録する。
+      # Secrets ではなく Variables を使うことで値が Actions ログで見やすくなる。
+      - name: Deploy to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.PUBLISH_OUTPUT_DIR }}
+
+      # ── クリーンアップ ──────────────────────────────────────────────────────
+      # デプロイ成否に関わらず Azure セッションを破棄する。
+      - name: Logout from Azure
+        if: always()
+        run: az logout
