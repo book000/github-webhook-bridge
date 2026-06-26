@@ -38,7 +38,7 @@
     "@types/diff": "8.0.0",
     "@types/jest": "30.0.0",
     "@types/node": "24.13.2",
-    "@vercel/node": "5.8.17",
+    "@vercel/node": "5.8.18",
     "diff": "9.0.0",
     "eslint": "10.5.0",
     "eslint-config-standard": "17.1.0",
