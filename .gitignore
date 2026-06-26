@@ -133,3 +133,9 @@ data/
 
 # pnpm
 .pnpm-store
+
+# Azure Functions
+local.settings.json
+packages.lock.json
+bin/
+obj/
