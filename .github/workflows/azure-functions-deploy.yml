@@ -52,6 +52,3 @@ jobs:
           app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
           package: ${{ env.PUBLISH_OUTPUT_DIR }}
 
-      - name: Logout from Azure
-        if: always()
-        run: az logout
