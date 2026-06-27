@@ -21,12 +21,12 @@ public sealed class PingAction(IDiscordClient d, Uri wu, string en, PingEvent e,
             title: "Received a ping event",
             description: Event.Zen,
             fields: [
-                new("Hook Type",    Event.Hook.Type,                                   true),
-                new("Hook ID",      Event.HookId.ToString(System.Globalization.CultureInfo.InvariantCulture),                           true),
-                new("Events",       (Event.Hook.Events?.Count ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture),        true),
-                new("Repository",   Event.Repository?.FullName ?? "N/A",              true),
-                new("Sender",       Event.Sender?.Login ?? "N/A",                     true),
-                new("Organization", Event.Organization?.Login ?? "N/A",               true),
+                new("Hook Type", Event.Hook.Type, true),
+                new("Hook ID", Event.HookId.ToString(System.Globalization.CultureInfo.InvariantCulture), true),
+                new("Events", (Event.Hook.Events?.Count ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture), true),
+                new("Repository", Event.Repository?.FullName ?? "N/A", true),
+                new("Sender", Event.Sender?.Login ?? "N/A", true),
+                new("Organization", Event.Organization?.Login ?? "N/A", true),
             ]);
 
         var cacheKey = $"ping:{Event.Repository?.FullName ?? "N/A"}:{Event.Sender?.Login ?? "N/A"}:{Event.Organization?.Login ?? "N/A"}:{Event.Hook.Type}";

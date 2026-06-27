@@ -23,10 +23,10 @@ public class PushActionTests
         Commits = commits ?? [
             new Commit
             {
-                Id      = "abcdef1234567890",
+                Id = "abcdef1234567890",
                 Message = "feat: add new feature",
-                Url     = new Uri("https://github.com/test/repo/commit/abcdef1"),
-                Author  = new CommitAuthor { Name = "octocat" },
+                Url = new Uri("https://github.com/test/repo/commit/abcdef1"),
+                Author = new CommitAuthor { Name = "octocat" },
             },
         ],
     };

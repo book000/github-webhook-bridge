@@ -79,8 +79,8 @@ public sealed class PullRequestAction(IDiscordClient d, Uri wu, string en, PullR
 
         var fields = new List<DiscordEmbedField>
         {
-            new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})",                   true),
-            new("Branch",     $"`{pr.Head.Ref}` → `{pr.Base.Ref}`",                   true),
+            new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
+            new("Branch", $"`{pr.Head.Ref}` → `{pr.Base.Ref}`", true),
         };
 
         if (pr.Additions.HasValue && pr.Deletions.HasValue)

@@ -44,7 +44,7 @@ public sealed class IssuesAction(IDiscordClient d, Uri wu, string en, IssuesEven
         var fields = new List<DiscordEmbedField>
         {
             new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
-            new("State",      issue.State,                           true),
+            new("State", issue.State, true),
         };
 
         if (Event.Label is not null)
