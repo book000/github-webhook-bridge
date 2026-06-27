@@ -9,7 +9,7 @@ namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub ping イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class PingAction(IDiscordClient d, Uri wu, string en, PingEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<PingEvent>(d, wu, en, e, c, u, l)
+public sealed class PingAction(IDiscordClient discord, Uri webhookUrl, string eventName, PingEvent pingEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PingEvent>(discord, webhookUrl, eventName, pingEvent, cache, userMapManager, logger)
 {
 
     /// <inheritdoc/>

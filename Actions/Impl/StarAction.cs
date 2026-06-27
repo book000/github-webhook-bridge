@@ -9,7 +9,7 @@ namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub star イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class StarAction(IDiscordClient d, Uri wu, string en, StarEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<StarEvent>(d, wu, en, e, c, u, l)
+public sealed class StarAction(IDiscordClient discord, Uri webhookUrl, string eventName, StarEvent starEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<StarEvent>(discord, webhookUrl, eventName, starEvent, cache, userMapManager, logger)
 {
 
     /// <inheritdoc/>

@@ -9,7 +9,7 @@ namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub fork イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class ForkAction(IDiscordClient d, Uri wu, string en, ForkEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<ForkEvent>(d, wu, en, e, c, u, l)
+public sealed class ForkAction(IDiscordClient discord, Uri webhookUrl, string eventName, ForkEvent forkEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<ForkEvent>(discord, webhookUrl, eventName, forkEvent, cache, userMapManager, logger)
 {
 
     /// <inheritdoc/>

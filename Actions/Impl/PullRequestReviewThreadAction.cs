@@ -9,7 +9,7 @@ namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub pull_request_review_thread イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class PullRequestReviewThreadAction(IDiscordClient d, Uri wu, string en, PullRequestReviewThreadEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<PullRequestReviewThreadEvent>(d, wu, en, e, c, u, l)
+public sealed class PullRequestReviewThreadAction(IDiscordClient discord, Uri webhookUrl, string eventName, PullRequestReviewThreadEvent pullRequestReviewThreadEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PullRequestReviewThreadEvent>(discord, webhookUrl, eventName, pullRequestReviewThreadEvent, cache, userMapManager, logger)
 {
 
     /// <inheritdoc/>
@@ -32,7 +32,7 @@ public sealed class PullRequestReviewThreadAction(IDiscordClient d, Uri wu, stri
         var fields = new List<DiscordEmbedField>
         {
             new("Thread ID", thread.NodeId, false),
-            new("Resolved",  thread.Resolved ? "Yes" : "No", true),
+            new("Resolved", thread.Resolved ? "Yes" : "No", true),
         };
 
         // PR 作成者への @mention（送信者が PR 作成者の場合は除外）

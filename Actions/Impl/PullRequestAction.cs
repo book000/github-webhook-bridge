@@ -10,7 +10,7 @@ namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub pull_request イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class PullRequestAction(IDiscordClient d, Uri wu, string en, PullRequestEvent e, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : BaseAction<PullRequestEvent>(d, wu, en, e, c, u, l)
+public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, string eventName, PullRequestEvent pullRequestEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PullRequestEvent>(discord, webhookUrl, eventName, pullRequestEvent, cache, userMapManager, logger)
 {
 
     /// <summary>アクションに対応するキャッシュキーのサフィックスを取得します。</summary>
