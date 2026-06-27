@@ -19,14 +19,14 @@ public class ActionFactory(
     private readonly IMessageCacheService _cache = cache;
     private readonly IGitHubUserMapManager _userMapManager = userMapManager;
     private readonly ILoggerFactory _loggerFactory = loggerFactory;
-    private static readonly JsonSerializerOptions _opts = new()
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         ReadCommentHandling = JsonCommentHandling.Skip,
         PropertyNameCaseInsensitive = true,
     };
 
     private static T Deserialize<T>(JsonElement body)
-        => body.Deserialize<T>(_opts)
+        => body.Deserialize<T>(_jsonOptions)
            ?? throw new InvalidOperationException($"Failed to deserialize {typeof(T).Name}");
 
     private ILogger<T> Logger<T>() => _loggerFactory.CreateLogger<T>();
@@ -97,6 +97,6 @@ public class ActionFactory(
             "workflow_job" => new WorkflowJobAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<WorkflowJobAction>()),
             "workflow_run" => new WorkflowRunAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<WorkflowRunAction>()),
 
-            _ => throw new NotImplementedException($"Event '{eventName}' is not supported"),
+            _ => throw new NotSupportedException($"Event '{eventName}' is not supported"),
         };
 }

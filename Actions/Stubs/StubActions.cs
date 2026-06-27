@@ -15,237 +15,236 @@ public abstract class StubAction(
     IGitHubUserMapManager userMapManager,
     ILogger logger) : BaseAction<JsonElement>(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
-
     /// <summary>未実装のイベントハンドラー。</summary>
-    public override Task RunAsync() => throw new NotImplementedException($"Event '{EventName}' is not yet implemented.");
+    public override Task RunAsync() => throw new NotSupportedException($"Event '{EventName}' is not yet implemented.");
 }
 
 /// <summary>branch_protection_rule イベントのスタブハンドラー。</summary>
-public sealed class BranchProtectionRuleAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class BranchProtectionRuleAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>check_run イベントのスタブハンドラー。</summary>
-public sealed class CheckRunAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class CheckRunAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>check_suite イベントのスタブハンドラー。</summary>
-public sealed class CheckSuiteAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class CheckSuiteAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>code_scanning_alert イベントのスタブハンドラー。</summary>
-public sealed class CodeScanningAlertAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class CodeScanningAlertAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>commit_comment イベントのスタブハンドラー。</summary>
-public sealed class CommitCommentAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class CommitCommentAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>create イベントのスタブハンドラー。</summary>
-public sealed class CreateAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class CreateAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>delete イベントのスタブハンドラー。</summary>
-public sealed class DeleteAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class DeleteAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>dependabot_alert イベントのスタブハンドラー。</summary>
-public sealed class DependabotAlertAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class DependabotAlertAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>deploy_key イベントのスタブハンドラー。</summary>
-public sealed class DeployKeyAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class DeployKeyAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>deployment イベントのスタブハンドラー。</summary>
-public sealed class DeploymentAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class DeploymentAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>deployment_review イベントのスタブハンドラー。</summary>
-public sealed class DeploymentReviewAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class DeploymentReviewAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>deployment_status イベントのスタブハンドラー。</summary>
-public sealed class DeploymentStatusAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class DeploymentStatusAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>discussion_comment イベントのスタブハンドラー。</summary>
-public sealed class DiscussionCommentAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class DiscussionCommentAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>github_app_authorization イベントのスタブハンドラー。</summary>
-public sealed class GithubAppAuthorizationAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class GithubAppAuthorizationAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>gollum イベントのスタブハンドラー。</summary>
-public sealed class GollumAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class GollumAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>installation イベントのスタブハンドラー。</summary>
-public sealed class InstallationAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class InstallationAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>installation_repositories イベントのスタブハンドラー。</summary>
-public sealed class InstallationRepositoriesAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class InstallationRepositoriesAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>label イベントのスタブハンドラー。</summary>
-public sealed class LabelAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class LabelAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>marketplace_purchase イベントのスタブハンドラー。</summary>
-public sealed class MarketplacePurchaseAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class MarketplacePurchaseAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>member イベントのスタブハンドラー。</summary>
-public sealed class MemberAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class MemberAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>membership イベントのスタブハンドラー。</summary>
-public sealed class MembershipAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class MembershipAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>merge_group イベントのスタブハンドラー。</summary>
-public sealed class MergeGroupAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class MergeGroupAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>meta イベントのスタブハンドラー。</summary>
-public sealed class MetaAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class MetaAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>milestone イベントのスタブハンドラー。</summary>
-public sealed class MilestoneAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class MilestoneAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>org_block イベントのスタブハンドラー。</summary>
-public sealed class OrgBlockAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class OrgBlockAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>organization イベントのスタブハンドラー。</summary>
-public sealed class OrganizationAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class OrganizationAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>package イベントのスタブハンドラー。</summary>
-public sealed class PackageAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class PackageAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>page_build イベントのスタブハンドラー。</summary>
-public sealed class PageBuildAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class PageBuildAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>project イベントのスタブハンドラー。</summary>
-public sealed class ProjectAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class ProjectAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>project_card イベントのスタブハンドラー。</summary>
-public sealed class ProjectCardAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class ProjectCardAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>project_column イベントのスタブハンドラー。</summary>
-public sealed class ProjectColumnAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class ProjectColumnAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>projects_v2_item イベントのスタブハンドラー。</summary>
-public sealed class ProjectsV2ItemAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class ProjectsV2ItemAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>release イベントのスタブハンドラー。</summary>
-public sealed class ReleaseAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class ReleaseAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>repository イベントのスタブハンドラー。</summary>
-public sealed class RepositoryAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class RepositoryAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>repository_dispatch イベントのスタブハンドラー。</summary>
-public sealed class RepositoryDispatchAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class RepositoryDispatchAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>repository_import イベントのスタブハンドラー。</summary>
-public sealed class RepositoryImportAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class RepositoryImportAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>repository_vulnerability_alert イベントのスタブハンドラー。</summary>
-public sealed class RepositoryVulnerabilityAlertAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class RepositoryVulnerabilityAlertAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>security_advisory イベントのスタブハンドラー。</summary>
-public sealed class SecurityAdvisoryAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class SecurityAdvisoryAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>sponsorship イベントのスタブハンドラー。</summary>
-public sealed class SponsorshipAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class SponsorshipAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>status イベントのスタブハンドラー。</summary>
-public sealed class StatusAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class StatusAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>team イベントのスタブハンドラー。</summary>
-public sealed class TeamAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class TeamAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>team_add イベントのスタブハンドラー。</summary>
-public sealed class TeamAddAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class TeamAddAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>watch イベントのスタブハンドラー。</summary>
-public sealed class WatchAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class WatchAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>workflow_dispatch イベントのスタブハンドラー。</summary>
-public sealed class WorkflowDispatchAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class WorkflowDispatchAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>workflow_job イベントのスタブハンドラー。</summary>
-public sealed class WorkflowJobAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class WorkflowJobAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
 
 /// <summary>workflow_run イベントのスタブハンドラー。</summary>
-public sealed class WorkflowRunAction(IDiscordClient d, Uri wu, string en, JsonElement b, IMessageCacheService c, IGitHubUserMapManager u, ILogger l) : StubAction(d, wu, en, b, c, u, l)
+public sealed class WorkflowRunAction(IDiscordClient discord, Uri webhookUrl, string eventName, JsonElement body, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : StubAction(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
 }
