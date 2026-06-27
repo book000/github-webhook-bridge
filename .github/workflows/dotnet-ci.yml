@@ -2,9 +2,6 @@ name: .NET CI
 
 on:
   push:
-    branches:
-      - master
-      - "feat/*"
   pull_request:
     branches:
       - master
