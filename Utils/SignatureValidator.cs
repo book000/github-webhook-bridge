@@ -28,23 +28,23 @@ public static class SignatureValidator
         }
 
         // クライアント実装差（大文字 HEX など）を吸収するため小文字に正規化する
-        var receivedHash = signatureHeader[SignaturePrefix.Length..].ToLowerInvariant();
+        var receivedHashHex = signatureHeader[SignaturePrefix.Length..].ToLowerInvariant();
 
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-        var computedHash = Convert.ToHexString(hmac.ComputeHash(rawBody)).ToLowerInvariant();
+        var computedHashHex = Convert.ToHexString(hmac.ComputeHash(rawBody)).ToLowerInvariant();
 
-        var computedBytes = Encoding.ASCII.GetBytes(computedHash);
-        var receivedBytes = Encoding.ASCII.GetBytes(receivedHash);
+        var computedHashBytes = Encoding.ASCII.GetBytes(computedHashHex);
+        var receivedHashBytes = Encoding.ASCII.GetBytes(receivedHashHex);
 
         // 長さが異なる場合もタイミング情報を漏洩しないよう、常に FixedTimeEquals を実行する。
-        // receivedBytes を computedBytes と同じ長さに正規化してから比較する。
-        var normalizedReceived = new byte[computedBytes.Length];
-        var copyLen = Math.Min(receivedBytes.Length, normalizedReceived.Length);
-        receivedBytes.AsSpan(0, copyLen).CopyTo(normalizedReceived);
+        // receivedHashBytes を computedHashBytes と同じ長さに正規化してから比較する。
+        var normalizedReceived = new byte[computedHashBytes.Length];
+        var copyLength = Math.Min(receivedHashBytes.Length, normalizedReceived.Length);
+        receivedHashBytes.AsSpan(0, copyLength).CopyTo(normalizedReceived);
 
-        var equal = CryptographicOperations.FixedTimeEquals(computedBytes, normalizedReceived);
+        var equal = CryptographicOperations.FixedTimeEquals(computedHashBytes, normalizedReceived);
 
         // 長さが違う場合は false（正規化で内容が変わっているため）
-        return equal && receivedBytes.Length == computedBytes.Length;
+        return equal && receivedHashBytes.Length == computedHashBytes.Length;
     }
 }

@@ -29,7 +29,7 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     // JSONC（コメント・末尾カンマ付き JSON）をサポートするオプション
-    private static readonly JsonSerializerOptions _jsonOpts = new()
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
@@ -119,7 +119,7 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
 
     /// <summary>型パラメータ T を用いた汎用 JSON デシリアライズ。</summary>
     protected T? DeserializeJson<T>(string json)
-        => JsonSerializer.Deserialize<T>(json, _jsonOpts);
+        => JsonSerializer.Deserialize<T>(json, _jsonOptions);
 
     /// <summary>テスト用: サブクラスがデータを直接設定できるようにする。</summary>
     internal void SetDataForTest(TData data)

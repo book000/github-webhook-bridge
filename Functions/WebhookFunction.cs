@@ -79,8 +79,8 @@ public class WebhookFunction(
         if (string.IsNullOrEmpty(rawEventName))
             return new BadRequestObjectResult(new { message = "Bad Request: Missing X-GitHub-Event" });
 
-        var sanitized = SanitizeEventName(rawEventName);
-        if (sanitized != rawEventName)
+        var sanitizedEventName = SanitizeEventName(rawEventName);
+        if (sanitizedEventName != rawEventName)
         {
             _logger.LogWarning("Rejected request with invalid X-GitHub-Event header value");
             return new BadRequestObjectResult(new { message = "Bad Request: Invalid X-GitHub-Event" });
@@ -107,14 +107,14 @@ public class WebhookFunction(
         }
 
         // 6. ?disabled-events= チェック（カンマ区切り、イベント名が含まれる場合は 202 を返す）
-        var disabledEvents = req.Query.TryGetValue("disabled-events", out StringValues deParam)
-                             && !string.IsNullOrEmpty(deParam)
-            ? deParam.ToString()
+        var disabledEvents = req.Query.TryGetValue("disabled-events", out StringValues disabledEventsParam)
+                             && !string.IsNullOrEmpty(disabledEventsParam)
+            ? disabledEventsParam.ToString()
             : _config["DISABLED_EVENTS"];
         if (!string.IsNullOrEmpty(disabledEvents))
         {
-            var disabled = disabledEvents.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            if (disabled.Contains(eventName, StringComparer.OrdinalIgnoreCase))
+            var disabledEventNames = disabledEvents.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            if (disabledEventNames.Contains(eventName, StringComparer.OrdinalIgnoreCase))
                 return new ObjectResult(new { message = "Disabled event" }) { StatusCode = 202 };
         }
 
@@ -135,7 +135,7 @@ public class WebhookFunction(
             && sender.TryGetProperty("id", out JsonElement senderId)
             && senderId.ValueKind == JsonValueKind.Number)
         {
-            var actionProp = body.TryGetProperty("action", out JsonElement a) ? a.GetString() : null;
+            var actionProp = body.TryGetProperty("action", out JsonElement actionElement) ? actionElement.GetString() : null;
             if (_muteManager.IsMuted(senderId.GetInt64(), eventName, actionProp))
                 return new OkObjectResult(new { message = "Muted user" });
         }

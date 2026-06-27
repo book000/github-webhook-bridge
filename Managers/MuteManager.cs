@@ -42,18 +42,18 @@ public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFac
         if (record.Type == MuteType.Include)
         {
             // 指定イベント・アクションがリストにある場合にミュート
-            return record.Events.Any(e =>
-                e.EventName == eventName
-                && (e.Actions is null
-                    || (action != null && e.Actions.Contains(action))));
+            return record.Events.Any(muteEvent =>
+                muteEvent.EventName == eventName
+                && (muteEvent.Actions is null
+                    || (action != null && muteEvent.Actions.Contains(action))));
         }
 
         // Exclude モード: リストにないイベントをミュートする
-        // TypeScript 版準拠: e.Actions == null のエントリは免除条件にならない
-        return !record.Events.Any(e =>
-            e.EventName == eventName
-            && e.Actions != null
-            && (action == null || e.Actions.Contains(action)));
+        // TypeScript 版準拠: Actions == null のエントリは免除条件にならない
+        return !record.Events.Any(muteEvent =>
+            muteEvent.EventName == eventName
+            && muteEvent.Actions != null
+            && (action == null || muteEvent.Actions.Contains(action)));
     }
 }
 
