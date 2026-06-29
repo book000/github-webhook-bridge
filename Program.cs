@@ -1,4 +1,4 @@
-using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Azure.Monitor.OpenTelemetry.Exporter;
 using GitHubWebhookBridge.Actions;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Services;
@@ -12,10 +12,12 @@ FunctionsApplicationBuilder builder = FunctionsApplication.CreateBuilder(args);
 builder.ConfigureFunctionsWebApplication();
 
 // OpenTelemetry: Azure Functions 向け計装 + Azure Monitor エクスポーター
+// AspNetCoreInstrumentation を含まない低レイヤーエクスポーターを使用し、
+// Functions ホストとの二重テレメトリを防ぐ（公式推奨構成）
 // APPLICATIONINSIGHTS_CONNECTION_STRING 環境変数が設定されている場合に有効
 OpenTelemetryBuilder otelBuilder = builder.Services.AddOpenTelemetry();
 otelBuilder.UseFunctionsWorkerDefaults();
-otelBuilder.UseAzureMonitor();
+otelBuilder.UseAzureMonitorExporter();
 
 builder.Services
     // 汎用 HttpClient（IHttpClientFactory 経由で利用可能）
