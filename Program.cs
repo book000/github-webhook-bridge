@@ -1,13 +1,21 @@
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using GitHubWebhookBridge.Actions;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Services;
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
+using Microsoft.Azure.Functions.Worker.OpenTelemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OpenTelemetry;
 
 FunctionsApplicationBuilder builder = FunctionsApplication.CreateBuilder(args);
 builder.ConfigureFunctionsWebApplication();
+
+// OpenTelemetry: Azure Functions 向け計装 + Azure Monitor エクスポーター
+// APPLICATIONINSIGHTS_CONNECTION_STRING 環境変数が設定されている場合に有効
+OpenTelemetryBuilder otelBuilder = builder.Services.AddOpenTelemetry();
+otelBuilder.UseFunctionsWorkerDefaults();
+otelBuilder.UseAzureMonitor();
 
 builder.Services
     // 汎用 HttpClient（IHttpClientFactory 経由で利用可能）
@@ -39,11 +47,6 @@ builder.Services
     // アクションファクトリー
     .AddSingleton<IActionFactory, ActionFactory>()
     // テーブルストレージの初期化をホスト起動時に非同期実行
-    .AddHostedService<TableStorageInitializer>()
-    // Application Insights テレメトリ（サンプリングは host.json で設定）
-    .AddApplicationInsightsTelemetryWorkerService();
-
-// Azure Functions Isolated ワーカー向け Application Insights の追加設定
-builder.Services.ConfigureFunctionsApplicationInsights();
+    .AddHostedService<TableStorageInitializer>();
 
 builder.Build().Run();

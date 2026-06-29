@@ -31,6 +31,13 @@ public class ActionFactory(
 
     private ILogger<T> Logger<T>() => _loggerFactory.CreateLogger<T>();
 
+    /// <summary>
+    /// イベント名から適切な IAction インスタンスを生成して返す。
+    /// </summary>
+    /// <param name="eventName">GitHub Webhook の X-GitHub-Event ヘッダー値。</param>
+    /// <param name="body">Webhook ペイロードの JSON 要素。</param>
+    /// <param name="webhookUrl">通知先 Discord Webhook URL。</param>
+    /// <returns>イベントに対応する <see cref="IAction"/> インスタンス。</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Factory メソッドは全イベント型を参照するため必然的に結合度が高い")]
     public IAction GetAction(string eventName, JsonElement body, Uri webhookUrl)
         => eventName switch

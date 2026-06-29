@@ -11,7 +11,6 @@ namespace GitHubWebhookBridge.Actions.Impl;
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 public sealed class PullRequestReviewCommentAction(IDiscordClient discord, Uri webhookUrl, string eventName, PullRequestReviewCommentEvent pullRequestReviewCommentEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PullRequestReviewCommentEvent>(discord, webhookUrl, eventName, pullRequestReviewCommentEvent, cache, userMapManager, logger)
 {
-
     /// <inheritdoc/>
     public override async Task RunAsync()
     {

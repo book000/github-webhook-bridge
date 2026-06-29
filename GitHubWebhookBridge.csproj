@@ -10,6 +10,9 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <!-- .editorconfig の IDE 診断ルールをビルド時に有効化する -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- SA1600/SA1602/SA1611/SA1615/SA1618/CS1591: XML ドキュメントコメントの詳細要件は段階的に対応 -->
+    <NoWarn>$(NoWarn);SA1600;SA1602;SA1611;SA1615;SA1618;CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,14 +30,28 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="3.1.2" />
+    <!-- Azure Functions -->
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.1.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.7" />
+    <!-- OpenTelemetry / Azure Monitor -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.OpenTelemetry" Version="1.2.0" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.5.0" />
+    <!-- Azure Storage -->
     <PackageReference Include="Azure.Data.Tables" Version="12.11.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
+    <!-- Utilities -->
     <PackageReference Include="DiffPlex" Version="1.9.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="2.51.0" />
+    <!-- StyleCop: ビルド時のみ使用（出力には含まれない） -->
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- StyleCop 設定ファイル -->
+    <AdditionalFiles Include="stylecop.json" />
   </ItemGroup>
 
   <ItemGroup>

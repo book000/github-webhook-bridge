@@ -20,12 +20,24 @@ public abstract class BaseAction<TEvent>(
     IGitHubUserMapManager userMapManager,
     ILogger logger) : IAction
 {
+    /// <summary>Discord Webhook API クライアント。</summary>
     protected IDiscordClient Discord { get; } = discord;
+
+    /// <summary>通知先 Discord Webhook URL。</summary>
     protected Uri WebhookUrl { get; } = webhookUrl;
+
+    /// <summary>GitHub Webhook イベント名。</summary>
     protected string EventName { get; } = eventName;
+
+    /// <summary>デシリアライズされた Webhook ペイロード。</summary>
     protected TEvent Event { get; } = @event;
+
+    /// <summary>GitHub → Discord ユーザーマッピングマネージャー。</summary>
     protected IGitHubUserMapManager UserMapManager { get; } = userMapManager;
+
+    /// <summary>ロガーインスタンス。</summary>
     protected ILogger Logger { get; } = logger;
+
     private readonly IMessageCacheService _cache = cache;
 
     /// <summary>イベント処理を実行する。各サブクラスで実装する。</summary>
@@ -36,6 +48,8 @@ public abstract class BaseAction<TEvent>(
     /// 同一キーのメッセージが 5 分以内に存在する場合は編集する。
     /// 全メッセージに SuppressNotifications フラグを付与する。
     /// </summary>
+    /// <param name="key">キャッシュの検索・保存に使用するキー文字列。</param>
+    /// <param name="message">送信する Discord メッセージ。</param>
     protected async Task SendMessageAsync(string key, DiscordMessage message)
     {
         ArgumentNullException.ThrowIfNull(message);
@@ -67,6 +81,9 @@ public abstract class BaseAction<TEvent>(
     /// GitHub ユーザー ID 一覧から Discord メンション文字列を生成する。
     /// 送信者自身は除外する。Team オブジェクトが含まれる場合は事前にフィルタリングすること。
     /// </summary>
+    /// <param name="senderId">送信者の GitHub ユーザー ID（メンションから除外される）。</param>
+    /// <param name="users">メンション対象の GitHub ユーザー ID とログイン名のコレクション。</param>
+    /// <returns>Discord メンション文字列（スペース区切り）。対象がいない場合は空文字列。</returns>
     protected async Task<string> GetUsersMentionsAsync(
         long senderId,
         IEnumerable<(long Id, string Login)> users)
@@ -85,6 +102,10 @@ public abstract class BaseAction<TEvent>(
     /// TypeScript の diff.createPatch() と同等の +/-/スペース 行プレフィックス形式。
     /// 呼び出し元で ```diff コードブロックで囲むこと。
     /// </summary>
+    /// <param name="oldText">変更前のテキスト。</param>
+    /// <param name="newText">変更後のテキスト。</param>
+    /// <param name="fileName">diff ヘッダーに表示するファイル名。</param>
+    /// <returns>+/-/スペース 行プレフィックス形式の diff 文字列。</returns>
     protected static string CreatePatch(string oldText, string newText, string fileName = "file")
     {
         DiffPaneModel diff = InlineDiffBuilder.Diff(oldText, newText);

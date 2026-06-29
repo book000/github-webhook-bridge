@@ -15,6 +15,10 @@ public static class SignatureValidator
     /// タイミング攻撃を防ぐために <see cref="CryptographicOperations.FixedTimeEquals"/> を使用する。
     /// 長さが異なる場合もダミー比較を行い、長さ情報をタイミングで漏洩しない。
     /// </summary>
+    /// <param name="rawBody">検証対象の HTTP リクエストボディバイト列。</param>
+    /// <param name="headers">HTTP リクエストヘッダーコレクション。</param>
+    /// <param name="secret">HMAC-SHA256 署名計算に使用するシークレット文字列。</param>
+    /// <returns>署名が有効な場合は true、無効または署名ヘッダーが存在しない場合は false。</returns>
     [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "GitHub Webhook の署名は仕様上小文字 hex のため ToLowerInvariant が正しい")]
     public static bool Validate(byte[] rawBody, IHeaderDictionary headers, string secret)
     {

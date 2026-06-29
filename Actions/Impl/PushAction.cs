@@ -11,7 +11,6 @@ namespace GitHubWebhookBridge.Actions.Impl;
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 public sealed class PushAction(IDiscordClient discord, Uri webhookUrl, string eventName, PushEvent pushEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PushEvent>(discord, webhookUrl, eventName, pushEvent, cache, userMapManager, logger)
 {
-
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
@@ -20,8 +19,8 @@ public sealed class PushAction(IDiscordClient discord, Uri webhookUrl, string ev
 
         // refs/heads/ や refs/tags/ を除去して短いブランチ名にする
         var shortRef = Event.Ref
-            .Replace("refs/heads/", "")
-            .Replace("refs/tags/", "");
+            .Replace("refs/heads/", string.Empty)
+            .Replace("refs/tags/", string.Empty);
 
         // 先頭 5 件のみ表示する（TypeScript 実装との統一）
         const int CommitLimit = 5;

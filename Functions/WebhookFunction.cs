@@ -34,12 +34,13 @@ public class WebhookFunction(
     /// <summary>
     /// GitHub Webhook リクエストを受け取り、署名検証・ミュートチェックを経て Discord に通知する。
     /// </summary>
+    /// <param name="req">Azure Functions が受け取った HTTP リクエスト。</param>
+    /// <returns>処理結果を表す <see cref="IActionResult"/>。</returns>
     [Function("GitHubWebhook")]
     [SuppressMessage("Naming", "IDE1006:NamingRuleViolation", Justification = "Azure Functions ランタイムが 'Run' という名前を要求するため変更不可")]
     [SuppressMessage("Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Webhook エントリーポイントは必然的に多くの型を参照する")]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post",
-            Route = "GitHubWebhook")] HttpRequest req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "GitHubWebhook")] HttpRequest req)
     {
         ArgumentNullException.ThrowIfNull(req);
 
@@ -61,6 +62,7 @@ public class WebhookFunction(
             if (ms.Length > MaxBodyBytes)
                 return new BadRequestObjectResult(new { message = "Bad Request: Body too large" });
         }
+
         var rawBody = ms.ToArray();
 
         if (rawBody.Length == 0)
@@ -183,7 +185,7 @@ public class WebhookFunction(
     /// ログインジェクション攻撃を防ぐ。
     /// </summary>
     private static string SanitizeEventName(string raw)
-        => System.Text.RegularExpressions.Regex.Replace(raw, "[^a-zA-Z0-9_-]", "");
+        => System.Text.RegularExpressions.Regex.Replace(raw, "[^a-zA-Z0-9_-]", string.Empty);
 
     /// <summary>
     /// GitHub イベント名を小文字に正規化する。

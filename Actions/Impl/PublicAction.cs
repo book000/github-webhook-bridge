@@ -11,7 +11,6 @@ namespace GitHubWebhookBridge.Actions.Impl;
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 public sealed class PublicAction(IDiscordClient discord, Uri webhookUrl, string eventName, PublicEvent publicEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PublicEvent>(discord, webhookUrl, eventName, publicEvent, cache, userMapManager, logger)
 {
-
     /// <inheritdoc/>
     public override async Task RunAsync()
     {

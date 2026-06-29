@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/DotNetAnalyzers/StyleCopAnalyzers/master/StyleCop.Analyzers/StyleCop.Analyzers/Settings/stylecop.schema.json",
+  "settings": {
+    "documentationRules": {
+      "companyName": "book000",
+      "copyrightText": "unspecified",
+      "documentationCulture": "ja-JP",
+      "fileNamingConvention": "stylecop"
+    },
+    "namingRules": {
+      "allowUnderscoreInMemberNames": true,
+      "allowCommonHungarianPrefixes": false
+    },
+    "layoutRules": {
+      "newlineAtEndOfFile": "require"
+    },
+    "indentation": {
+      "indentationSize": 4,
+      "tabSize": 4,
+      "useTabs": false
+    }
+  }
+}

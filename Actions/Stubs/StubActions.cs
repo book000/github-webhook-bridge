@@ -15,7 +15,8 @@ public abstract class StubAction(
     IGitHubUserMapManager userMapManager,
     ILogger logger) : BaseAction<JsonElement>(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
 {
-    /// <summary>未実装のイベントハンドラー。</summary>
+    /// <summary>未実装のイベントハンドラー。常に <see cref="NotSupportedException"/> をスローする。</summary>
+    /// <returns>このメソッドは常に例外をスローするため、値を返さない。</returns>
     public override Task RunAsync() => throw new NotSupportedException($"Event '{EventName}' is not yet implemented.");
 }
 

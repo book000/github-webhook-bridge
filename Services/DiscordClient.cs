@@ -8,6 +8,7 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
 {
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
+    /// <inheritdoc/>
     public async Task<string> SendMessageAsync(Uri webhookUrl, DiscordMessage message)
     {
         ArgumentNullException.ThrowIfNull(webhookUrl);
@@ -20,6 +21,7 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
         return result.Id;
     }
 
+    /// <inheritdoc/>
     public async Task EditMessageAsync(Uri webhookUrl, string messageId, DiscordMessage message)
     {
         ArgumentNullException.ThrowIfNull(webhookUrl);

@@ -9,10 +9,19 @@ namespace GitHubWebhookBridge.Services;
 /// <summary>Azure Table Storage キャッシュエントリ。</summary>
 public class MessageCacheEntity : ITableEntity
 {
-    public string PartitionKey { get; set; } = "";  // webhookUrl の SHA-256 (32 hex chars)
-    public string RowKey { get; set; } = "";  // サニタイズ済みメッセージキー
-    public string MessageId { get; set; } = "";
-    public DateTimeOffset? Timestamp { get; set; }        // サーバー管理プロパティ（書き込み不可）
+    /// <summary>webhookUrl の SHA-256 ハッシュ（32 文字小文字 hex）。</summary>
+    public string PartitionKey { get; set; } = string.Empty;
+
+    /// <summary>サニタイズ済みメッセージキー。</summary>
+    public string RowKey { get; set; } = string.Empty;
+
+    /// <summary>キャッシュされた Discord メッセージ ID。</summary>
+    public string MessageId { get; set; } = string.Empty;
+
+    /// <summary>サーバー管理プロパティ（書き込み不可）。TTL チェックに使用する。</summary>
+    public DateTimeOffset? Timestamp { get; set; }
+
+    /// <summary>楽観的同時実行制御用 ETag。</summary>
     public ETag ETag { get; set; }
 }
 
@@ -43,6 +52,8 @@ public class MessageCacheService : IMessageCacheService, IDisposable
     /// テーブルを非同期で作成する。
     /// TableStorageInitializer (IHostedService) から呼ばれる。
     /// </summary>
+    /// <param name="cancellationToken">キャンセルトークン。</param>
+    /// <returns>処理完了を表す <see cref="Task"/>。</returns>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (_initialized) return;
@@ -59,6 +70,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public async Task<CachedMessage?> GetAsync(Uri webhookUrl, string key)
     {
         ArgumentNullException.ThrowIfNull(webhookUrl);
@@ -81,12 +93,14 @@ public class MessageCacheService : IMessageCacheService, IDisposable
             {
                 // 並行削除などでエントリが既に存在しない場合は無視
             }
+
             return null;
         }
 
         return new CachedMessage(response.Value.MessageId);
     }
 
+    /// <inheritdoc/>
     public async Task SetAsync(Uri webhookUrl, string key, string messageId)
     {
         ArgumentNullException.ThrowIfNull(webhookUrl);
@@ -109,7 +123,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         }
     }
 
-    /// <summary>指定キーのキャッシュエントリを削除する。編集失敗時のフォールバック用。</summary>
+    /// <inheritdoc/>
     public async Task DeleteAsync(Uri webhookUrl, string key)
     {
         ArgumentNullException.ThrowIfNull(webhookUrl);
@@ -172,9 +186,11 @@ public class TableStorageInitializer(MessageCacheService service) : IHostedServi
 {
     private readonly MessageCacheService _service = service;
 
+    /// <inheritdoc/>
     public Task StartAsync(CancellationToken cancellationToken)
         => _service.InitializeAsync(cancellationToken);
 
+    /// <inheritdoc/>
     public Task StopAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
 }

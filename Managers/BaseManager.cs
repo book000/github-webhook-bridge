@@ -10,6 +10,7 @@ namespace GitHubWebhookBridge.Managers;
 /// 設定ファイルを Blob / HTTPS URL / ローカルファイルから読み込む抽象基底クラス。
 /// 優先順位: Blob > HTTPS URL > ローカルファイル
 /// </summary>
+/// <typeparam name="TData">デシリアライズ対象のデータ型。</typeparam>
 public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFactory httpClientFactory) : IDisposable
 {
     /// <summary>ローカルファイルパス（環境変数から設定）。</summary>
@@ -24,7 +25,9 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
     /// </summary>
     protected abstract string? BlobPath { get; }
 
+    /// <summary>ロード済みのデータ。<see cref="EnsureLoadedAsync"/> 呼び出し後に有効になる。</summary>
     protected TData Data { get; private set; } = default!;
+
     private volatile bool _loaded;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -59,6 +62,8 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
     }
 
     /// <summary>JSON 文字列をデシリアライズする。各サブクラスで実装する。</summary>
+    /// <param name="json">デシリアライズ対象の JSON 文字列。</param>
+    /// <returns>デシリアライズされたデータ。失敗時は null。</returns>
     protected abstract TData? Deserialize(string json);
 
     /// <summary>ソース未指定時のデフォルトファイルパス。各サブクラスで実装する。</summary>
@@ -111,6 +116,7 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
             await File.WriteAllTextAsync(path, defaultContent);
             return defaultContent;
         }
+
         return await File.ReadAllTextAsync(path);
     }
 
@@ -118,6 +124,9 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
     protected virtual string GetDefaultContent() => "[]";
 
     /// <summary>型パラメータ T を用いた汎用 JSON デシリアライズ。</summary>
+    /// <typeparam name="T">デシリアライズ対象の型。</typeparam>
+    /// <param name="json">デシリアライズ対象の JSON 文字列。</param>
+    /// <returns>デシリアライズされたインスタンス。失敗時は null。</returns>
     protected T? DeserializeJson<T>(string json)
         => JsonSerializer.Deserialize<T>(json, _jsonOptions);
 

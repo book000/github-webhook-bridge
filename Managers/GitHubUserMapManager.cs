@@ -10,7 +10,9 @@ namespace GitHubWebhookBridge.Managers;
 public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory httpClientFactory) : BaseManager<Dictionary<long, string>>(config, httpClientFactory), IGitHubUserMapManager
 {
     protected override string? FilePath { get; } = config["GITHUB_USER_MAP_FILE_PATH"];
+
     protected override Uri? FileUrl { get; } = config["GITHUB_USER_MAP_FILE_URL"] is string url ? new Uri(url) : null;
+
     protected override string? BlobPath { get; } = config["GITHUB_USER_MAP_BLOB"];
 
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
@@ -24,10 +26,13 @@ public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory http
     /// <summary>ユーザーマップのデフォルト内容は空オブジェクト。</summary>
     protected override string GetDefaultContent() => "{}";
 
+    /// <inheritdoc/>
     protected override Dictionary<long, string>? Deserialize(string json)
         => DeserializeJson<Dictionary<long, string>>(json);
 
     /// <summary>GitHub ユーザー ID から Discord ユーザー ID を取得する。</summary>
+    /// <param name="githubUserId">検索対象の GitHub ユーザー ID。</param>
+    /// <returns>対応する Discord ユーザー ID。マッピングが存在しない場合は null。</returns>
     public string? GetById(long githubUserId)
     {
         if (Data is null)
@@ -43,6 +48,8 @@ public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory http
     /// GitHub API でユーザー名から数値 ID を引き、マップを検索する。
     /// ログイン名を URL パスに埋め込む前に形式を検証する（パストラバーサル防止）。
     /// </summary>
+    /// <param name="login">検索対象の GitHub ログイン名。</param>
+    /// <returns>対応する Discord ユーザー ID。マッピングが存在しない、またはユーザーが見つからない場合は null。</returns>
     public async Task<string?> GetFromUsernameAsync(string login)
     {
         if (!_loginRegex.IsMatch(login))
@@ -58,6 +65,7 @@ public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory http
         {
             return null;
         }
+
         if (user is null) return null;
         return GetById(user.Id);
     }

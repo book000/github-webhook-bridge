@@ -12,7 +12,6 @@ namespace GitHubWebhookBridge.Actions.Impl;
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, string eventName, PullRequestEvent pullRequestEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PullRequestEvent>(discord, webhookUrl, eventName, pullRequestEvent, cache, userMapManager, logger)
 {
-
     /// <summary>アクションに対応するキャッシュキーのサフィックスを取得します。</summary>
     private string GetCacheKeySuffix() => Event.Action switch
     {
