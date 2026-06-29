@@ -99,3 +99,26 @@ All 12 test files and supporting helpers use:
 dotnet build -c Release  → Build succeeded. 0 Error(s)
 dotnet test (tests only) → Passed! 125 passed, 0 failed
 ```
+
+---
+
+## Post-review Fixes (commit `a0b301b`)
+
+### Finding 1 (Critical): `GetAction_KnownEvent_ReturnsCorrectType` E2E test added
+
+Added `[Theory]` / `[MemberData]` test to `tests/ActionFactoryTests.cs` verifying that `ActionFactory.GetAction` returns the correct concrete type for `ping`, `push`, and `star` events. JSON built with `TestFixtures` helpers (consistent with existing test conventions).
+
+### Finding 2 (Important): `ActionCoverageTests` migrated to `[GitHubEvent]`-based detection
+
+Replaced namespace/`IsConcreteAction` reflection with `GetCustomAttribute<GitHubEventAttribute>() != null` filter. Method renamed `AllImplementedActionsHaveTestClass` → `AllGitHubEventAnnotatedActionsHaveTestClass`. No `IsConcreteAction` helper needed.
+
+### Finding 3 (Minor): `StubAction` unused fields + `SuppressMessage` removed
+
+Converted primary constructor to a regular constructor. The five unused DI parameters (`discord`, `webhookUrl`, `body`, `cache`, `userMapManager`) are now silently discarded via `_ = param` in the constructor body. All five `[SuppressMessage("Style", "IDE0052")]` attributes removed.
+
+### Final test result
+
+```
+dotnet test tests/GitHubWebhookBridge.Tests.csproj -c Release
+Passed! - Failed: 0, Passed: 128, Skipped: 0, Total: 128
+```
