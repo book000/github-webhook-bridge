@@ -12,7 +12,7 @@ using Moq;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>WebhookFunction.Run() のセキュリティパス・機能・境界値テスト。</summary>
+/// <summary>WebhookFunction.RunAsync() のセキュリティパス・機能・境界値テスト。</summary>
 public class WebhookFunctionTests
 {
     private const string TestSecret = "test-webhook-secret";
@@ -106,7 +106,7 @@ public class WebhookFunctionTests
         WebhookFunction fn = CreateFunction();
         HttpRequest req = BuildRequest("{}", TestSecret, "push", contentLengthOverride: 11L * 1024 * 1024);
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -118,7 +118,7 @@ public class WebhookFunctionTests
         WebhookFunction fn = CreateFunction();
         HttpRequest req = BuildRequest("", TestSecret, "push");
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -130,7 +130,7 @@ public class WebhookFunctionTests
         WebhookFunction fn = CreateFunction();
         HttpRequest req = BuildRequest("{}", TestSecret, "push", omitSignature: true);
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -148,7 +148,7 @@ public class WebhookFunctionTests
         ctx.Request.Headers["X-Hub-Signature-256"] = "sha256=deadbeef";
         ctx.Request.Headers["X-GitHub-Event"] = "push";
 
-        IActionResult result = await fn.Run(ctx.Request);
+        IActionResult result = await fn.RunAsync(ctx.Request);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -160,7 +160,7 @@ public class WebhookFunctionTests
         WebhookFunction fn = CreateFunction();
         HttpRequest req = BuildRequest("{}", TestSecret, "push", omitEvent: true);
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -172,7 +172,7 @@ public class WebhookFunctionTests
         WebhookFunction fn = CreateFunction();
         HttpRequest req = BuildRequest("{}", TestSecret, "pull_request; DROP TABLE");
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -188,7 +188,7 @@ public class WebhookFunctionTests
             "push",
             webhookUrlParam: "https://evil.com/webhook");
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -204,7 +204,7 @@ public class WebhookFunctionTests
             "push",
             webhookUrlParam: "http://discord.com/api/webhooks/123/token");
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -227,7 +227,7 @@ public class WebhookFunctionTests
             "push",
             webhookUrlParam: "https://discord.com/api/webhooks/111/aaa");
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<OkResult>(result);
     }
@@ -250,7 +250,7 @@ public class WebhookFunctionTests
             "push",
             webhookUrlParam: "https://discordapp.com/api/webhooks/222/bbb");
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<OkResult>(result);
     }
@@ -268,7 +268,7 @@ public class WebhookFunctionTests
             "push",
             disabledEvents: "push,issues");
 
-        var result = await fn.Run(req) as ObjectResult;
+        var result = await fn.RunAsync(req) as ObjectResult;
 
         Assert.NotNull(result);
         Assert.Equal(202, result.StatusCode);
@@ -284,7 +284,7 @@ public class WebhookFunctionTests
             TestSecret,
             "push");
 
-        var result = await fn.Run(req) as ObjectResult;
+        var result = await fn.RunAsync(req) as ObjectResult;
 
         Assert.NotNull(result);
         Assert.Equal(202, result.StatusCode);
@@ -306,7 +306,7 @@ public class WebhookFunctionTests
             TestSecret,
             "push");
 
-        var result = await fn.Run(req) as OkObjectResult;
+        var result = await fn.RunAsync(req) as OkObjectResult;
 
         Assert.NotNull(result);
         var value = JsonSerializer.Serialize(result.Value);
@@ -331,7 +331,7 @@ public class WebhookFunctionTests
             "push");
 
         // InvalidOperationException でなく正常に完了すること
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         // ミュートチェックをスキップして正常にアクション実行へ進む
         Assert.IsType<OkResult>(result);
@@ -346,7 +346,7 @@ public class WebhookFunctionTests
         WebhookFunction fn = CreateFunction();
         HttpRequest req = BuildRequest("{ invalid json }", TestSecret, "push");
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -362,7 +362,7 @@ public class WebhookFunctionTests
         WebhookFunction fn = CreateFunction(factoryMock: factoryMock);
         HttpRequest req = BuildRequest("""{"sender":{"id":1,"login":"u"}}""", TestSecret, "unknown_event");
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -381,7 +381,7 @@ public class WebhookFunctionTests
         WebhookFunction fn = CreateFunction(factoryMock: factoryMock);
         HttpRequest req = BuildRequest("""{"sender":{"id":1,"login":"u"}}""", TestSecret, "stub_event");
 
-        var result = await fn.Run(req) as ObjectResult;
+        var result = await fn.RunAsync(req) as ObjectResult;
 
         Assert.NotNull(result);
         Assert.Equal(406, result.StatusCode);
@@ -409,7 +409,7 @@ public class WebhookFunctionTests
         """;
         HttpRequest req = BuildRequest(pingBody, TestSecret, "ping");
 
-        IActionResult result = await fn.Run(req);
+        IActionResult result = await fn.RunAsync(req);
 
         Assert.IsType<OkResult>(result);
         actionMock.Verify(a => a.RunAsync(), Times.Once);

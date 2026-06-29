@@ -36,22 +36,15 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
         title.StartsWith("WIP:", StringComparison.OrdinalIgnoreCase) ||
         title.StartsWith("wip ", StringComparison.OrdinalIgnoreCase);
 
-    /// <inheritdoc/>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "PR イベントアクションの種類が多く、switch 式で列挙するため必然的に複雑度が高い")]
-    public override async Task RunAsync()
-    {
-        // synchronize はコミット追加時に発生するが通知不要なためスキップ
-        if (Event.Action == "synchronize") return;
-
-        PullRequest pr = Event.PullRequest;
-        Repository repo = Event.Repository;
-        User sender = Event.Sender;
-
-        (var titleVerb, var color) = Event.Action switch
+    /// <summary>PR アクション名をタイトル動詞と Embed カラーにマッピングする。</summary>
+    /// <param name="action">GitHub Webhook の pull_request.action 値。</param>
+    /// <param name="merged">PR がマージ済みかどうか（"closed" アクション時に参照）。</param>
+    /// <returns>タイトル動詞と Discord Embed カラーのタプル。</returns>
+    private static (string TitleVerb, int Color) GetTitleVerbAndColor(string action, bool merged)
+        => action switch
         {
             "opened" => ("opened", EmbedColors.PullRequestOpened),
-            "closed" when pr.Merged == true
-                                    => ("merged", EmbedColors.PullRequestMerged),
+            "closed" when merged => ("merged", EmbedColors.PullRequestMerged),
             "closed" => ("closed", EmbedColors.PullRequestClosed),
             "reopened" => ("reopened", EmbedColors.PullRequestReopened),
             "assigned" => ("assigned", EmbedColors.PullRequestAssigned),
@@ -71,11 +64,47 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
             "demilestoned" => ("demilestoned", EmbedColors.PullRequestDemilestoned),
             "enqueued" => ("enqueued", EmbedColors.PullRequestEnqueued),
             "dequeued" => ("dequeued", EmbedColors.PullRequestDequeued),
-            _ => (Event.Action, EmbedColors.Unknown),
+            _ => (action, EmbedColors.Unknown),
         };
 
-        var title = $"PR {titleVerb}: #{pr.Number} {pr.Title}";
+    /// <inheritdoc/>
+    public override async Task RunAsync()
+    {
+        // synchronize はコミット追加時に発生するが通知不要なためスキップ
+        if (Event.Action == "synchronize") return;
 
+        PullRequest pr = Event.PullRequest;
+        Repository repo = Event.Repository;
+        User sender = Event.Sender;
+
+        (var titleVerb, var color) = GetTitleVerbAndColor(Event.Action, pr.Merged == true);
+
+        var title = $"PR {titleVerb}: #{pr.Number} {pr.Title}";
+        List<DiscordEmbedField> fields = BuildFields(pr, repo);
+        var content = await BuildContentAsync(pr, sender);
+        var description = BuildDescription(pr);
+
+        var author = new DiscordEmbedAuthor(
+            Name: sender.Login,
+            Url: sender.HtmlUrl,
+            IconUrl: sender.AvatarUrl);
+
+        DiscordEmbed embed = EmbedHelper.CreateEmbed(
+            eventName: EventName,
+            color: color,
+            title: title,
+            description: description,
+            url: pr.HtmlUrl,
+            author: author,
+            fields: fields);
+
+        var key = GetCacheKey();
+        await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
+    }
+
+    /// <summary>PR の各種情報を Embed フィールドのリストとして構築する。</summary>
+    private List<DiscordEmbedField> BuildFields(PullRequest pr, Repository repo)
+    {
         var fields = new List<DiscordEmbedField>
         {
             new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
@@ -97,9 +126,19 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
         if (Event.RequestedReviewer is not null)
             fields.Add(new("Requested Reviewer", Event.RequestedReviewer.Login, true));
 
-        // PR 作成者への @mention が必要なアクションで通知する
-        // Draft PR はまだレビュー準備ができていないためメンションを抑制する
+        return fields;
+    }
+
+    /// <summary>
+    /// アクションに応じてメンション文字列を構築する。
+    /// Draft PR および WIP タイトル解除前はメンションを抑制する。
+    /// </summary>
+    private async Task<string?> BuildContentAsync(PullRequest pr, User sender)
+    {
         string? content = null;
+
+        // review_requested / assigned 時にレビュアー・アサイニーへメンション
+        // Draft PR はまだレビュー準備ができていないためメンションを抑制する
         if ((Event.Action is "review_requested" or "assigned") && !pr.Draft)
         {
             var targets = new List<(long, string)>();
@@ -112,27 +151,6 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
 
             var mentions = await GetUsersMentionsAsync(sender.Id, targets);
             if (mentions.Length > 0) content = mentions;
-        }
-
-        // PR 本文（長い場合は切り詰める）
-        string? description = null;
-        if (Event.Action is "opened" or "edited")
-        {
-            if (!string.IsNullOrEmpty(pr.Body))
-                description = pr.Body.Length > 500 ? $"{pr.Body[..500]}..." : pr.Body;
-
-            // edited の場合、タイトル変更の diff を生成する
-            if (Event.Action == "edited" && Event.Changes.HasValue)
-            {
-                JsonElement changes = Event.Changes.Value;
-                if (changes.TryGetProperty("title", out JsonElement titleChange) &&
-                    titleChange.TryGetProperty("from", out JsonElement fromProp))
-                {
-                    var oldTitle = fromProp.GetString() ?? string.Empty;
-                    var patch = CreatePatch(oldTitle, pr.Title, "title");
-                    description = $"```diff\n{patch}```";
-                }
-            }
         }
 
         // edited の場合、WIP タイトルが解除されたらレビュアーへメンション
@@ -160,21 +178,35 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
             }
         }
 
-        var author = new DiscordEmbedAuthor(
-            Name: sender.Login,
-            Url: sender.HtmlUrl,
-            IconUrl: sender.AvatarUrl);
+        return content;
+    }
 
-        DiscordEmbed embed = EmbedHelper.CreateEmbed(
-            eventName: EventName,
-            color: color,
-            title: title,
-            description: description,
-            url: pr.HtmlUrl,
-            author: author,
-            fields: fields);
+    /// <summary>
+    /// opened / edited アクション時に Embed の説明文を構築する。
+    /// edited かつタイトル変更がある場合は diff 形式で表示する。
+    /// </summary>
+    private string? BuildDescription(PullRequest pr)
+    {
+        if (Event.Action is not ("opened" or "edited"))
+            return null;
 
-        var key = GetCacheKey();
-        await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
+        // edited の場合、タイトル変更の diff を優先して表示する
+        if (Event.Action == "edited" && Event.Changes.HasValue)
+        {
+            JsonElement changes = Event.Changes.Value;
+            if (changes.TryGetProperty("title", out JsonElement titleChange) &&
+                titleChange.TryGetProperty("from", out JsonElement fromProp))
+            {
+                var oldTitle = fromProp.GetString() ?? string.Empty;
+                var patch = CreatePatch(oldTitle, pr.Title, "title");
+                return $"```diff\n{patch}```";
+            }
+        }
+
+        // PR 本文（長い場合は切り詰める）
+        if (!string.IsNullOrEmpty(pr.Body))
+            return pr.Body.Length > 500 ? $"{pr.Body[..500]}..." : pr.Body;
+
+        return null;
     }
 }
