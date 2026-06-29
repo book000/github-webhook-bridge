@@ -217,7 +217,7 @@ public class WebhookFunctionTests
         actionMock.Setup(a => a.RunAsync()).Returns(Task.CompletedTask);
 
         var factoryMock = new Mock<IActionFactory>();
-        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<JsonElement>(), It.IsAny<Uri>()))
+        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Uri>()))
                    .Returns(actionMock.Object);
 
         WebhookFunction fn = CreateFunction(factoryMock: factoryMock);
@@ -240,7 +240,7 @@ public class WebhookFunctionTests
         actionMock.Setup(a => a.RunAsync()).Returns(Task.CompletedTask);
 
         var factoryMock = new Mock<IActionFactory>();
-        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<JsonElement>(), It.IsAny<Uri>()))
+        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Uri>()))
                    .Returns(actionMock.Object);
 
         WebhookFunction fn = CreateFunction(factoryMock: factoryMock);
@@ -321,7 +321,7 @@ public class WebhookFunctionTests
         actionMock.Setup(a => a.RunAsync()).Returns(Task.CompletedTask);
 
         var factoryMock = new Mock<IActionFactory>();
-        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<JsonElement>(), It.IsAny<Uri>()))
+        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Uri>()))
                    .Returns(actionMock.Object);
 
         WebhookFunction fn = CreateFunction(factoryMock: factoryMock);
@@ -356,7 +356,7 @@ public class WebhookFunctionTests
     public async Task RunUnknownEventFactoryThrowsReturns400()
     {
         var factoryMock = new Mock<IActionFactory>();
-        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<JsonElement>(), It.IsAny<Uri>()))
+        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Uri>()))
                    .Throws<NotImplementedException>();
 
         WebhookFunction fn = CreateFunction(factoryMock: factoryMock);
@@ -375,7 +375,7 @@ public class WebhookFunctionTests
         actionMock.Setup(a => a.RunAsync()).Throws<NotImplementedException>();
 
         var factoryMock = new Mock<IActionFactory>();
-        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<JsonElement>(), It.IsAny<Uri>()))
+        factoryMock.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Uri>()))
                    .Returns(actionMock.Object);
 
         WebhookFunction fn = CreateFunction(factoryMock: factoryMock);
@@ -395,7 +395,7 @@ public class WebhookFunctionTests
         actionMock.Setup(a => a.RunAsync()).Returns(Task.CompletedTask);
 
         var factoryMock = new Mock<IActionFactory>();
-        factoryMock.Setup(f => f.GetAction("ping", It.IsAny<JsonElement>(), It.IsAny<Uri>()))
+        factoryMock.Setup(f => f.GetAction("ping", It.IsAny<string>(), It.IsAny<Uri>()))
                    .Returns(actionMock.Object);
 
         WebhookFunction fn = CreateFunction(factoryMock: factoryMock);

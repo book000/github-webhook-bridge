@@ -46,7 +46,9 @@ builder.Services
     .AddSingleton<IMuteManager, MuteManager>()
     // GitHub ユーザーマッピングマネージャー（起動時に一度だけロード）
     .AddSingleton<IGitHubUserMapManager, GitHubUserMapManager>()
-    // アクションファクトリー
+    // CAPTIVE DEPENDENCY GUARD: ActionFactory が受け取る IServiceProvider は root SP。
+    // Action の依存はすべて Singleton であること。
+    // Scoped サービスを Action に追加した場合は IServiceScopeFactory を使う設計に変更すること。
     .AddSingleton<IActionFactory, ActionFactory>()
     // テーブルストレージの初期化をホスト起動時に非同期実行
     .AddHostedService<TableStorageInitializer>();

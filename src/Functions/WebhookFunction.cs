@@ -119,7 +119,8 @@ public class WebhookFunction(
                 return new ObjectResult(new { message = "Disabled event" }) { StatusCode = 202 };
         }
 
-        // 7. JSON デシリアライズ（不正 JSON は 400 を返す）
+        // 7. JSON バリデーション（不正 JSON は 400 を返す）
+        var rawJson = System.Text.Encoding.UTF8.GetString(rawBody);
         JsonElement body;
         try
         {
@@ -145,7 +146,7 @@ public class WebhookFunction(
         IAction? actionHandler;
         try
         {
-            actionHandler = _actionFactory.GetAction(eventName, body, webhookUrl);
+            actionHandler = _actionFactory.GetAction(eventName, rawJson, webhookUrl);
         }
         catch (NotImplementedException)
         {

@@ -1,109 +1,78 @@
+using System.Collections.Frozen;
+using System.Reflection;
 using System.Text.Json;
-using GitHubWebhookBridge.Actions.Impl;
-using GitHubWebhookBridge.Actions.Stubs;
-using GitHubWebhookBridge.Managers;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
-using GitHubWebhookBridge.Services;
-using Microsoft.Extensions.Logging;
+using GitHubWebhookBridge.Utils;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GitHubWebhookBridge.Actions;
 
-/// <summary>イベント名から適切な IAction を生成するファクトリ。</summary>
-public class ActionFactory(
-    IDiscordClient discordClient,
-    IMessageCacheService cache,
-    IGitHubUserMapManager userMapManager,
-    ILoggerFactory loggerFactory) : IActionFactory
+/// <summary>
+/// リフレクションによりアセンブリをスキャンし、
+/// <see cref="GitHubEventAttribute"/> 付きクラスを自動登録するアクションファクトリ。
+/// </summary>
+public class ActionFactory(IServiceProvider sp) : IActionFactory
 {
-    private readonly IDiscordClient _discordClient = discordClient;
-    private readonly IMessageCacheService _cache = cache;
-    private readonly IGitHubUserMapManager _userMapManager = userMapManager;
-    private readonly ILoggerFactory _loggerFactory = loggerFactory;
-    private static readonly JsonSerializerOptions _jsonOptions = new()
+    private readonly IServiceProvider _sp = sp;
+
+    private readonly FrozenDictionary<string, (Type Action, Type Payload)> _registry =
+        BuildRegistry();
+
+    private static FrozenDictionary<string, (Type, Type)> BuildRegistry()
     {
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        PropertyNameCaseInsensitive = true,
-    };
+        var entries = typeof(ActionFactory).Assembly.GetTypes()
+            .Where(t => t.GetCustomAttribute<GitHubEventAttribute>() != null && !t.IsAbstract)
+            .Select(t =>
+            {
+                var payloadType = GetPayloadType(t);
+                var eventName   = ResolveEventName(t, payloadType);
+                return KeyValuePair.Create(eventName, (t, payloadType));
+            });
 
-    private static T Deserialize<T>(JsonElement body)
-        => body.Deserialize<T>(_jsonOptions)
-           ?? throw new InvalidOperationException($"Failed to deserialize {typeof(T).Name}");
+        // キーはすべて小文字スネークケース（GitHub のイベント名仕様）。大文字小文字を混在させないこと。
+        return entries.ToFrozenDictionary(StringComparer.Ordinal);
+    }
 
-    private ILogger<T> Logger<T>() => _loggerFactory.CreateLogger<T>();
+    private static Type GetPayloadType(Type actionType)
+    {
+        var b = actionType.BaseType;
+        while (b != null && !(b.IsGenericType && b.GetGenericTypeDefinition() == typeof(BaseAction<>)))
+            b = b.BaseType;
+        if (b == null)
+            throw new InvalidOperationException(
+                $"{actionType.Name} must inherit from BaseAction<T> to be registered via [GitHubEvent].");
+        return b.GetGenericArguments()[0];
+    }
 
-    /// <summary>
-    /// イベント名から適切な IAction インスタンスを生成して返す。
-    /// </summary>
-    /// <param name="eventName">GitHub Webhook の X-GitHub-Event ヘッダー値。</param>
-    /// <param name="body">Webhook ペイロードの JSON 要素。</param>
-    /// <param name="webhookUrl">通知先 Discord Webhook URL。</param>
-    /// <returns>イベントに対応する <see cref="IAction"/> インスタンス。</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Factory メソッドは全イベント型を参照するため必然的に結合度が高い")]
-    public IAction GetAction(string eventName, JsonElement body, Uri webhookUrl)
-        => eventName switch
-        {
-            // ── 実装済み 12 種（デシリアライズあり） ──────────────────────────
-            "ping" => new PingAction(_discordClient, webhookUrl, eventName, Deserialize<PingEvent>(body), _cache, _userMapManager, Logger<PingAction>()),
-            "push" => new PushAction(_discordClient, webhookUrl, eventName, Deserialize<PushEvent>(body), _cache, _userMapManager, Logger<PushAction>()),
-            "star" => new StarAction(_discordClient, webhookUrl, eventName, Deserialize<StarEvent>(body), _cache, _userMapManager, Logger<StarAction>()),
-            "fork" => new ForkAction(_discordClient, webhookUrl, eventName, Deserialize<ForkEvent>(body), _cache, _userMapManager, Logger<ForkAction>()),
-            "public" => new PublicAction(_discordClient, webhookUrl, eventName, Deserialize<PublicEvent>(body), _cache, _userMapManager, Logger<PublicAction>()),
-            "pull_request_review_comment" => new PullRequestReviewCommentAction(_discordClient, webhookUrl, eventName, Deserialize<PullRequestReviewCommentEvent>(body), _cache, _userMapManager, Logger<PullRequestReviewCommentAction>()),
-            "pull_request_review_thread" => new PullRequestReviewThreadAction(_discordClient, webhookUrl, eventName, Deserialize<PullRequestReviewThreadEvent>(body), _cache, _userMapManager, Logger<PullRequestReviewThreadAction>()),
-            "pull_request_review" => new PullRequestReviewAction(_discordClient, webhookUrl, eventName, Deserialize<PullRequestReviewEvent>(body), _cache, _userMapManager, Logger<PullRequestReviewAction>()),
-            "pull_request" => new PullRequestAction(_discordClient, webhookUrl, eventName, Deserialize<PullRequestEvent>(body), _cache, _userMapManager, Logger<PullRequestAction>()),
-            "issue_comment" => new IssueCommentAction(_discordClient, webhookUrl, eventName, Deserialize<IssueCommentEvent>(body), _cache, _userMapManager, Logger<IssueCommentAction>()),
-            "issues" => new IssuesAction(_discordClient, webhookUrl, eventName, Deserialize<IssuesEvent>(body), _cache, _userMapManager, Logger<IssuesAction>()),
-            "discussion" => new DiscussionAction(_discordClient, webhookUrl, eventName, Deserialize<DiscussionEvent>(body), _cache, _userMapManager, Logger<DiscussionAction>()),
+    private static string ResolveEventName(Type actionType, Type payloadType)
+    {
+        // --- Level 2 (scratch/octokit-api-surface.md の Level2Available が true の場合) ---
+        // var octokitAttr = payloadType.GetCustomAttribute<LEVEL2_ATTRIBUTE_TYPE>();
+        // if (octokitAttr != null) return octokitAttr.LEVEL2_PROPERTY_NAME;
 
-            // ── スタブ 46 種（JsonElement 受け渡し） ───────────────────────────
-            "branch_protection_rule" => new BranchProtectionRuleAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<BranchProtectionRuleAction>()),
-            "check_run" => new CheckRunAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<CheckRunAction>()),
-            "check_suite" => new CheckSuiteAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<CheckSuiteAction>()),
-            "code_scanning_alert" => new CodeScanningAlertAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<CodeScanningAlertAction>()),
-            "commit_comment" => new CommitCommentAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<CommitCommentAction>()),
-            "create" => new CreateAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<CreateAction>()),
-            "delete" => new DeleteAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<DeleteAction>()),
-            "dependabot_alert" => new DependabotAlertAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<DependabotAlertAction>()),
-            "deploy_key" => new DeployKeyAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<DeployKeyAction>()),
-            "deployment" => new DeploymentAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<DeploymentAction>()),
-            "deployment_review" => new DeploymentReviewAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<DeploymentReviewAction>()),
-            "deployment_status" => new DeploymentStatusAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<DeploymentStatusAction>()),
-            "discussion_comment" => new DiscussionCommentAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<DiscussionCommentAction>()),
-            "github_app_authorization" => new GithubAppAuthorizationAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<GithubAppAuthorizationAction>()),
-            "gollum" => new GollumAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<GollumAction>()),
-            "installation" => new InstallationAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<InstallationAction>()),
-            "installation_repositories" => new InstallationRepositoriesAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<InstallationRepositoriesAction>()),
-            "label" => new LabelAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<LabelAction>()),
-            "marketplace_purchase" => new MarketplacePurchaseAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<MarketplacePurchaseAction>()),
-            "member" => new MemberAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<MemberAction>()),
-            "membership" => new MembershipAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<MembershipAction>()),
-            "merge_group" => new MergeGroupAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<MergeGroupAction>()),
-            "meta" => new MetaAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<MetaAction>()),
-            "milestone" => new MilestoneAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<MilestoneAction>()),
-            "org_block" => new OrgBlockAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<OrgBlockAction>()),
-            "organization" => new OrganizationAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<OrganizationAction>()),
-            "package" => new PackageAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<PackageAction>()),
-            "page_build" => new PageBuildAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<PageBuildAction>()),
-            "project" => new ProjectAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<ProjectAction>()),
-            "project_card" => new ProjectCardAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<ProjectCardAction>()),
-            "project_column" => new ProjectColumnAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<ProjectColumnAction>()),
-            "projects_v2_item" => new ProjectsV2ItemAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<ProjectsV2ItemAction>()),
-            "release" => new ReleaseAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<ReleaseAction>()),
-            "repository" => new RepositoryAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<RepositoryAction>()),
-            "repository_dispatch" => new RepositoryDispatchAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<RepositoryDispatchAction>()),
-            "repository_import" => new RepositoryImportAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<RepositoryImportAction>()),
-            "repository_vulnerability_alert" => new RepositoryVulnerabilityAlertAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<RepositoryVulnerabilityAlertAction>()),
-            "security_advisory" => new SecurityAdvisoryAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<SecurityAdvisoryAction>()),
-            "sponsorship" => new SponsorshipAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<SponsorshipAction>()),
-            "status" => new StatusAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<StatusAction>()),
-            "team" => new TeamAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<TeamAction>()),
-            "team_add" => new TeamAddAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<TeamAddAction>()),
-            "watch" => new WatchAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<WatchAction>()),
-            "workflow_dispatch" => new WorkflowDispatchAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<WorkflowDispatchAction>()),
-            "workflow_job" => new WorkflowJobAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<WorkflowJobAction>()),
-            "workflow_run" => new WorkflowRunAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<WorkflowRunAction>()),
+        // --- Level 1 ---
+        var attr = actionType.GetCustomAttribute<GitHubEventAttribute>()!;
+        if (attr.EventName != null)
+            return attr.EventName;
 
-            _ => throw new NotImplementedException($"Event '{eventName}' is not supported"),
-        };
+        throw new InvalidOperationException(
+            $"Cannot resolve event name for {actionType.Name}: " +
+            $"payload type {payloadType.Name} has no Level 2 Octokit attribute and " +
+            $"[GitHubEvent] was declared without an explicit name.");
+    }
+
+    /// <inheritdoc/>
+    public IAction GetAction(string eventName, string rawJson, Uri webhookUrl)
+    {
+        if (!_registry.TryGetValue(eventName, out var entry))
+            return new UnhandledAction(eventName);
+
+        var payload = JsonSerializer.Deserialize(rawJson, entry.Payload, OctokitJsonOptions.Value)
+                      ?? throw new InvalidOperationException(
+                          $"Deserialization returned null for event '{eventName}' ({entry.Payload.Name}).");
+
+        return (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, webhookUrl, eventName, payload);
+    }
+
+    /// <summary>テスト・ActionRegistryValidator 用: レジストリを内部から参照できるようにする。</summary>
+    internal IReadOnlyDictionary<string, (Type Action, Type Payload)> Registry => _registry;
 }
