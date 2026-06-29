@@ -28,7 +28,6 @@ public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFac
 
     /// <summary>
     /// ユーザーがミュートされているかどうかを返す。
-    /// TypeScript 版の mute.ts（lines 65-84）と同一ロジック。
     /// </summary>
     /// <param name="userId">判定対象の GitHub ユーザー ID。</param>
     /// <param name="eventName">GitHub Webhook イベント名。</param>
@@ -56,7 +55,7 @@ public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFac
         }
 
         // Exclude モード: リストにないイベントをミュートする
-        // TypeScript 版準拠: Actions == null のエントリは免除条件にならない
+        // Actions == null のエントリは免除条件にならない
         return !record.Events.Any(muteEvent =>
             muteEvent.EventName == eventName
             && muteEvent.Actions != null

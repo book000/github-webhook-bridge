@@ -99,8 +99,7 @@ public abstract class BaseAction<TEvent>(
 
     /// <summary>
     /// 2 つのテキスト間の unified diff を生成する（DiffPlex InlineDiffBuilder 使用）。
-    /// TypeScript の diff.createPatch() と同等の +/-/スペース 行プレフィックス形式。
-    /// 呼び出し元で ```diff コードブロックで囲むこと。
+    /// +/-/スペース 行プレフィックス形式。呼び出し元で ```diff コードブロックで囲むこと。
     /// </summary>
     /// <param name="oldText">変更前のテキスト。</param>
     /// <param name="newText">変更後のテキスト。</param>

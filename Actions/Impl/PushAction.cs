@@ -22,7 +22,7 @@ public sealed class PushAction(IDiscordClient discord, Uri webhookUrl, string ev
             .Replace("refs/heads/", string.Empty)
             .Replace("refs/tags/", string.Empty);
 
-        // 先頭 5 件のみ表示する（TypeScript 実装との統一）
+        // 先頭 5 件のみ表示する
         const int CommitLimit = 5;
         var commits = allCommits.Take(CommitLimit).ToList();
         var description = GetDescription(commits, allCommits.Count);

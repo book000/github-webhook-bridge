@@ -601,6 +601,8 @@ dotnet_diagnostic.IL3001.severity = warning
 dotnet_diagnostic.IL3002.severity = warning
 dotnet_diagnostic.IL3003.severity = warning
 dotnet_diagnostic.IL3005.severity = warning
+# CS1591: XML ドキュメントコメントがない public メンバー（段階的に対応）
+dotnet_diagnostic.CS1591.severity = none
 
 # =========================
 # 命名規則 (.NET Naming Rules)
@@ -1089,12 +1091,12 @@ dotnet_diagnostic.SX1309S.severity = warning
 # =========================
 # StyleCop.Analyzers ドキュメンテーションルール
 # =========================
-# SA1600: すべての要素（クラス、メソッドなど）にドキュメントコメントを付ける
-dotnet_diagnostic.SA1600.severity = warning
+# SA1600: すべての要素にドキュメントコメントを付ける（段階的に対応）
+dotnet_diagnostic.SA1600.severity = none
 # SA1601: Partialとマークされているすべての要素にドキュメントコメントを付ける
 dotnet_diagnostic.SA1601.severity = warning
-# SA1602: すべての列挙型の項目にドキュメントコメントを付ける
-dotnet_diagnostic.SA1602.severity = warning
+# SA1602: すべての列挙型の項目にドキュメントコメントを付ける（段階的に対応）
+dotnet_diagnostic.SA1602.severity = none
 # SA1603: ドキュメントコメントは有効なXMLを含む
 dotnet_diagnostic.SA1603.severity = warning
 # SA1604: 要素のドキュメントコメントにsummaryタグを含める
@@ -1111,22 +1113,22 @@ dotnet_diagnostic.SA1608.severity = warning
 dotnet_diagnostic.SA1609.severity = none
 # SA1610: プロパティのドキュメントコメントのvalueタグにテキストを含める
 dotnet_diagnostic.SA1610.severity = warning
-# SA1611: 要素のすべてのパラメータにparamタグを含むドキュメントを付ける
-dotnet_diagnostic.SA1611.severity = warning
+# SA1611: 要素のすべてのパラメータにparamタグを含むドキュメントを付ける（段階的に対応）
+dotnet_diagnostic.SA1611.severity = none
 # SA1612: 要素のドキュメントコメントのパラメータ名が実際のパラメータ名と一致する
 dotnet_diagnostic.SA1612.severity = warning
 # SA1613: 要素のパラメータ用のドキュメントコメントにはパラメータ名を含める
 dotnet_diagnostic.SA1613.severity = warning
 # SA1614: 要素のパラメータ用のドキュメントコメントにはパラメータの説明テキストを含める
 dotnet_diagnostic.SA1614.severity = warning
-# SA1615: 値を返す要素には、returnsタグを含むドキュメントコメントを付ける
-dotnet_diagnostic.SA1615.severity = warning
+# SA1615: 値を返す要素にはreturnsタグを含むドキュメントコメントを付ける（段階的に対応）
+dotnet_diagnostic.SA1615.severity = none
 # SA1616: 要素のreturnsタグには戻り値の説明テキストを含める
 dotnet_diagnostic.SA1616.severity = warning
 # SA1617: void型を返す要素には、returnsタグを含めない
 dotnet_diagnostic.SA1617.severity = warning
-# SA1618: ジェネリック型パラメータには、typeparamタグを使用してドキュメントを付ける
-dotnet_diagnostic.SA1618.severity = warning
+# SA1618: ジェネリック型パラメータにはtypeparamタグを使用してドキュメントを付ける（段階的に対応）
+dotnet_diagnostic.SA1618.severity = none
 # SA1619: partial クラスのジェネリック型パラメータには、typeparamタグを使用してドキュメントを付ける
 dotnet_diagnostic.SA1619.severity = warning
 # SA1620: ジェネリック型パラメータのドキュメント名が実際の型パラメータ名と一致する
