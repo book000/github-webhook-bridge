@@ -4,7 +4,7 @@
       "name": "github-webhook-bridge",
       "module": "GitHubWebhookBridge"
     },
-    "solution": "GitHubWebhookBridge.sln",
+    "solution": "GitHubWebhookBridge.slnx",
     "test-projects": [
       "tests/GitHubWebhookBridge.Tests.csproj"
     ],
