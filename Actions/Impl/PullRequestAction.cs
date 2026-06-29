@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Models.GitHubWebhooks;
@@ -31,7 +32,7 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
 
     /// <summary>タイトルが WIP（作業中）かどうかを判定します。</summary>
     private static bool IsWipTitle(string title) =>
-        System.Text.RegularExpressions.Regex.IsMatch(title, @"\bwip\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
+        Regex.IsMatch(title, @"\bwip\b", RegexOptions.IgnoreCase) ||
         title.Contains("[WIP]", StringComparison.OrdinalIgnoreCase) ||
         title.StartsWith("WIP:", StringComparison.OrdinalIgnoreCase) ||
         title.StartsWith("wip ", StringComparison.OrdinalIgnoreCase);

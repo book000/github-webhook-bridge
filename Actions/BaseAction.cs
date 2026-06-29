@@ -1,3 +1,4 @@
+using System.Text;
 using DiffPlex.DiffBuilder;
 using DiffPlex.DiffBuilder.Model;
 using GitHubWebhookBridge.Managers;
@@ -108,7 +109,7 @@ public abstract class BaseAction<TEvent>(
     protected static string CreatePatch(string oldText, string newText, string fileName = "file")
     {
         DiffPaneModel diff = InlineDiffBuilder.Diff(oldText, newText);
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"--- {fileName}");
         sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"+++ {fileName}");
 
