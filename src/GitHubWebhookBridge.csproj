@@ -4,7 +4,6 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>GitHubWebhookBridge</RootNamespace>
     <AssemblyName>GitHubWebhookBridge</AssemblyName>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <!-- .editorconfig の IDE 診断ルールをビルド時に有効化する -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
