@@ -1191,7 +1191,7 @@ generated_code = true
 # =========================
 # テストプロジェクト固有のルール緩和
 # =========================
-[tests/**/*.cs]
+[tests/**.cs]
 # xUnit の Method_Scenario_Expected アンダースコア区切り命名規約を許容する
 dotnet_diagnostic.CA1707.severity = none
 # xUnit の [Fact]/[Theory] メソッドは Async サフィックスを必要としない規約に従う
