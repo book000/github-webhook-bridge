@@ -5,6 +5,7 @@ using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
 
 namespace GitHubWebhookBridge.Actions;
 
@@ -19,7 +20,7 @@ public abstract class BaseAction<TEvent>(
     TEvent @event,
     IMessageCacheService cache,
     IGitHubUserMapManager userMapManager,
-    ILogger logger) : IAction
+    ILogger logger) : IAction where TEvent : WebhookEvent
 {
     /// <summary>Discord Webhook API クライアント。</summary>
     protected IDiscordClient Discord { get; } = discord;
