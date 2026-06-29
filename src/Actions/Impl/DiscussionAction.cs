@@ -1,15 +1,27 @@
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
+using Octokit.Webhooks.Events;
+using Octokit.Webhooks.Events.Discussion;
+using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub discussion イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class DiscussionAction(IDiscordClient discord, Uri webhookUrl, string eventName, DiscussionEvent discussionEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<DiscussionEvent>(discord, webhookUrl, eventName, discussionEvent, cache, userMapManager, logger)
+[GitHubEvent(WebhookEventType.Discussion)]
+public sealed class DiscussionAction(
+    IDiscordClient discord,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger<DiscussionAction> logger,
+    Uri webhookUrl,
+    string eventName,
+    DiscussionEvent discussionEvent)
+    : BaseAction<DiscussionEvent>(discord, webhookUrl, eventName, discussionEvent, cache, userMapManager, logger)
 {
     /// <inheritdoc/>
     public override async Task RunAsync()
@@ -38,6 +50,12 @@ public sealed class DiscussionAction(IDiscordClient discord, Uri webhookUrl, str
 
         var title = $"Discussion {titleVerb}: #{discussion.Number} {discussion.Title}";
 
+        // サブタイプ固有プロパティをパターンマッチで取得する
+        Label? label = (Event as DiscussionLabeledEvent)?.Label
+                       ?? (Event as DiscussionUnlabeledEvent)?.Label;
+        DiscussionAnswer? answer = (Event as DiscussionAnsweredEvent)?.Answer;
+        DiscussionCategory? newCategory = (Event as DiscussionCategoryChangedEvent)?.Changes?.Category?.From;
+
         var fields = new List<DiscordEmbedField>
         {
             new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
@@ -46,18 +64,18 @@ public sealed class DiscussionAction(IDiscordClient discord, Uri webhookUrl, str
         if (discussion.Category is not null)
             fields.Add(new("Category", discussion.Category.Name, true));
 
-        if (Event.Label is not null)
-            fields.Add(new("Label", Event.Label.Name, true));
+        if (label is not null)
+            fields.Add(new("Label", label.Name, true));
 
-        if (Event.Category is not null)
-            fields.Add(new("New Category", Event.Category.Name, true));
+        if (newCategory is not null)
+            fields.Add(new("New Category", newCategory.Name, true));
 
-        // answered イベント時は回答コメントの本文を表示する
+        // answered イベント時は回答の本文を表示する
         string? description = null;
-        if (Event.Action == "answered" && Event.Comment is not null)
+        if (Event.Action == "answered" && answer is not null)
         {
-            var commentBody = Event.Comment.Body ?? string.Empty;
-            description = commentBody.Length > 500 ? $"{commentBody[..500]}..." : commentBody;
+            var answerBody = answer.Body ?? string.Empty;
+            description = answerBody.Length > 500 ? $"{answerBody[..500]}..." : answerBody;
         }
         else if (!string.IsNullOrEmpty(discussion.Body) && Event.Action is "created" or "edited")
         {
@@ -68,15 +86,15 @@ public sealed class DiscussionAction(IDiscordClient discord, Uri webhookUrl, str
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: sender.HtmlUrl,
-            IconUrl: sender.AvatarUrl);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: description,
-            url: discussion.HtmlUrl,
+            url: Uri.TryCreate(discussion.HtmlUrl, UriKind.Absolute, out var discussionUrl) ? discussionUrl : null,
             author: author,
             fields: fields);
 

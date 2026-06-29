@@ -1,16 +1,27 @@
-using System.Text.Json;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
+using Octokit.Webhooks.Events;
+using Octokit.Webhooks.Events.Issues;
+using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub issues イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class IssuesAction(IDiscordClient discord, Uri webhookUrl, string eventName, IssuesEvent issuesEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<IssuesEvent>(discord, webhookUrl, eventName, issuesEvent, cache, userMapManager, logger)
+[GitHubEvent(WebhookEventType.Issues)]
+public sealed class IssuesAction(
+    IDiscordClient discord,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger<IssuesAction> logger,
+    Uri webhookUrl,
+    string eventName,
+    IssuesEvent issuesEvent)
+    : BaseAction<IssuesEvent>(discord, webhookUrl, eventName, issuesEvent, cache, userMapManager, logger)
 {
     /// <inheritdoc/>
     public override async Task RunAsync()
@@ -40,49 +51,53 @@ public sealed class IssuesAction(IDiscordClient discord, Uri webhookUrl, string 
             _ => ($"Issue {Event.Action}: #{issue.Number} {issue.Title}", EmbedColors.Unknown),
         };
 
+        // サブタイプ固有プロパティをパターンマッチで取得する
+        Label? label = (Event as IssuesLabeledEvent)?.Label
+                       ?? (Event as IssuesUnlabeledEvent)?.Label;
+        User? assignee = (Event as IssuesAssignedEvent)?.Assignee
+                         ?? (Event as IssuesUnassignedEvent)?.Assignee;
+        Milestone? milestone = (Event as IssuesMilestonedEvent)?.Milestone
+                               ?? (Event as IssuesDemilestonedEvent)?.Milestone;
+        Octokit.Webhooks.Models.IssuesEvent.Changes? changes = (Event as IssuesEditedEvent)?.Changes;
+
         var fields = new List<DiscordEmbedField>
         {
             new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
-            new("State", issue.State, true),
+            new("State", issue.State.StringValue, true),
         };
 
-        if (Event.Label is not null)
-            fields.Add(new("Label", Event.Label.Name, true));
+        if (label is not null)
+            fields.Add(new("Label", label.Name, true));
 
-        if (Event.Assignee is not null)
-            fields.Add(new("Assignee", Event.Assignee.Login, true));
+        if (assignee is not null)
+            fields.Add(new("Assignee", assignee.Login, true));
 
-        if (Event.Milestone is not null)
-            fields.Add(new("Milestone", Event.Milestone.Title, true));
+        if (milestone is not null)
+            fields.Add(new("Milestone", milestone.Title, true));
 
         var description = issue.Body is not null && issue.Body.Length > 0
             ? (issue.Body.Length > 500 ? $"{issue.Body[..500]}..." : issue.Body)
             : null;
 
         // edited イベントの場合、タイトル変更の diff を description として生成する
-        if (Event.Action == "edited" && Event.Changes.HasValue)
+        if (Event.Action == "edited" && changes?.Title?.From is not null)
         {
-            JsonElement changes = Event.Changes.Value;
-            if (changes.TryGetProperty("title", out JsonElement titleChange) &&
-                titleChange.TryGetProperty("from", out JsonElement fromProp))
-            {
-                var oldTitle = fromProp.GetString() ?? string.Empty;
-                var patch = CreatePatch(oldTitle, issue.Title, "title");
-                description = $"```diff\n{patch}```";
-            }
+            var oldTitle = changes.Title.From;
+            var patch = CreatePatch(oldTitle, issue.Title, "title");
+            description = $"```diff\n{patch}```";
         }
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: sender.HtmlUrl,
-            IconUrl: sender.AvatarUrl);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: description,
-            url: issue.HtmlUrl,
+            url: Uri.TryCreate(issue.HtmlUrl, UriKind.Absolute, out var issueUrl) ? issueUrl : null,
             author: author,
             fields: fields);
 

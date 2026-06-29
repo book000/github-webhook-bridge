@@ -1,15 +1,25 @@
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub star イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class StarAction(IDiscordClient discord, Uri webhookUrl, string eventName, StarEvent starEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<StarEvent>(discord, webhookUrl, eventName, starEvent, cache, userMapManager, logger)
+[GitHubEvent(WebhookEventType.Star)]
+public sealed class StarAction(
+    IDiscordClient discord,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger<StarAction> logger,
+    Uri webhookUrl,
+    string eventName,
+    StarEvent starEvent)
+    : BaseAction<StarEvent>(discord, webhookUrl, eventName, starEvent, cache, userMapManager, logger)
 {
     /// <inheritdoc/>
     public override async Task RunAsync()
@@ -19,14 +29,14 @@ public sealed class StarAction(IDiscordClient discord, Uri webhookUrl, string ev
 
         var author = new DiscordEmbedAuthor(
             Name: Event.Sender.Login,
-            Url: Event.Sender.HtmlUrl,
-            IconUrl: Event.Sender.AvatarUrl);
+            Url: Uri.TryCreate(Event.Sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(Event.Sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: $"{titlePrefix} {Event.Repository.FullName} by {Event.Sender.Login}",
-            url: Event.Repository.HtmlUrl,
+            url: Uri.TryCreate(Event.Repository.HtmlUrl, UriKind.Absolute, out var repoUrl) ? repoUrl : null,
             author: author);
 
         var key = $"{Event.Repository.FullName}-star-{Event.Sender.Login}";

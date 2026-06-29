@@ -1,26 +1,37 @@
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
+using Octokit.Webhooks.Events;
+using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub issue_comment イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class IssueCommentAction(IDiscordClient discord, Uri webhookUrl, string eventName, IssueCommentEvent issueCommentEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<IssueCommentEvent>(discord, webhookUrl, eventName, issueCommentEvent, cache, userMapManager, logger)
+[GitHubEvent(WebhookEventType.IssueComment)]
+public sealed class IssueCommentAction(
+    IDiscordClient discord,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger<IssueCommentAction> logger,
+    Uri webhookUrl,
+    string eventName,
+    IssueCommentEvent issueCommentEvent)
+    : BaseAction<IssueCommentEvent>(discord, webhookUrl, eventName, issueCommentEvent, cache, userMapManager, logger)
 {
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
         Issue issue = Event.Issue;
-        Comment comment = Event.Comment;
+        IssueComment comment = Event.Comment;
         Repository repo = Event.Repository;
         User sender = Event.Sender;
 
-        // Issue に関連するのが PR かどうかで種別を変える
-        var issueType = issue.PullRequest is not null ? "PR" : "Issue";
+        // Issue に関連するのが PR かどうかで種別を変える（IssuePullRequest.HtmlUrl が空でなければ PR）
+        var issueType = !string.IsNullOrEmpty(issue.PullRequest?.HtmlUrl) ? "PR" : "Issue";
 
         (var titleVerb, var color) = Event.Action switch
         {
@@ -45,18 +56,18 @@ public sealed class IssueCommentAction(IDiscordClient discord, Uri webhookUrl, s
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: sender.HtmlUrl,
-            IconUrl: sender.AvatarUrl);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: body,
-            url: comment.HtmlUrl,
+            url: Uri.TryCreate(comment.HtmlUrl, UriKind.Absolute, out var commentUrl) ? commentUrl : null,
             author: author);
 
-        var key = $"{repo.FullName}-issue-comment-{comment.Id}";
+        var key = $"{repo.FullName}-issue-comment-{comment.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 }

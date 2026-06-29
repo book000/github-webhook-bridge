@@ -1,17 +1,29 @@
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
+using Octokit.Webhooks.Events;
+using Octokit.Webhooks.Events.PullRequest;
+using Octokit.Webhooks.Models;
+using OctokitPR = Octokit.Webhooks.Models.PullRequestEvent.PullRequest;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub pull_request イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, string eventName, PullRequestEvent pullRequestEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PullRequestEvent>(discord, webhookUrl, eventName, pullRequestEvent, cache, userMapManager, logger)
+[GitHubEvent(WebhookEventType.PullRequest)]
+public sealed class PullRequestAction(
+    IDiscordClient discord,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger<PullRequestAction> logger,
+    Uri webhookUrl,
+    string eventName,
+    PullRequestEvent pullRequestEvent)
+    : BaseAction<PullRequestEvent>(discord, webhookUrl, eventName, pullRequestEvent, cache, userMapManager, logger)
 {
     /// <summary>アクションに対応するキャッシュキーのサフィックスを取得します。</summary>
     private string GetCacheKeySuffix() => Event.Action switch
@@ -74,28 +86,37 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
         // synchronize はコミット追加時に発生するが通知不要なためスキップ
         if (Event.Action == "synchronize") return;
 
-        PullRequest pr = Event.PullRequest;
+        OctokitPR pr = Event.PullRequest;
         Repository repo = Event.Repository;
         User sender = Event.Sender;
+
+        // サブタイプ固有プロパティをパターンマッチで取得する
+        Label? label = (Event as PullRequestLabeledEvent)?.Label
+                       ?? (Event as PullRequestUnlabeledEvent)?.Label;
+        User? assignee = (Event as PullRequestAssignedEvent)?.Assignee
+                         ?? (Event as PullRequestUnassignedEvent)?.Assignee;
+        User? requestedReviewer = (Event as PullRequestReviewRequestedEvent)?.RequestedReviewer;
+        Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges? changes =
+            (Event as PullRequestEditedEvent)?.Changes;
 
         (var titleVerb, var color) = GetTitleVerbAndColor(Event.Action, pr.Merged == true);
 
         var title = $"PR {titleVerb}: #{pr.Number} {pr.Title}";
-        List<DiscordEmbedField> fields = BuildFields(pr, repo);
-        var content = await BuildContentAsync(pr, sender);
-        var description = BuildDescription(pr);
+        List<DiscordEmbedField> fields = BuildFields(pr, repo, label, assignee, requestedReviewer);
+        var content = await BuildContentAsync(pr, sender, assignee, requestedReviewer, changes);
+        var description = BuildDescription(pr, changes);
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: sender.HtmlUrl,
-            IconUrl: sender.AvatarUrl);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: description,
-            url: pr.HtmlUrl,
+            url: Uri.TryCreate(pr.HtmlUrl, UriKind.Absolute, out var prUrl) ? prUrl : null,
             author: author,
             fields: fields);
 
@@ -104,7 +125,9 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
     }
 
     /// <summary>PR の各種情報を Embed フィールドのリストとして構築する。</summary>
-    private List<DiscordEmbedField> BuildFields(PullRequest pr, Repository repo)
+    private static List<DiscordEmbedField> BuildFields(
+        OctokitPR pr, Repository repo,
+        Label? label, User? assignee, User? requestedReviewer)
     {
         var fields = new List<DiscordEmbedField>
         {
@@ -112,20 +135,20 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
             new("Branch", $"`{pr.Head.Ref}` → `{pr.Base.Ref}`", true),
         };
 
-        if (pr.Additions.HasValue && pr.Deletions.HasValue)
-            fields.Add(new("Changes", $"+{pr.Additions} / -{pr.Deletions} ({pr.ChangedFiles} files)", true));
+        // Octokit の PullRequest では Additions/Deletions は long（常に存在）
+        fields.Add(new("Changes", $"+{pr.Additions} / -{pr.Deletions} ({pr.ChangedFiles} files)", true));
 
         if (pr.Draft)
             fields.Add(new("Status", "Draft", true));
 
-        if (Event.Label is not null)
-            fields.Add(new("Label", Event.Label.Name, true));
+        if (label is not null)
+            fields.Add(new("Label", label.Name, true));
 
-        if (Event.Assignee is not null)
-            fields.Add(new("Assignee", Event.Assignee.Login, true));
+        if (assignee is not null)
+            fields.Add(new("Assignee", assignee.Login, true));
 
-        if (Event.RequestedReviewer is not null)
-            fields.Add(new("Requested Reviewer", Event.RequestedReviewer.Login, true));
+        if (requestedReviewer is not null)
+            fields.Add(new("Requested Reviewer", requestedReviewer.Login, true));
 
         return fields;
     }
@@ -134,7 +157,10 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
     /// アクションに応じてメンション文字列を構築する。
     /// Draft PR および WIP タイトル解除前はメンションを抑制する。
     /// </summary>
-    private async Task<string?> BuildContentAsync(PullRequest pr, User sender)
+    private async Task<string?> BuildContentAsync(
+        OctokitPR pr, User sender,
+        User? assignee, User? requestedReviewer,
+        Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges? changes)
     {
         string? content = null;
 
@@ -144,11 +170,11 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
         {
             var targets = new List<(long, string)>();
 
-            if (Event.RequestedReviewer is not null)
-                targets.Add((Event.RequestedReviewer.Id, Event.RequestedReviewer.Login));
+            if (requestedReviewer is not null)
+                targets.Add((requestedReviewer.Id, requestedReviewer.Login));
 
-            if (Event.Assignee is not null)
-                targets.Add((Event.Assignee.Id, Event.Assignee.Login));
+            if (assignee is not null)
+                targets.Add((assignee.Id, assignee.Login));
 
             var mentions = await GetUsersMentionsAsync(sender.Id, targets);
             if (mentions.Length > 0) content = mentions;
@@ -156,25 +182,19 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
 
         // edited の場合、WIP タイトルが解除されたらレビュアーへメンション
         // Draft PR はまだレビュー準備ができていないためメンションを抑制する
-        if (Event.Action == "edited" && Event.Changes.HasValue && !pr.Draft)
+        if (Event.Action == "edited" && changes?.Title?.From is not null && !pr.Draft)
         {
-            JsonElement changes = Event.Changes.Value;
-            if (changes.TryGetProperty("title", out JsonElement titleChangeProp) &&
-                titleChangeProp.TryGetProperty("from", out JsonElement previousTitleProp))
+            var previousTitle = changes.Title.From;
+            if (IsWipTitle(previousTitle) && !IsWipTitle(pr.Title))
             {
-                var previousTitle = previousTitleProp.GetString();
-                if (previousTitle is not null &&
-                    IsWipTitle(previousTitle) && !IsWipTitle(pr.Title))
+                IEnumerable<(long Id, string Login)> reviewers = (pr.RequestedReviewers ?? [])
+                    .Select(u => (u.Id, u.Login));
+                var wipMentions = await GetUsersMentionsAsync(sender.Id, reviewers);
+                if (wipMentions.Length > 0)
                 {
-                    IEnumerable<(long Id, string Login)> reviewers = (pr.RequestedReviewers ?? [])
-                        .Select(u => (u.Id, u.Login));
-                    var wipMentions = await GetUsersMentionsAsync(sender.Id, reviewers);
-                    if (wipMentions.Length > 0)
-                    {
-                        content = string.IsNullOrEmpty(content)
-                            ? wipMentions
-                            : $"{content} {wipMentions}";
-                    }
+                    content = string.IsNullOrEmpty(content)
+                        ? wipMentions
+                        : $"{content} {wipMentions}";
                 }
             }
         }
@@ -186,22 +206,19 @@ public sealed class PullRequestAction(IDiscordClient discord, Uri webhookUrl, st
     /// opened / edited アクション時に Embed の説明文を構築する。
     /// edited かつタイトル変更がある場合は diff 形式で表示する。
     /// </summary>
-    private string? BuildDescription(PullRequest pr)
+    private string? BuildDescription(
+        OctokitPR pr,
+        Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges? changes)
     {
         if (Event.Action is not ("opened" or "edited"))
             return null;
 
         // edited の場合、タイトル変更の diff を優先して表示する
-        if (Event.Action == "edited" && Event.Changes.HasValue)
+        if (Event.Action == "edited" && changes?.Title?.From is not null)
         {
-            JsonElement changes = Event.Changes.Value;
-            if (changes.TryGetProperty("title", out JsonElement titleChange) &&
-                titleChange.TryGetProperty("from", out JsonElement fromProp))
-            {
-                var oldTitle = fromProp.GetString() ?? string.Empty;
-                var patch = CreatePatch(oldTitle, pr.Title, "title");
-                return $"```diff\n{patch}```";
-            }
+            var oldTitle = changes.Title.From;
+            var patch = CreatePatch(oldTitle, pr.Title, "title");
+            return $"```diff\n{patch}```";
         }
 
         // PR 本文（長い場合は切り詰める）

@@ -1,21 +1,32 @@
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
+using Octokit.Webhooks.Events;
+using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub pull_request_review_comment イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class PullRequestReviewCommentAction(IDiscordClient discord, Uri webhookUrl, string eventName, PullRequestReviewCommentEvent pullRequestReviewCommentEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PullRequestReviewCommentEvent>(discord, webhookUrl, eventName, pullRequestReviewCommentEvent, cache, userMapManager, logger)
+[GitHubEvent(WebhookEventType.PullRequestReviewComment)]
+public sealed class PullRequestReviewCommentAction(
+    IDiscordClient discord,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger<PullRequestReviewCommentAction> logger,
+    Uri webhookUrl,
+    string eventName,
+    PullRequestReviewCommentEvent pullRequestReviewCommentEvent)
+    : BaseAction<PullRequestReviewCommentEvent>(discord, webhookUrl, eventName, pullRequestReviewCommentEvent, cache, userMapManager, logger)
 {
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        ReviewComment comment = Event.Comment;
-        PullRequest pr = Event.PullRequest;
+        PullRequestReviewComment comment = Event.Comment;
+        SimplePullRequest pr = Event.PullRequest;
         Repository repo = Event.Repository;
         User sender = Event.Sender;
 
@@ -54,19 +65,19 @@ public sealed class PullRequestReviewCommentAction(IDiscordClient discord, Uri w
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: sender.HtmlUrl,
-            IconUrl: sender.AvatarUrl);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: body,
-            url: comment.HtmlUrl,
+            url: Uri.TryCreate(comment.HtmlUrl, UriKind.Absolute, out var commentUrl) ? commentUrl : null,
             author: author,
             fields: fields.Count > 0 ? fields : null);
 
-        var key = $"{repo.FullName}-pr-review-comment-{comment.Id}";
+        var key = $"{repo.FullName}-pr-review-comment-{comment.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 }

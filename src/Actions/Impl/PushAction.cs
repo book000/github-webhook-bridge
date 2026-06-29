@@ -1,20 +1,31 @@
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
+using Octokit.Webhooks.Events;
+using OctokitCommit = Octokit.Webhooks.Models.PushEvent.Commit;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub push イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class PushAction(IDiscordClient discord, Uri webhookUrl, string eventName, PushEvent pushEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PushEvent>(discord, webhookUrl, eventName, pushEvent, cache, userMapManager, logger)
+[GitHubEvent(WebhookEventType.Push)]
+public sealed class PushAction(
+    IDiscordClient discord,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger<PushAction> logger,
+    Uri webhookUrl,
+    string eventName,
+    PushEvent pushEvent)
+    : BaseAction<PushEvent>(discord, webhookUrl, eventName, pushEvent, cache, userMapManager, logger)
 {
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        IList<Commit> allCommits = Event.Commits;
+        IReadOnlyList<OctokitCommit> allCommits = Event.Commits;
         if (allCommits.Count == 0) return;
 
         // refs/heads/ や refs/tags/ を除去して短いブランチ名にする
@@ -29,8 +40,8 @@ public sealed class PushAction(IDiscordClient discord, Uri webhookUrl, string ev
 
         var author = new DiscordEmbedAuthor(
             Name: Event.Sender.Login,
-            Url: Event.Sender.HtmlUrl,
-            IconUrl: Event.Sender.AvatarUrl);
+            Url: Uri.TryCreate(Event.Sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(Event.Sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
@@ -46,7 +57,7 @@ public sealed class PushAction(IDiscordClient discord, Uri webhookUrl, string ev
     /// <summary>コミット一覧の説明文を生成する。</summary>
     /// <param name="commits">表示するコミット一覧（最大 5 件）。</param>
     /// <param name="totalCount">全コミット数。5 を超える場合は末尾に省略メッセージを付加する。</param>
-    private static string GetDescription(List<Commit> commits, int totalCount)
+    private static string GetDescription(List<OctokitCommit> commits, int totalCount)
     {
         var lines = commits.Select(c =>
         {

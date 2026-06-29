@@ -1,15 +1,25 @@
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub ping イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class PingAction(IDiscordClient discord, Uri webhookUrl, string eventName, PingEvent pingEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PingEvent>(discord, webhookUrl, eventName, pingEvent, cache, userMapManager, logger)
+[GitHubEvent(WebhookEventType.Ping)]
+public sealed class PingAction(
+    IDiscordClient discord,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger<PingAction> logger,
+    Uri webhookUrl,
+    string eventName,
+    PingEvent pingEvent)
+    : BaseAction<PingEvent>(discord, webhookUrl, eventName, pingEvent, cache, userMapManager, logger)
 {
     /// <inheritdoc/>
     public override async Task RunAsync()
@@ -20,15 +30,16 @@ public sealed class PingAction(IDiscordClient discord, Uri webhookUrl, string ev
             title: "Received a ping event",
             description: Event.Zen,
             fields: [
-                new("Hook Type", Event.Hook.Type, true),
+                new("Hook Type", Event.Hook?.Type.StringValue ?? "N/A", true),
                 new("Hook ID", Event.HookId.ToString(System.Globalization.CultureInfo.InvariantCulture), true),
-                new("Events", (Event.Hook.Events?.Count ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture), true),
+                new("Events", (Event.Hook?.Events?.Count ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture), true),
                 new("Repository", Event.Repository?.FullName ?? "N/A", true),
                 new("Sender", Event.Sender?.Login ?? "N/A", true),
                 new("Organization", Event.Organization?.Login ?? "N/A", true),
             ]);
 
-        var cacheKey = $"ping:{Event.Repository?.FullName ?? "N/A"}:{Event.Sender?.Login ?? "N/A"}:{Event.Organization?.Login ?? "N/A"}:{Event.Hook.Type}";
+        var hookType = Event.Hook?.Type.StringValue ?? "N/A";
+        var cacheKey = $"ping:{Event.Repository?.FullName ?? "N/A"}:{Event.Sender?.Login ?? "N/A"}:{Event.Organization?.Login ?? "N/A"}:{hookType}";
         await SendMessageAsync(cacheKey, new DiscordMessage(Embeds: [embed]));
     }
 }

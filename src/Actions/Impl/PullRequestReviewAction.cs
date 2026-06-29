@@ -1,26 +1,38 @@
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
+using Octokit.Webhooks;
+using Octokit.Webhooks.Events;
+using Octokit.Webhooks.Models;
+using OctokitReview = Octokit.Webhooks.Models.PullRequestReviewEvent.Review;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
 /// <summary>GitHub pull_request_review イベントを Discord に通知する。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
-public sealed class PullRequestReviewAction(IDiscordClient discord, Uri webhookUrl, string eventName, PullRequestReviewEvent pullRequestReviewEvent, IMessageCacheService cache, IGitHubUserMapManager userMapManager, ILogger logger) : BaseAction<PullRequestReviewEvent>(discord, webhookUrl, eventName, pullRequestReviewEvent, cache, userMapManager, logger)
+[GitHubEvent(WebhookEventType.PullRequestReview)]
+public sealed class PullRequestReviewAction(
+    IDiscordClient discord,
+    IMessageCacheService cache,
+    IGitHubUserMapManager userMapManager,
+    ILogger<PullRequestReviewAction> logger,
+    Uri webhookUrl,
+    string eventName,
+    PullRequestReviewEvent pullRequestReviewEvent)
+    : BaseAction<PullRequestReviewEvent>(discord, webhookUrl, eventName, pullRequestReviewEvent, cache, userMapManager, logger)
 {
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        Review review = Event.Review;
-        PullRequest pr = Event.PullRequest;
+        OctokitReview review = Event.Review;
+        SimplePullRequest pr = Event.PullRequest;
         Repository repo = Event.Repository;
         User sender = Event.Sender;
 
         // レビュー状態とアクションを組み合わせて色とタイトルを決定する
-        (var titleVerb, var color) = (Event.Action, review.State.ToUpperInvariant()) switch
+        (var titleVerb, var color) = (Event.Action, review.State.StringValue?.ToUpperInvariant() ?? string.Empty) switch
         {
             ("submitted", "APPROVED") => ("approved", EmbedColors.PullRequestReviewApproved),
             ("submitted", "CHANGES_REQUESTED") => ("requested changes", EmbedColors.PullRequestReviewChangesRequested),
@@ -44,18 +56,18 @@ public sealed class PullRequestReviewAction(IDiscordClient discord, Uri webhookU
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: sender.HtmlUrl,
-            IconUrl: sender.AvatarUrl);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: body,
-            url: review.HtmlUrl,
+            url: Uri.TryCreate(review.HtmlUrl, UriKind.Absolute, out var reviewUrl) ? reviewUrl : null,
             author: author);
 
-        var key = $"{repo.FullName}-pr-review-{review.Id}";
+        var key = $"{repo.FullName}-pr-review-{review.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 }

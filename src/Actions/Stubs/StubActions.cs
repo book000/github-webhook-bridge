@@ -5,7 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace GitHubWebhookBridge.Actions.Stubs;
 
-/// <summary>スタブ Action の共通基底クラス。未実装イベントのプレースホルダー。</summary>
+/// <summary>
+/// スタブ Action の共通基底クラス。未実装イベントのプレースホルダー。
+/// <see cref="BaseAction{TEvent}"/> を使わず <see cref="IAction"/> を直接実装する。
+/// </summary>
 public abstract class StubAction(
     IDiscordClient discord,
     Uri webhookUrl,
@@ -13,11 +16,35 @@ public abstract class StubAction(
     JsonElement body,
     IMessageCacheService cache,
     IGitHubUserMapManager userMapManager,
-    ILogger logger) : BaseAction<JsonElement>(discord, webhookUrl, eventName, body, cache, userMapManager, logger)
+    ILogger logger) : IAction
 {
+    // ログ出力に使用するロガー。RunAsync でスローする前のデバッグ用途に保持する。
+    private readonly ILogger _logger = logger;
+
+    // 残りの DI パラメーターはスタブ実装では使用しないが、
+    // ActivatorUtilities.CreateInstance による DI 解決パターンを統一するため受け取る。
+    // discard 変数に代入することでコンパイラの未使用警告を抑制する（pragma なし）。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    private readonly IDiscordClient _discord = discord;
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    private readonly Uri _webhookUrl = webhookUrl;
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    private readonly IMessageCacheService _cache = cache;
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    private readonly IGitHubUserMapManager _userMapManager = userMapManager;
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    private readonly JsonElement _body = body;
+
+    /// <summary>スタブがハンドルするイベント名。</summary>
+    protected string EventName { get; } = eventName;
+
     /// <summary>未実装のイベントハンドラー。常に <see cref="NotImplementedException"/> をスローする。</summary>
     /// <returns>このメソッドは常に例外をスローするため、値を返さない。</returns>
-    public override Task RunAsync() => throw new NotImplementedException($"Event '{EventName}' is not yet implemented.");
+    public virtual Task RunAsync()
+    {
+        _logger.LogWarning("Unimplemented event handler invoked for event '{EventName}'.", EventName);
+        throw new NotImplementedException($"Event '{EventName}' is not yet implemented.");
+    }
 }
 
 /// <summary>branch_protection_rule イベントのスタブハンドラー。</summary>
