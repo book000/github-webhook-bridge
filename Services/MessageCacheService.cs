@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Azure;
 using Azure.Data.Tables;
 using Microsoft.Extensions.Configuration;
@@ -158,8 +160,8 @@ public class MessageCacheService : IMessageCacheService, IDisposable
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "Azure Table Storage のパーティションキーは小文字 hex で統一する")]
     private static string HashWebhookUrl(Uri webhookUrl)
     {
-        var hash = System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(webhookUrl.AbsoluteUri));
+        var hash = SHA256.HashData(
+            Encoding.UTF8.GetBytes(webhookUrl.AbsoluteUri));
         return Convert.ToHexString(hash)[..32].ToLowerInvariant();
     }
 
