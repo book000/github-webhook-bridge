@@ -1185,3 +1185,14 @@ generated_code = true
 # EF Core マイグレーションファイルは除外
 [Migrations/*.cs]
 generated_code = true
+
+# =========================
+# テストプロジェクト固有のルール緩和
+# =========================
+[tests/**/*.cs]
+# xUnit の Method_Scenario_Expected アンダースコア区切り命名規約を許容する
+dotnet_diagnostic.CA1707.severity = none
+# xUnit の [Fact]/[Theory] メソッドは Async サフィックスを必要としない規約に従う
+dotnet_diagnostic.IDE1006.severity = none
+# HMAC-SHA256 の hex 文字列は仕様上小文字のため ToLowerInvariant の使用を許容する
+dotnet_diagnostic.CA1308.severity = none
