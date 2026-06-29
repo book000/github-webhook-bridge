@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <!--
+            除外対象:
+            - Actions.Stubs.*      : HTTP 406 を返すだけのスタブ実装 (46 クラス)
+            - Models.*             : JSON デシリアライズ用 POCO (テスト対象外)
+            - Program              : Azure Functions エントリーポイント (生成コード)
+            - DirectFunctionExecutor / FunctionExecutor* / GeneratedFunctionMetadata* :
+                                     AF ワーカー生成コード (テスト対象外)
+          -->
+          <Exclude>
+            [GitHubWebhookBridge]GitHubWebhookBridge.Actions.Stubs.*,
+            [GitHubWebhookBridge]GitHubWebhookBridge.Models.*,
+            [GitHubWebhookBridge]Program,
+            [GitHubWebhookBridge]GitHubWebhookBridge.DirectFunctionExecutor*,
+            [GitHubWebhookBridge]GitHubWebhookBridge.FunctionExecutorHostBuilderExtensions,
+            [GitHubWebhookBridge]GitHubWebhookBridge.FunctionExecutorAutoStartup,
+            [GitHubWebhookBridge]GitHubWebhookBridge.GeneratedFunctionMetadataProvider,
+            [GitHubWebhookBridge]GitHubWebhookBridge.WorkerHostBuilderFunctionMetadataProviderExtension,
+            [GitHubWebhookBridge]GitHubWebhookBridge.FunctionMetadataProviderAutoStartup
+          </Exclude>
+          <!-- ライン カバレッジ 60% を下限とする -->
+          <Threshold>60</Threshold>
+          <ThresholdType>line</ThresholdType>
+          <ThresholdStat>minimum</ThresholdStat>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

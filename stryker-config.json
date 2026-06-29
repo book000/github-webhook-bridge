@@ -1,0 +1,30 @@
+{
+  "stryker-config": {
+    "project-info": {
+      "name": "github-webhook-bridge",
+      "module": "GitHubWebhookBridge"
+    },
+    "solution": "GitHubWebhookBridge.csproj",
+    "test-projects": [
+      "tests/GitHubWebhookBridge.Tests/GitHubWebhookBridge.Tests.csproj"
+    ],
+    "mutate": [
+      "Actions/Impl/**/*.cs",
+      "Actions/BaseAction.cs",
+      "Actions/ActionFactory.cs",
+      "Functions/WebhookFunction.cs",
+      "Utils/SignatureValidator.cs",
+      "Utils/EmbedHelper.cs",
+      "Managers/MuteManager.cs"
+    ],
+    "reporters": ["html", "cleartext", "json"],
+    "report-file-name": "stryker-report",
+    "threshold": {
+      "high": 80,
+      "low": 65,
+      "break": 60
+    },
+    "output-path": "StrykerOutput",
+    "verbosity": "info"
+  }
+}

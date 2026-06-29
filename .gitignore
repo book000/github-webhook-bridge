@@ -25,3 +25,7 @@ data/
 # Azure Functions
 local.settings.json
 packages.lock.json
+
+# Test / coverage output
+TestResults/
+StrykerOutput/
