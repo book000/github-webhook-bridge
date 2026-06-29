@@ -81,7 +81,7 @@ public class WebhookFunction(
             return new BadRequestObjectResult(new { message = "Bad Request: Invalid X-GitHub-Event" });
         }
 
-        // ActionFactory の switch 式は小文字前提のため小文字に正規化する
+        // ActionFactory のリフレクションレジストリは Ordinal 比較のため小文字に正規化する
         var eventName = NormalizeEventName(rawEventName);
 
         // 5. ?url= — discord.com Webhook URL に限定（SSRF 対策）
