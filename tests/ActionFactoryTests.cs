@@ -39,6 +39,18 @@ public class ActionFactoryTests
         await Assert.ThrowsAsync<NotImplementedException>(() => action.RunAsync());
     }
 
+    [Fact]
+    public void ActionRegistryValidator_ValidateAll_DoesNotThrowForEmptyRegistry()
+    {
+        var sp = BuildServiceProvider();
+        var factory = new ActionFactory(sp);
+        var validator = new ActionRegistryValidator(factory, sp);
+
+        // Task 8 前はレジストリが空なので例外なし
+        var ex = Record.Exception(() => validator.ValidateAll());
+        Assert.Null(ex);
+    }
+
     // ── Task 8 完了後に Registry.Count == 12 を検証するテストをここに追加する ──
     // Task 8 Step 7c 参照。
 }

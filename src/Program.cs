@@ -50,6 +50,8 @@ builder.Services
     // Action の依存はすべて Singleton であること。
     // Scoped サービスを Action に追加した場合は IServiceScopeFactory を使う設計に変更すること。
     .AddSingleton<IActionFactory, ActionFactory>()
+    // 起動時にアクションレジストリの DI 解決を検証
+    .AddHostedService<ActionRegistryValidator>()
     // テーブルストレージの初期化をホスト起動時に非同期実行
     .AddHostedService<TableStorageInitializer>();
 
