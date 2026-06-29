@@ -41,7 +41,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore src/GitHubWebhookBridge.csproj
 
       - name: Publish
         run: dotnet publish src/GitHubWebhookBridge.csproj --configuration Release --no-restore --output ${{ env.PUBLISH_OUTPUT_DIR }}

@@ -50,7 +50,7 @@
 
 param(
     [string]$SchemaVersion = "latest",
-    [string]$OutputDir     = "Models/GitHubWebhooks/Generated",
+    [string]$OutputDir     = "src/Models/GitHubWebhooks/Generated",
     [string]$Namespace     = "GitHubWebhookBridge.Models.GitHubWebhooks",
     [string]$TmpDir        = "",
     [switch]$Clean
@@ -69,7 +69,7 @@ foreach ($extra in @("$env:HOME/.dotnet", "$env:HOME/.dotnet/tools")) {
 # ── ルートディレクトリの解決 ────────────────────────────────────────────────
 $ScriptDir = $PSScriptRoot ? $PSScriptRoot : (Get-Location).Path
 $Root      = Split-Path $ScriptDir -Parent
-if (-not (Test-Path (Join-Path $Root "GitHubWebhookBridge.csproj"))) {
+if (-not (Test-Path (Join-Path $Root "src/GitHubWebhookBridge.csproj"))) {
     Write-Error "GitHubWebhookBridge.csproj が見つかりません。リポジトリルートで実行してください。"
     exit 1
 }
