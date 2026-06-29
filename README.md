@@ -87,13 +87,6 @@ func start
 
 上記以外の GitHub Webhook イベントは HTTP 406 を返します。
 
-## Vercel 版からの移行
-
-旧 Vercel 版と比べた破壊的変更：
-
-- エンドポイントが `POST /` → `POST /GitHubWebhook` に変更
-- `?url=` パラメータは `https://discord.com/api/webhooks/` または `https://discordapp.com/api/webhooks/` プレフィックスのみ許可
-
 ## ライセンス
 
 MIT（[LICENSE](LICENSE)）
