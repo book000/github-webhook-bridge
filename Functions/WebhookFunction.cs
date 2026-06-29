@@ -40,7 +40,7 @@ public class WebhookFunction(
     [SuppressMessage("Naming", "IDE1006:NamingRuleViolation", Justification = "Azure Functions ランタイムが 'Run' という名前を要求するため変更不可")]
     [SuppressMessage("Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Webhook エントリーポイントは必然的に多くの型を参照する")]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "GitHubWebhook")] HttpRequest req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "")] HttpRequest req)
     {
         ArgumentNullException.ThrowIfNull(req);
 
