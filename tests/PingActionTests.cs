@@ -1,10 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
+using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -33,21 +35,37 @@ public class PingActionTests
         return (discord, cache, userMap);
     }
 
+    /// <summary>PingEvent の最小 JSON からデシリアライズして PingEvent を作成するヘルパー。</summary>
+    private static PingEvent MakePingEvent(
+        string zen = "Non-blocking is better than blocking.",
+        long hookId = 12345,
+        string? repoFullName = null,
+        string? senderLogin = null,
+        string? hookType = null)
+    {
+        var repoPart = repoFullName is not null
+            ? $",\"repository\":{TestFixtures.RepoJson(repoFullName)}"
+            : string.Empty;
+        var senderPart = senderLogin is not null
+            ? $",\"sender\":{TestFixtures.UserJson(senderLogin, 1)}"
+            : string.Empty;
+        // Hook.Type は required のためデフォルト "Repository" を使用する
+        var hookTypeStr = hookType ?? "Repository";
+        var hookJson = "{\"id\":1,\"type\":\"" + hookTypeStr + "\",\"name\":\"web\",\"active\":true,\"events\":[\"push\"],\"config\":{\"url\":\"https://example.com\",\"content_type\":\"json\",\"insecure_ssl\":\"0\"},\"updated_at\":\"2024-01-01T00:00:00Z\",\"created_at\":\"2024-01-01T00:00:00Z\",\"url\":\"https://api.github.com/repos/owner/repo/hooks/1\",\"test_url\":\"https://api.github.com/repos/owner/repo/hooks/1/test\",\"ping_url\":\"https://api.github.com/repos/owner/repo/hooks/1/pings\",\"deliveries_url\":\"https://api.github.com/repos/owner/repo/hooks/1/deliveries\"}";
+        return JsonSerializer.Deserialize<PingEvent>(
+            "{\"zen\":\"" + zen + "\",\"hook_id\":" + hookId + ",\"hook\":" + hookJson + repoPart + senderPart + "}",
+            OctokitJsonOptions.Value)!;
+    }
+
     [Fact]
     public async Task RunAsyncSendsMessageWithPingEmbed()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        PingEvent pingEvent = new()
-        {
-            Zen = "Non-blocking is better than blocking.",
-            HookId = 12345,
-        };
-
         PingAction action = new(
-            discord.Object, _webhookUri, "ping",
-            pingEvent, cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PingAction>>(),
+            _webhookUri, "ping", MakePingEvent(zen: "Non-blocking is better than blocking.", hookId: 12345));
 
         await action.RunAsync();
 
@@ -68,19 +86,11 @@ public class PingActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        PingEvent pingEvent = new()
-        {
-            Zen = "test",
-            HookId = 9999,
-            Hook = new PingHook { Type = "Repository" },
-            Repository = new Repository { FullName = "owner/repo" },
-            Sender = new User { Login = "user1" },
-        };
-
         PingAction action = new(
-            discord.Object, _webhookUri, "ping",
-            pingEvent, cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PingAction>>(),
+            _webhookUri, "ping",
+            MakePingEvent(hookId: 9999, repoFullName: "owner/repo", senderLogin: "user1", hookType: "Repository"));
 
         await action.RunAsync();
 
@@ -99,12 +109,10 @@ public class PingActionTests
         cache.Setup(c => c.GetAsync(It.IsAny<Uri>(), It.IsAny<string>()))
              .ReturnsAsync(new CachedMessage("existing-message-id"));
 
-        PingEvent pingEvent = new() { Zen = "Speak friend and enter.", HookId = 1 };
-
         PingAction action = new(
-            discord.Object, _webhookUri, "ping",
-            pingEvent, cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PingAction>>(),
+            _webhookUri, "ping", MakePingEvent(zen: "Speak friend and enter.", hookId: 1));
 
         await action.RunAsync();
 

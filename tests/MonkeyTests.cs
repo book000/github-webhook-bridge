@@ -6,13 +6,13 @@ using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Actions.Stubs;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -263,37 +263,27 @@ public class MonkeyTests
         return (discord, cache, userMap);
     }
 
+    private static PullRequestEvent MakePrEvent(string action = "opened", string? body = null)
+    {
+        var prJson = TestFixtures.PullRequestJson(number: 1, title: "Test PR", body: body);
+        var repoJson = TestFixtures.RepoJson("owner/repo");
+        var senderJson = TestFixtures.UserJson("author", 100);
+        // PullRequestSynchronizeEvent が action="synchronize" で before/after を required にするため常に含める
+        return JsonSerializer.Deserialize<PullRequestEvent>(
+            $$$"""{"action":"{{{action}}}","number":1,"before":"aaa000","after":"bbb111","pull_request":{{{prJson}}},"repository":{{{repoJson}}},"sender":{{{senderJson}}}}""",
+            OctokitJsonOptions.Value)!;
+    }
+
     /// <summary>PR の Body と RequestedReviewers が null でも NullReferenceException が発生しない。</summary>
     [Fact]
     public async Task PullRequestActionNullBodyAndNullRequestedReviewersDoesNotThrow()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateActionMocks();
 
-        PullRequestEvent prEvent = new()
-        {
-            Action = "opened",
-            Number = 1,
-            PullRequest = new PullRequest
-            {
-                Number = 1,
-                Title = "Test PR",
-                Body = null, // null ボディ
-                State = "open",
-                HtmlUrl = new Uri("https://github.com/owner/repo/pull/1"),
-                User = new User { Login = "author", Id = 100 },
-                Draft = false,
-                Head = new PullRequestRef { Ref = "feature", Sha = "abc" },
-                Base = new PullRequestRef { Ref = "main", Sha = "def" },
-                RequestedReviewers = null, // null レビュアーリスト
-            },
-            Repository = new Repository { FullName = "owner/repo", HtmlUrl = new Uri("https://github.com/owner/repo") },
-            Sender = new User { Login = "author", Id = 100 },
-        };
-
         PullRequestAction action = new(
-            discord.Object, _actionWebhookUri, "pull_request",
-            prEvent, cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestAction>>(),
+            _actionWebhookUri, "pull_request", MakePrEvent("opened", body: null));
 
         Exception? ex = await Record.ExceptionAsync(() => action.RunAsync());
 
@@ -306,28 +296,10 @@ public class MonkeyTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateActionMocks();
 
-        PullRequestEvent prEvent = new()
-        {
-            Action = "synchronize",
-            Number = 1,
-            PullRequest = new PullRequest
-            {
-                Number = 1,
-                Title = "Test PR",
-                State = "open",
-                HtmlUrl = new Uri("https://github.com/owner/repo/pull/1"),
-                User = new User { Login = "author", Id = 100 },
-                Head = new PullRequestRef { Ref = "feature", Sha = "abc" },
-                Base = new PullRequestRef { Ref = "main", Sha = "def" },
-            },
-            Repository = new Repository { FullName = "owner/repo", HtmlUrl = new Uri("https://github.com/owner/repo") },
-            Sender = new User { Login = "author", Id = 100 },
-        };
-
         PullRequestAction action = new(
-            discord.Object, _actionWebhookUri, "pull_request",
-            prEvent, cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestAction>>(),
+            _actionWebhookUri, "pull_request", MakePrEvent("synchronize"));
 
         await action.RunAsync();
 

@@ -1,10 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
+using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -30,15 +32,9 @@ public class PublicActionTests
         return (discord, cache, userMap);
     }
 
-    private static PublicEvent MakeEvent() => new()
-    {
-        Repository = new Repository
-        {
-            FullName = "test/repo",
-            HtmlUrl = new Uri("https://github.com/test/repo"),
-        },
-        Sender = new User { Login = "publisher", Id = 1 },
-    };
+    private static PublicEvent MakeEvent() => JsonSerializer.Deserialize<PublicEvent>(
+        $$"""{"repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("publisher",1)}}}""",
+        OctokitJsonOptions.Value)!;
 
     /// <summary>タイトルに "Published"・リポジトリ名・送信者 login が含まれる。</summary>
     [Fact]
@@ -47,8 +43,9 @@ public class PublicActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PublicAction action = new(
-            discord.Object, _webhookUri, "public",
-            MakeEvent(), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PublicAction>>(),
+            _webhookUri, "public", MakeEvent());
 
         await action.RunAsync();
 
@@ -69,8 +66,9 @@ public class PublicActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PublicAction action = new(
-            discord.Object, _webhookUri, "public",
-            MakeEvent(), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PublicAction>>(),
+            _webhookUri, "public", MakeEvent());
 
         await action.RunAsync();
 

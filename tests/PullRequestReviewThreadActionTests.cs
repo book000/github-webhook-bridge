@@ -1,11 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -31,31 +32,29 @@ public class PullRequestReviewThreadActionTests
         return (discord, cache, userMap);
     }
 
-    private static PullRequestReviewThreadEvent MakeEvent(string action, bool resolved = true) => new()
-    {
-        Action = action,
-        Thread = new ReviewThread
-        {
-            NodeId = "RT_node_abc",
-            Resolved = resolved,
-        },
-        PullRequest = new PullRequest
-        {
-            Number = 12,
-            Title = "Feature branch",
-            State = "open",
-            HtmlUrl = new Uri("https://github.com/test/repo/pull/12"),
-            User = new User { Login = "pr-author", Id = 50 },
-            Head = new PullRequestRef { Ref = "feature", Sha = "abc" },
-            Base = new PullRequestRef { Ref = "main", Sha = "def" },
-        },
-        Repository = new Repository
-        {
-            FullName = "test/repo",
-            HtmlUrl = new Uri("https://github.com/test/repo"),
-        },
-        Sender = new User { Login = "reviewer", Id = 60 },
-    };
+    /// <summary>
+    /// PullRequestReviewThreadEvent を JSON から生成する。
+    /// Octokit の PullRequestReviewThreadEvent には Thread プロパティが存在しないため、
+    /// Review.NodeId をスレッド識別子として使用する。
+    /// </summary>
+    private static PullRequestReviewThreadEvent MakeEvent(string action) =>
+        JsonSerializer.Deserialize<PullRequestReviewThreadEvent>(
+            $$"""
+            {
+                "action":"{{action}}",
+                "review":{{TestFixtures.ReviewJson(
+                    1, "approved",
+                    "https://github.com/test/repo/pull/12#pullrequestreview-1",
+                    nodeId: "RT_node_abc")}},
+                "pull_request":{{TestFixtures.SimplePrJson(
+                    12, "Feature branch",
+                    "https://github.com/test/repo/pull/12",
+                    "pr-author", 50)}},
+                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer",60)}}
+            }
+            """,
+            OctokitJsonOptions.Value)!;
 
     /// <summary>resolved イベントのタイトルに "resolved" が含まれる。</summary>
     [Fact]
@@ -64,8 +63,9 @@ public class PullRequestReviewThreadActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PullRequestReviewThreadAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_thread",
-            MakeEvent("resolved"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", MakeEvent("resolved"));
 
         await action.RunAsync();
 
@@ -88,8 +88,9 @@ public class PullRequestReviewThreadActionTests
                .ReturnsAsync("msg-id");
 
         PullRequestReviewThreadAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_thread",
-            MakeEvent("resolved"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", MakeEvent("resolved"));
 
         await action.RunAsync();
 
@@ -108,23 +109,25 @@ public class PullRequestReviewThreadActionTests
                .ReturnsAsync("msg-id");
 
         PullRequestReviewThreadAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_thread",
-            MakeEvent("unresolved", resolved: false), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", MakeEvent("unresolved"));
 
         await action.RunAsync();
 
         Assert.Equal(EmbedColors.PullRequestReviewThreadUnresolved, capturedColor);
     }
 
-    /// <summary>Embed フィールドにスレッドの NodeId が含まれる。</summary>
+    /// <summary>Embed フィールドにスレッドの NodeId "RT_node_abc" が含まれる。</summary>
     [Fact]
     public async Task RunAsyncEmbedFieldContainsThreadNodeId()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PullRequestReviewThreadAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_thread",
-            MakeEvent("resolved"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", MakeEvent("resolved"));
 
         await action.RunAsync();
 
@@ -144,8 +147,9 @@ public class PullRequestReviewThreadActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PullRequestReviewThreadAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_thread",
-            MakeEvent("resolved"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", MakeEvent("resolved"));
 
         await action.RunAsync();
 
@@ -161,8 +165,9 @@ public class PullRequestReviewThreadActionTests
         userMap.Setup(u => u.GetById(50L)).Returns("discord-author-id");
 
         PullRequestReviewThreadAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_thread",
-            MakeEvent("resolved"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", MakeEvent("resolved"));
 
         await action.RunAsync();
 

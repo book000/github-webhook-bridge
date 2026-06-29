@@ -1,10 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
+using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -30,20 +32,9 @@ public class ForkActionTests
         return (discord, cache, userMap);
     }
 
-    private static ForkEvent MakeEvent() => new()
-    {
-        Repository = new Repository
-        {
-            FullName = "original/repo",
-            HtmlUrl = new Uri("https://github.com/original/repo"),
-        },
-        Forkee = new Repository
-        {
-            FullName = "forker/repo",
-            HtmlUrl = new Uri("https://github.com/forker/repo"),
-        },
-        Sender = new User { Login = "forker", Id = 1 },
-    };
+    private static ForkEvent MakeEvent() => JsonSerializer.Deserialize<ForkEvent>(
+        $$"""{"repository":{{TestFixtures.RepoJson("original/repo","https://github.com/original/repo")}},"forkee":{{TestFixtures.RepoJson("forker/repo","https://github.com/forker/repo")}},"sender":{{TestFixtures.UserJson("forker",1)}}}""",
+        OctokitJsonOptions.Value)!;
 
     /// <summary>タイトルにフォーク元・フォーク先リポジトリ名と送信者 login が含まれる。</summary>
     [Fact]
@@ -52,8 +43,9 @@ public class ForkActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         ForkAction action = new(
-            discord.Object, _webhookUri, "fork",
-            MakeEvent(), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<ForkAction>>(),
+            _webhookUri, "fork", MakeEvent());
 
         await action.RunAsync();
 
@@ -74,8 +66,9 @@ public class ForkActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         ForkAction action = new(
-            discord.Object, _webhookUri, "fork",
-            MakeEvent(), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<ForkAction>>(),
+            _webhookUri, "fork", MakeEvent());
 
         await action.RunAsync();
 

@@ -20,7 +20,8 @@ public abstract class BaseAction<TEvent>(
     TEvent @event,
     IMessageCacheService cache,
     IGitHubUserMapManager userMapManager,
-    ILogger logger) : IAction where TEvent : WebhookEvent
+    ILogger logger) : IAction
+    where TEvent : WebhookEvent
 {
     /// <summary>Discord Webhook API クライアント。</summary>
     protected IDiscordClient Discord { get; } = discord;

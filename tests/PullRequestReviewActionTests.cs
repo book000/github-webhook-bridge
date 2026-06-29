@@ -2,11 +2,11 @@ using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -14,8 +14,6 @@ namespace GitHubWebhookBridge.Tests;
 public class PullRequestReviewActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.com/api/webhooks/1/x");
-
-    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private static (Mock<IDiscordClient>, Mock<IMessageCacheService>, Mock<IGitHubUserMapManager>) CreateMocks()
     {
@@ -34,57 +32,23 @@ public class PullRequestReviewActionTests
         return (discord, cache, userMap);
     }
 
-    /// <summary>テスト用 PullRequestReviewEvent を JSON から生成する。</summary>
-    private static PullRequestReviewEvent MakePrReviewEvent(string action, string state)
-    {
-        var json = $$"""
-        {
-            "action": "{{action}}",
-            "review": {
-                "id": 1,
-                "state": "{{state}}",
-                "body": "LGTM",
-                "html_url": "https://github.com/owner/repo/pull/1#pullrequestreview-1",
-                "user": {
-                    "id": 1,
-                    "login": "reviewer",
-                    "html_url": "https://github.com/reviewer",
-                    "avatar_url": "https://avatars.githubusercontent.com/u/1"
-                }
-            },
-            "pull_request": {
-                "id": 1,
-                "number": 1,
-                "title": "Test PR",
-                "html_url": "https://github.com/owner/repo/pull/1",
-                "head": {"ref": "feature", "sha": "abc123"},
-                "base": {"ref": "main", "sha": "def456"},
-                "draft": false,
-                "body": null,
-                "state": "open",
-                "user": {
-                    "id": 2,
-                    "login": "pr-author",
-                    "html_url": "https://github.com/pr-author",
-                    "avatar_url": "https://avatars.githubusercontent.com/u/2"
-                }
-            },
-            "sender": {
-                "id": 1,
-                "login": "reviewer",
-                "html_url": "https://github.com/reviewer",
-                "avatar_url": "https://avatars.githubusercontent.com/u/1"
-            },
-            "repository": {
-                "id": 1,
-                "full_name": "owner/repo",
-                "html_url": "https://github.com/owner/repo",
-                "name": "repo"
+    /// <summary>テスト用 PullRequestReviewEvent を TestFixtures から生成する。</summary>
+    private static PullRequestReviewEvent MakePrReviewEvent(string action, string reviewState) =>
+        JsonSerializer.Deserialize<PullRequestReviewEvent>(
+            $$"""
+            {
+                "action":"{{action}}",
+                "review":{{TestFixtures.ReviewJson(1, reviewState.ToLowerInvariant(),
+                    "https://github.com/owner/repo/pull/1#pullrequestreview-1")}},
+                "pull_request":{{TestFixtures.SimplePrJson(
+                    1, "Test PR",
+                    "https://github.com/owner/repo/pull/1",
+                    "pr-author", 2)}},
+                "repository":{{TestFixtures.RepoJson("owner/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer",1)}}
             }
-        }
-        """;
-        return JsonSerializer.Deserialize<PullRequestReviewEvent>(json, _jsonOptions)!;
-    }
+            """,
+            OctokitJsonOptions.Value)!;
 
     /// <summary>キャプチャされた Embed の色を取得するヘルパー。</summary>
     private static async Task<int> RunAndCaptureColor(
@@ -98,12 +62,12 @@ public class PullRequestReviewActionTests
 
         PullRequestReviewAction reviewAction = new(
             discord.Object,
-            _webhookUri,
-            "pull_request_review",
-            prEvent,
             cache.Object,
             userMap.Object,
-            Mock.Of<ILogger>());
+            Mock.Of<ILogger<PullRequestReviewAction>>(),
+            _webhookUri,
+            "pull_request_review",
+            prEvent);
 
         var capturedColor = -1;
         discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
@@ -189,12 +153,12 @@ public class PullRequestReviewActionTests
 
         PullRequestReviewAction action = new(
             discord.Object,
-            _webhookUri,
-            "pull_request_review",
-            prEvent,
             cache.Object,
             userMap.Object,
-            Mock.Of<ILogger>());
+            Mock.Of<ILogger<PullRequestReviewAction>>(),
+            _webhookUri,
+            "pull_request_review",
+            prEvent);
 
         await action.RunAsync();
 
@@ -219,12 +183,12 @@ public class PullRequestReviewActionTests
 
         PullRequestReviewAction action = new(
             discord.Object,
-            _webhookUri,
-            "pull_request_review",
-            prEvent,
             cache.Object,
             userMap.Object,
-            Mock.Of<ILogger>());
+            Mock.Of<ILogger<PullRequestReviewAction>>(),
+            _webhookUri,
+            "pull_request_review",
+            prEvent);
 
         await action.RunAsync();
 
@@ -249,12 +213,12 @@ public class PullRequestReviewActionTests
 
         PullRequestReviewAction action = new(
             discord.Object,
-            _webhookUri,
-            "pull_request_review",
-            prEvent,
             cache.Object,
             userMap.Object,
-            Mock.Of<ILogger>());
+            Mock.Of<ILogger<PullRequestReviewAction>>(),
+            _webhookUri,
+            "pull_request_review",
+            prEvent);
 
         await action.RunAsync();
 

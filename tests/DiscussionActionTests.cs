@@ -1,11 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -31,34 +32,30 @@ public class DiscussionActionTests
         return (discord, cache, userMap);
     }
 
+    private static string AnswerJson(long id, string body) =>
+        $$"""{"id":{{id}},"node_id":"DC_{{id}}","html_url":"https://github.com/test/repo/discussions/5#discussioncomment-{{id}}","parent_id":null,"child_comment_count":0,"repository_url":"","discussion_id":5,"author_association":"NONE","user":{{TestFixtures.UserJson("answerer",2)}},"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","body":"{{body}}"}""";
+
+    private static string CategoryJson(string name) =>
+        $$"""{"id":1,"repository_id":1,"emoji":":speech_balloon:","name":"{{name}}","description":"","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","slug":"{{name.ToLowerInvariant().Replace(" ", "-")}}","is_answerable":false}""";
+
     private static DiscussionEvent MakeEvent(
         string action,
-        string? discussionBody = "body",
-        DiscussionComment? comment = null,
-        Label? label = null,
-        DiscussionCategory? newCategory = null) => new()
-    {
-        Action = action,
-        Discussion = new Discussion
-        {
-            Number = 5,
-            Title = "Great discussion",
-            Body = discussionBody,
-            HtmlUrl = new Uri("https://github.com/test/repo/discussions/5"),
-            User = new User { Login = "author", Id = 1 },
-            State = "open",
-            Category = new DiscussionCategory { Name = "General", IsAnswerable = false },
-        },
-        Repository = new Repository
-        {
-            FullName = "test/repo",
-            HtmlUrl = new Uri("https://github.com/test/repo"),
-        },
-        Sender = new User { Login = "author", Id = 1 },
-        Comment = comment,
-        Label = label,
-        Category = newCategory,
-    };
+        string? labelName = null,
+        string? answerBody = null,
+        string? changedFromCategory = null) =>
+        JsonSerializer.Deserialize<DiscussionEvent>(
+            $$"""
+            {
+                "action":"{{action}}",
+                "discussion":{{TestFixtures.DiscussionJson(5,"Great discussion","https://github.com/test/repo/discussions/5","body","author",1)}},
+                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("author",1)}}
+                {{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : string.Empty)}}
+                {{(answerBody is not null ? $",\"answer\":{AnswerJson(999, answerBody)}" : string.Empty)}}
+                {{(changedFromCategory is not null ? $",\"changes\":{{\"category\":{{\"from\":{CategoryJson(changedFromCategory)}}}}}" : string.Empty)}}
+            }
+            """,
+            OctokitJsonOptions.Value)!;
 
     /// <summary>created イベントのタイトルに "created" と Discussion 番号が含まれる。</summary>
     [Fact]
@@ -67,8 +64,9 @@ public class DiscussionActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         DiscussionAction action = new(
-            discord.Object, _webhookUri, "discussion",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionAction>>(),
+            _webhookUri, "discussion", MakeEvent("created"));
 
         await action.RunAsync();
 
@@ -93,32 +91,26 @@ public class DiscussionActionTests
                .ReturnsAsync("msg-id");
 
         DiscussionAction action = new(
-            discord.Object, _webhookUri, "discussion",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionAction>>(),
+            _webhookUri, "discussion", MakeEvent("created"));
 
         await action.RunAsync();
 
         Assert.Equal(EmbedColors.DiscussionCreated, capturedColor);
     }
 
-    /// <summary>answered イベントは discussion.Body ではなく comment.Body を description に使用する。</summary>
+    /// <summary>answered イベントは discussion.Body ではなく answer.Body を description に使用する。</summary>
     [Fact]
-    public async Task RunAsyncAnsweredUsesCommentBodyNotDiscussionBody()
+    public async Task RunAsyncAnsweredUsesAnswerBodyNotDiscussionBody()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        var answerComment = new DiscussionComment
-        {
-            Id = 999,
-            Body = "This is the answer",
-            HtmlUrl = new Uri("https://github.com/test/repo/discussions/5#discussioncomment-999"),
-            User = new User { Login = "answerer", Id = 2 },
-        };
-
         DiscussionAction action = new(
-            discord.Object, _webhookUri, "discussion",
-            MakeEvent("answered", discussionBody: "original body", comment: answerComment),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionAction>>(),
+            _webhookUri, "discussion",
+            MakeEvent("answered", answerBody: "This is the answer"));
 
         await action.RunAsync();
 
@@ -138,24 +130,26 @@ public class DiscussionActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         DiscussionAction action = new(
-            discord.Object, _webhookUri, "discussion",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionAction>>(),
+            _webhookUri, "discussion", MakeEvent("created"));
 
         await action.RunAsync();
 
         cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-discussion-5"), Times.Once);
     }
 
-    /// <summary>category_changed イベントは新カテゴリ名をフィールドに含む。</summary>
+    /// <summary>category_changed イベントは変更前カテゴリ名をフィールドに含む（Changes.Category.From）。</summary>
     [Fact]
     public async Task RunAsyncCategoryChangedIncludesNewCategoryField()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         DiscussionAction action = new(
-            discord.Object, _webhookUri, "discussion",
-            MakeEvent("category_changed", newCategory: new DiscussionCategory { Name = "Q&A" }),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionAction>>(),
+            _webhookUri, "discussion",
+            MakeEvent("category_changed", changedFromCategory: "Q&A"));
 
         await action.RunAsync();
 

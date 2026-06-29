@@ -1,11 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -31,16 +32,9 @@ public class StarActionTests
         return (discord, cache, userMap);
     }
 
-    private static StarEvent MakeEvent(string action) => new()
-    {
-        Action = action,
-        Repository = new Repository
-        {
-            FullName = "test/repo",
-            HtmlUrl = new Uri("https://github.com/test/repo"),
-        },
-        Sender = new User { Login = "stargazer", Id = 1 },
-    };
+    private static StarEvent MakeEvent(string action) => JsonSerializer.Deserialize<StarEvent>(
+        $$"""{"action":"{{action}}","repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("stargazer",1)}}}""",
+        OctokitJsonOptions.Value)!;
 
     /// <summary>created → "Starred" というタイトルになる。</summary>
     [Fact]
@@ -49,8 +43,9 @@ public class StarActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         StarAction action = new(
-            discord.Object, _webhookUri, "star",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<StarAction>>(),
+            _webhookUri, "star", MakeEvent("created"));
 
         await action.RunAsync();
 
@@ -68,8 +63,9 @@ public class StarActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         StarAction action = new(
-            discord.Object, _webhookUri, "star",
-            MakeEvent("deleted"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<StarAction>>(),
+            _webhookUri, "star", MakeEvent("deleted"));
 
         await action.RunAsync();
 
@@ -92,8 +88,9 @@ public class StarActionTests
                .ReturnsAsync("msg-id");
 
         StarAction action = new(
-            discord.Object, _webhookUri, "star",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<StarAction>>(),
+            _webhookUri, "star", MakeEvent("created"));
 
         await action.RunAsync();
 
@@ -112,8 +109,9 @@ public class StarActionTests
                .ReturnsAsync("msg-id");
 
         StarAction action = new(
-            discord.Object, _webhookUri, "star",
-            MakeEvent("deleted"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<StarAction>>(),
+            _webhookUri, "star", MakeEvent("deleted"));
 
         await action.RunAsync();
 
@@ -127,8 +125,9 @@ public class StarActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         StarAction action = new(
-            discord.Object, _webhookUri, "star",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<StarAction>>(),
+            _webhookUri, "star", MakeEvent("created"));
 
         await action.RunAsync();
 

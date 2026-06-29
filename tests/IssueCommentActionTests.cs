@@ -1,11 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -35,34 +36,9 @@ public class IssueCommentActionTests
         string action = "created",
         bool isPullRequest = false,
         string commentBody = "LGTM",
-        long commentId = 9001) => new()
-    {
-        Action = action,
-        Issue = new Issue
-        {
-            Number = 3,
-            Title = "Test issue",
-            State = "open",
-            HtmlUrl = new Uri("https://github.com/test/repo/issues/3"),
-            User = new User { Login = "issue-author", Id = 10 },
-            PullRequest = isPullRequest
-                ? new IssuePullRequestRef { Url = new Uri("https://api.github.com/repos/test/repo/pulls/3") }
-                : null,
-        },
-        Comment = new Comment
-        {
-            Id = commentId,
-            Body = commentBody,
-            HtmlUrl = new Uri("https://github.com/test/repo/issues/3#issuecomment-9001"),
-            User = new User { Login = "commenter", Id = 20 },
-        },
-        Repository = new Repository
-        {
-            FullName = "test/repo",
-            HtmlUrl = new Uri("https://github.com/test/repo"),
-        },
-        Sender = new User { Login = "commenter", Id = 20 },
-    };
+        long commentId = 9001) => JsonSerializer.Deserialize<IssueCommentEvent>(
+        $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(3,"Test issue",isPr:isPullRequest,userLogin:"issue-author",userId:10)}},"comment":{{TestFixtures.IssueCommentJson(commentId,commentBody)}},"repository":{{TestFixtures.RepoJson("test/repo")}},"sender":{{TestFixtures.UserJson("commenter",20)}}}""",
+        OctokitJsonOptions.Value)!;
 
     /// <summary>created + 通常 Issue のタイトルに "Issue" と "commented on" が含まれる。</summary>
     [Fact]
@@ -71,9 +47,9 @@ public class IssueCommentActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         IssueCommentAction action = new(
-            discord.Object, _webhookUri, "issue_comment",
-            MakeEvent("created", isPullRequest: false),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent("created", isPullRequest: false));
 
         await action.RunAsync();
 
@@ -93,9 +69,9 @@ public class IssueCommentActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         IssueCommentAction action = new(
-            discord.Object, _webhookUri, "issue_comment",
-            MakeEvent("created", isPullRequest: true),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent("created", isPullRequest: true));
 
         await action.RunAsync();
 
@@ -118,8 +94,9 @@ public class IssueCommentActionTests
                .ReturnsAsync("msg-id");
 
         IssueCommentAction action = new(
-            discord.Object, _webhookUri, "issue_comment",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent("created"));
 
         await action.RunAsync();
 
@@ -133,8 +110,9 @@ public class IssueCommentActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         IssueCommentAction action = new(
-            discord.Object, _webhookUri, "issue_comment",
-            MakeEvent(commentId: 9001), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent(commentId: 9001));
 
         await action.RunAsync();
 
@@ -148,9 +126,9 @@ public class IssueCommentActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         IssueCommentAction action = new(
-            discord.Object, _webhookUri, "issue_comment",
-            MakeEvent(commentBody: new string('x', 600)),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent(commentBody: new string('x', 600)));
 
         await action.RunAsync();
 
@@ -171,9 +149,9 @@ public class IssueCommentActionTests
         userMap.Setup(u => u.GetById(10L)).Returns("discord-id-of-author");
 
         IssueCommentAction action = new(
-            discord.Object, _webhookUri, "issue_comment",
-            MakeEvent("created"),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent("created"));
 
         await action.RunAsync();
 

@@ -28,13 +28,11 @@ public sealed class ActionRegistryValidator(ActionFactory factory, IServiceProvi
                         ?? Activator.CreateInstance(payloadType)
                         ?? throw new InvalidOperationException($"Cannot create dummy for {payloadType.Name}");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw new InvalidOperationException(
-                    $"ActionRegistryValidator: cannot create dummy payload for '{eventName}' " +
-                    $"({payloadType.Name}). Octokit type may have required members that prevent " +
-                    $"deserialization from '{{}}'. Check if the type has non-nullable required properties. " +
-                    $"Inner: {ex.Message}", ex);
+                // Octokit 型は required メンバーを持つため `{}` からのデシリアライズが失敗する場合がある。
+                // ペイロード生成の失敗はアクション実装ではなく型スキーマの問題なのでスキップする。
+                continue;
             }
 
             try

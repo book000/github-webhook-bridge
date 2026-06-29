@@ -1,11 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -33,31 +34,12 @@ public class IssuesActionTests
 
     private static IssuesEvent MakeEvent(
         string action,
-        Label? label = null,
-        User? assignee = null,
-        Milestone? milestone = null,
-        string issueBody = "") => new()
-    {
-        Action = action,
-        Issue = new Issue
-        {
-            Number = 7,
-            Title = "Fix bug",
-            Body = issueBody.Length > 0 ? issueBody : null,
-            State = action == "closed" ? "closed" : "open",
-            HtmlUrl = new Uri("https://github.com/test/repo/issues/7"),
-            User = new User { Login = "opener", Id = 1 },
-        },
-        Repository = new Repository
-        {
-            FullName = "test/repo",
-            HtmlUrl = new Uri("https://github.com/test/repo"),
-        },
-        Sender = new User { Login = "sender", Id = 2 },
-        Label = label,
-        Assignee = assignee,
-        Milestone = milestone,
-    };
+        string? labelName = null,
+        string? assigneeLogin = null,
+        string? milestoneTitle = null,
+        string issueBody = "") => JsonSerializer.Deserialize<IssuesEvent>(
+        $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7,"Fix bug",action=="closed"?"closed":"open",body:issueBody.Length>0?issueBody:null,userLogin:"opener",userId:1)}},"repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender",2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin,3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}}""",
+        OctokitJsonOptions.Value)!;
 
     /// <summary>opened イベントはタイトルに "opened" と Issue 番号を含む。</summary>
     [Fact]
@@ -66,9 +48,9 @@ public class IssuesActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         IssuesAction action = new(
-            discord.Object, _webhookUri, "issues",
-            MakeEvent("opened"), cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("opened"));
 
         await action.RunAsync();
 
@@ -93,9 +75,9 @@ public class IssuesActionTests
                .ReturnsAsync("msg-id");
 
         IssuesAction action = new(
-            discord.Object, _webhookUri, "issues",
-            MakeEvent("opened"), cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("opened"));
 
         await action.RunAsync();
 
@@ -114,9 +96,9 @@ public class IssuesActionTests
                .ReturnsAsync("msg-id");
 
         IssuesAction action = new(
-            discord.Object, _webhookUri, "issues",
-            MakeEvent("closed"), cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("closed"));
 
         await action.RunAsync();
 
@@ -130,10 +112,9 @@ public class IssuesActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         IssuesAction action = new(
-            discord.Object, _webhookUri, "issues",
-            MakeEvent("labeled", label: new Label { Name = "bug" }),
-            cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("labeled", labelName: "bug"));
 
         await action.RunAsync();
 
@@ -153,15 +134,8 @@ public class IssuesActionTests
         (Mock<IDiscordClient>? discord1, Mock<IMessageCacheService>? cache1, Mock<IGitHubUserMapManager>? userMap1) = CreateMocks();
         (Mock<IDiscordClient>? discord2, Mock<IMessageCacheService>? cache2, Mock<IGitHubUserMapManager>? userMap2) = CreateMocks();
 
-        IssuesAction action1 = new(
-            discord1.Object, _webhookUri, "issues",
-            MakeEvent("labeled", label: new Label { Name = "bug" }),
-            cache1.Object, userMap1.Object, Mock.Of<ILogger>());
-
-        IssuesAction action2 = new(
-            discord2.Object, _webhookUri, "issues",
-            MakeEvent("unlabeled", label: new Label { Name = "bug" }),
-            cache2.Object, userMap2.Object, Mock.Of<ILogger>());
+        IssuesAction action1 = new(discord1.Object, cache1.Object, userMap1.Object, Mock.Of<ILogger<IssuesAction>>(), _webhookUri, "issues", MakeEvent("labeled", labelName: "bug"));
+        IssuesAction action2 = new(discord2.Object, cache2.Object, userMap2.Object, Mock.Of<ILogger<IssuesAction>>(), _webhookUri, "issues", MakeEvent("unlabeled", labelName: "bug"));
 
         await action1.RunAsync();
         await action2.RunAsync();
@@ -177,9 +151,9 @@ public class IssuesActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         IssuesAction action = new(
-            discord.Object, _webhookUri, "issues",
-            MakeEvent("opened"), cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("opened"));
 
         await action.RunAsync();
 
@@ -193,9 +167,9 @@ public class IssuesActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         IssuesAction action = new(
-            discord.Object, _webhookUri, "issues",
-            MakeEvent("opened", issueBody: new string('a', 600)),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("opened", issueBody: new string('a', 600)));
 
         await action.RunAsync();
 
@@ -213,9 +187,9 @@ public class IssuesActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         IssuesAction action = new(
-            discord.Object, _webhookUri, "issues",
-            MakeEvent("milestoned", milestone: new Milestone { Title = "v1.0", Number = 1 }),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("milestoned", milestoneTitle: "v1.0"));
 
         await action.RunAsync();
 

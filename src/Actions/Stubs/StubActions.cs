@@ -22,17 +22,17 @@ public abstract class StubAction(
     private readonly ILogger _logger = logger;
 
     // 残りの DI パラメーターはスタブ実装では使用しないが、
-    // ActivatorUtilities.CreateInstance による DI 解決パターンを統一するため受け取る。
-    // discard 変数に代入することでコンパイラの未使用警告を抑制する（pragma なし）。
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    // テストコードとのシグネチャ互換性を維持するため受け取る。
+    // サブクラスが将来これらを使用できるよう protected で公開する。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
     private readonly IDiscordClient _discord = discord;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
     private readonly Uri _webhookUrl = webhookUrl;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
     private readonly IMessageCacheService _cache = cache;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
     private readonly IGitHubUserMapManager _userMapManager = userMapManager;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
     private readonly JsonElement _body = body;
 
     /// <summary>スタブがハンドルするイベント名。</summary>

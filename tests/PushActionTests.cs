@@ -1,10 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
+using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -12,24 +14,18 @@ public class PushActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
 
-    private static PushEvent MakePushEvent(List<Commit>? commits = null) => new()
+    private static string MakeCommitJson(string id, string message, string authorName = "octocat", string url = "https://github.com/test/repo/commit/abc") =>
+        $$$"""{"id":"{{{id}}}","tree_id":"tree1","distinct":true,"message":"{{{message}}}","timestamp":"2024-01-01T00:00:00Z","url":"{{{url}}}","author":{"name":"{{{authorName}}}","email":"u@x.com","username":"{{{authorName}}}"},"committer":{"name":"{{{authorName}}}","email":"u@x.com","username":"{{{authorName}}}"},"added":[],"removed":[],"modified":[]}""";
+
+    private static PushEvent MakePushEvent(string[] commitJsons = null!)
     {
-        Ref = "refs/heads/main",
-        Before = "aaa",
-        After = "bbb",
-        Compare = "https://github.com/test/repo/compare/aaa...bbb",
-        Repository = new Repository { FullName = "test/repo", HtmlUrl = new Uri("https://github.com/test/repo") },
-        Sender = new User { Login = "octocat", Id = 1, HtmlUrl = new Uri("https://github.com/octocat") },
-        Commits = commits ?? [
-            new Commit
-            {
-                Id = "abcdef1234567890",
-                Message = "feat: add new feature",
-                Url = new Uri("https://github.com/test/repo/commit/abcdef1"),
-                Author = new CommitAuthor { Name = "octocat" },
-            },
-        ],
-    };
+        var commitsJson = string.Join(",", commitJsons ?? [MakeCommitJson("abcdef1234567890", "feat: add new feature")]);
+        var repoJson = TestFixtures.RepoJson("test/repo", "https://github.com/test/repo");
+        var senderJson = TestFixtures.UserJson("octocat", 1, "https://github.com/octocat");
+        return JsonSerializer.Deserialize<PushEvent>(
+            $$$"""{"ref":"refs/heads/main","before":"aaa","after":"bbb","compare":"https://github.com","commits":[{{{commitsJson}}}],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":"octocat@example.com"}}""",
+            OctokitJsonOptions.Value)!;
+    }
 
     private static (Mock<IDiscordClient>, Mock<IMessageCacheService>, Mock<IGitHubUserMapManager>) CreateMocks()
     {
@@ -53,9 +49,9 @@ public class PushActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PushAction action = new(
-            discord.Object, _webhookUri, "push",
-            MakePushEvent(), cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PushAction>>(),
+            _webhookUri, "push", MakePushEvent());
 
         await action.RunAsync();
 
@@ -75,14 +71,20 @@ public class PushActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
+        // 空のコミットリストで PushEvent を作成する
+        var repoJson = TestFixtures.RepoJson("test/repo", "https://github.com/test/repo");
+        var senderJson = TestFixtures.UserJson();
+        var emptyPush = JsonSerializer.Deserialize<PushEvent>(
+            $$$"""{"ref":"refs/heads/main","before":"aaa","after":"bbb","compare":"https://github.com","commits":[],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":""}}""",
+            OctokitJsonOptions.Value)!;
+
         PushAction action = new(
-            discord.Object, _webhookUri, "push",
-            MakePushEvent(commits: []), cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PushAction>>(),
+            _webhookUri, "push", emptyPush);
 
         await action.RunAsync();
 
-        // コミットがない場合はメッセージを送信しない
         discord.Verify(
             d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()),
             Times.Never);
@@ -93,13 +95,17 @@ public class PushActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        PushEvent pushEvent = MakePushEvent();
-        pushEvent.Ref = "refs/heads/feature/my-branch";
+        var commitJson = MakeCommitJson("abc1", "test");
+        var repoJson = TestFixtures.RepoJson("test/repo");
+        var senderJson = TestFixtures.UserJson();
+        var push = JsonSerializer.Deserialize<PushEvent>(
+            $$$"""{"ref":"refs/heads/feature/my-branch","before":"aaa","after":"bbb","compare":"https://github.com","commits":[{{{commitJson}}}],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":""}}""",
+            OctokitJsonOptions.Value)!;
 
         PushAction action = new(
-            discord.Object, _webhookUri, "push",
-            pushEvent, cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PushAction>>(),
+            _webhookUri, "push", push);
 
         await action.RunAsync();
 
@@ -117,15 +123,11 @@ public class PushActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         string longMessage = new('a', 60); // 60 文字 > 50 文字上限
-        List<Commit> commits =
-        [
-            new() { Id = "abc1234", Message = longMessage, Url = new Uri("https://x.example.com/"), Author = new CommitAuthor { Name = "user" } },
-        ];
-
         PushAction action = new(
-            discord.Object, _webhookUri, "push",
-            MakePushEvent(commits), cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PushAction>>(),
+            _webhookUri, "push",
+            MakePushEvent([MakeCommitJson("abc1234", longMessage)]));
 
         await action.RunAsync();
 
@@ -142,15 +144,11 @@ public class PushActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        List<Commit> commits =
-        [
-            new() { Id = "abc1234", Message = "first line\nsecond line\nthird", Url = new Uri("https://x.example.com/"), Author = new CommitAuthor { Name = "user" } },
-        ];
-
         PushAction action = new(
-            discord.Object, _webhookUri, "push",
-            MakePushEvent(commits), cache.Object, userMap.Object,
-            Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PushAction>>(),
+            _webhookUri, "push",
+            MakePushEvent([MakeCommitJson("abc1234", "first line\\nsecond line\\nthird")]));
 
         await action.RunAsync();
 

@@ -1,6 +1,8 @@
 using GitHubWebhookBridge.Actions;
+using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -9,10 +11,17 @@ public class ActionFactoryTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
 
+    /// <summary>テスト用 DI コンテナ。ActionFactory が必要とするサービスをモックで登録する。</summary>
     internal static IServiceProvider BuildServiceProvider()
     {
         var services = new ServiceCollection();
         services.AddLogging();
+
+        // ActionFactory / ActionRegistryValidator が DI から解決するサービスをモックで登録する
+        services.AddSingleton(Mock.Of<IDiscordClient>());
+        services.AddSingleton(Mock.Of<IMessageCacheService>());
+        services.AddSingleton(Mock.Of<IGitHubUserMapManager>());
+
         return services.BuildServiceProvider();
     }
 
@@ -40,17 +49,23 @@ public class ActionFactoryTests
     }
 
     [Fact]
-    public void ActionRegistryValidator_ValidateAll_DoesNotThrowForEmptyRegistry()
+    public void ActionRegistryValidator_ValidateAll_DoesNotThrow()
     {
         var sp = BuildServiceProvider();
         var factory = new ActionFactory(sp);
         var validator = new ActionRegistryValidator(factory, sp);
 
-        // Task 8 前はレジストリが空なので例外なし
+        // Octokit 型は required メンバーを持つためペイロード生成をスキップするが例外は発生しない
         var ex = Record.Exception(() => validator.ValidateAll());
         Assert.Null(ex);
     }
 
-    // ── Task 8 完了後に Registry.Count == 12 を検証するテストをここに追加する ──
-    // Task 8 Step 7c 参照。
+    /// <summary>Task 8 完了: 12 アクションがすべて登録されていることを検証する。</summary>
+    [Fact]
+    public void Registry_ContainsTwelveActions()
+    {
+        var factory = new ActionFactory(BuildServiceProvider());
+
+        Assert.Equal(12, factory.Registry.Count);
+    }
 }

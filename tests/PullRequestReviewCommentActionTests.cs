@@ -1,11 +1,12 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
-using GitHubWebhookBridge.Models.GitHubWebhooks;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -33,37 +34,25 @@ public class PullRequestReviewCommentActionTests
 
     private static PullRequestReviewCommentEvent MakeEvent(
         string action = "created",
-        string? diffHunk = null,
         string? path = null,
-        long commentId = 5001) => new()
-    {
-        Action = action,
-        Comment = new ReviewComment
-        {
-            Id = commentId,
-            Body = "Looks good!",
-            HtmlUrl = new Uri("https://github.com/test/repo/pull/10#discussion_r5001"),
-            User = new User { Login = "reviewer", Id = 30 },
-            DiffHunk = diffHunk,
-            Path = path,
-        },
-        PullRequest = new PullRequest
-        {
-            Number = 10,
-            Title = "My PR",
-            State = "open",
-            HtmlUrl = new Uri("https://github.com/test/repo/pull/10"),
-            User = new User { Login = "pr-author", Id = 20 },
-            Head = new PullRequestRef { Ref = "feature", Sha = "abc" },
-            Base = new PullRequestRef { Ref = "main", Sha = "def" },
-        },
-        Repository = new Repository
-        {
-            FullName = "test/repo",
-            HtmlUrl = new Uri("https://github.com/test/repo"),
-        },
-        Sender = new User { Login = "reviewer", Id = 30 },
-    };
+        long commentId = 5001) =>
+        JsonSerializer.Deserialize<PullRequestReviewCommentEvent>(
+            $$"""
+            {
+                "action":"{{action}}",
+                "comment":{{TestFixtures.ReviewCommentJson(
+                    commentId, "Looks good!",
+                    path ?? "src/file.cs",
+                    $"https://github.com/test/repo/pull/10#discussion_r{commentId}")}},
+                "pull_request":{{TestFixtures.SimplePrJson(
+                    10, "My PR",
+                    "https://github.com/test/repo/pull/10",
+                    "pr-author", 20)}},
+                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer",30)}}
+            }
+            """,
+            OctokitJsonOptions.Value)!;
 
     /// <summary>created イベントのタイトルに "commented on" と PR 番号が含まれる。</summary>
     [Fact]
@@ -72,8 +61,9 @@ public class PullRequestReviewCommentActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PullRequestReviewCommentAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_comment",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewCommentAction>>(),
+            _webhookUri, "pull_request_review_comment", MakeEvent("created"));
 
         await action.RunAsync();
 
@@ -98,24 +88,25 @@ public class PullRequestReviewCommentActionTests
                .ReturnsAsync("msg-id");
 
         PullRequestReviewCommentAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_comment",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewCommentAction>>(),
+            _webhookUri, "pull_request_review_comment", MakeEvent("created"));
 
         await action.RunAsync();
 
         Assert.Equal(EmbedColors.PullRequestReviewCommentCreated, capturedColor);
     }
 
-    /// <summary>diff_hunk が設定されると Embed フィールドに diff ブロックが追加される。</summary>
+    /// <summary>TestFixtures.ReviewCommentJson は常に diff_hunk を含むため diff フィールドが追加される。</summary>
     [Fact]
     public async Task RunAsyncWithDiffHunkAddsDiffField()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PullRequestReviewCommentAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_comment",
-            MakeEvent(diffHunk: "@@ -1,3 +1,4 @@ line"),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewCommentAction>>(),
+            _webhookUri, "pull_request_review_comment", MakeEvent());
 
         await action.RunAsync();
 
@@ -135,9 +126,9 @@ public class PullRequestReviewCommentActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PullRequestReviewCommentAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_comment",
-            MakeEvent(path: "src/main.cs"),
-            cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewCommentAction>>(),
+            _webhookUri, "pull_request_review_comment", MakeEvent(path: "src/main.cs"));
 
         await action.RunAsync();
 
@@ -157,8 +148,9 @@ public class PullRequestReviewCommentActionTests
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
         PullRequestReviewCommentAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_comment",
-            MakeEvent(commentId: 5001), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewCommentAction>>(),
+            _webhookUri, "pull_request_review_comment", MakeEvent(commentId: 5001));
 
         await action.RunAsync();
 
@@ -174,8 +166,9 @@ public class PullRequestReviewCommentActionTests
         userMap.Setup(u => u.GetById(20L)).Returns("discord-pr-author-id");
 
         PullRequestReviewCommentAction action = new(
-            discord.Object, _webhookUri, "pull_request_review_comment",
-            MakeEvent("created"), cache.Object, userMap.Object, Mock.Of<ILogger>());
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewCommentAction>>(),
+            _webhookUri, "pull_request_review_comment", MakeEvent("created"));
 
         await action.RunAsync();
 
