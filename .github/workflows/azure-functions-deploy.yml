@@ -44,7 +44,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish
-        run: dotnet publish --configuration Release --no-restore --output ${{ env.PUBLISH_OUTPUT_DIR }}
+        run: dotnet publish src/GitHubWebhookBridge.csproj --configuration Release --no-restore --output ${{ env.PUBLISH_OUTPUT_DIR }}
 
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1

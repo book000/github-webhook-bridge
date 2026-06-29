@@ -23,7 +23,7 @@ Stack: C# / .NET 10, Azure Functions v4 Isolated, Azure Table + Blob Storage, xU
 dotnet restore                    # restore packages
 dotnet build -c Release           # build (mirrors CI)
 dotnet test -c Release            # run all tests (mirrors CI)
-func start                        # run Azure Functions locally
+cd src && func start              # run Azure Functions locally
 
 # Model regeneration (OpenAPI → C# models)
 pwsh scripts/generate-models.ps1  # or: dotnet tool run nswag
