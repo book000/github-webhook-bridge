@@ -24,9 +24,6 @@ dotnet restore                    # restore packages
 dotnet build -c Release           # build (mirrors CI)
 dotnet test -c Release            # run all tests (mirrors CI)
 cd src && func start              # run Azure Functions locally
-
-# Model regeneration (OpenAPI → C# models)
-pwsh scripts/generate-models.ps1  # or: dotnet tool run nswag
 ```
 
 ---
@@ -50,7 +47,7 @@ pwsh scripts/generate-models.ps1  # or: dotnet tool run nswag
 - Managers: `MuteManager` / `IMuteManager`, `GitHubUserMapManager` / `IGitHubUserMapManager`.
 - Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`.
 - Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`.
-- `Models/GitHubWebhooks/Generated/` — generated reference files, **excluded from compilation** (`.csproj` `<Compile Remove>`). The models actually compiled and used are the hand-written files in `Models/GitHubWebhooks/*.cs`; do not wire up the `.g.cs` files.
+- GitHub Webhook payload types come from `Octokit.Webhooks` NuGet — do not create hand-written payload models.
 
 ---
 
@@ -58,9 +55,8 @@ pwsh scripts/generate-models.ps1  # or: dotnet tool run nswag
 
 1. Create a file in `Actions/Impl/` (follow an existing file such as `PushAction.cs`).
 2. Extend `BaseAction<TYourEventModel>` and override `RunAsync()` (no parameters; payload available via constructor-injected field).
-3. Register the event name in `Actions/ActionFactory.cs` (switch expression).
-4. Delete the matching stub class from `Actions/Stubs/StubActions.cs`.
-5. Add tests under `tests/GitHubWebhookBridge.Tests/`.
+3. Annotate the class with `[GitHubEvent(WebhookEventType.X)]` — `ActionFactory` auto-registers it via reflection at startup.
+4. Add tests under `tests/GitHubWebhookBridge.Tests/`.
 
 ---
 
