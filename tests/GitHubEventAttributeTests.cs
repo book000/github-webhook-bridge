@@ -5,17 +5,10 @@ namespace GitHubWebhookBridge.Tests;
 public class GitHubEventAttributeTests
 {
     [Fact]
-    public void Level1_StoresEventName()
+    public void StoresEventName()
     {
         var attr = new GitHubEventAttribute("pull_request");
         Assert.Equal("pull_request", attr.EventName);
-    }
-
-    [Fact]
-    public void Level2_EventNameIsNull()
-    {
-        var attr = new GitHubEventAttribute();
-        Assert.Null(attr.EventName);
     }
 
     [Fact]

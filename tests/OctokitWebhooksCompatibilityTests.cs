@@ -47,12 +47,10 @@ public class OctokitWebhooksCompatibilityTests
     }
 
     /// <summary>
-    /// イベント型からイベント名を取得する。
-    /// Level2Available: false のため、型名 → snake_case 変換を使用する。
+    /// イベント型からイベント名を取得する（型名 → snake_case 変換）。
     /// </summary>
     private static string GetEventName(Type t)
     {
-        // Level 2 不可の場合: 型名 → snake_case 変換
         var name = t.Name;
         if (name.EndsWith("Event", StringComparison.Ordinal))
             name = name[..^5];

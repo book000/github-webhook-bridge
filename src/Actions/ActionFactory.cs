@@ -45,19 +45,13 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
 
     private static string ResolveEventName(Type actionType, Type payloadType)
     {
-        // --- Level 2 (scratch/octokit-api-surface.md の Level2Available が true の場合) ---
-        // var octokitAttr = payloadType.GetCustomAttribute<LEVEL2_ATTRIBUTE_TYPE>();
-        // if (octokitAttr != null) return octokitAttr.LEVEL2_PROPERTY_NAME;
-
-        // --- Level 1 ---
         var attr = actionType.GetCustomAttribute<GitHubEventAttribute>()!;
         if (attr.EventName != null)
             return attr.EventName;
 
         throw new InvalidOperationException(
-            $"Cannot resolve event name for {actionType.Name}: " +
-            $"payload type {payloadType.Name} has no Level 2 Octokit attribute and " +
-            $"[GitHubEvent] was declared without an explicit name.");
+            $"Cannot resolve event name for {actionType.Name} (payload: {payloadType.Name}): " +
+            $"[GitHubEvent] requires an explicit event name.");
     }
 
     /// <inheritdoc/>
