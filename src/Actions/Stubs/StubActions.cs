@@ -9,34 +9,33 @@ namespace GitHubWebhookBridge.Actions.Stubs;
 /// スタブ Action の共通基底クラス。未実装イベントのプレースホルダー。
 /// <see cref="BaseAction{TEvent}"/> を使わず <see cref="IAction"/> を直接実装する。
 /// </summary>
-public abstract class StubAction(
-    IDiscordClient discord,
-    Uri webhookUrl,
-    string eventName,
-    JsonElement body,
-    IMessageCacheService cache,
-    IGitHubUserMapManager userMapManager,
-    ILogger logger) : IAction
+public abstract class StubAction : IAction
 {
     // ログ出力に使用するロガー。RunAsync でスローする前のデバッグ用途に保持する。
-    private readonly ILogger _logger = logger;
-
-    // 残りの DI パラメーターはスタブ実装では使用しないが、
-    // テストコードとのシグネチャ互換性を維持するため受け取る。
-    // サブクラスが将来これらを使用できるよう protected で公開する。
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
-    private readonly IDiscordClient _discord = discord;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
-    private readonly Uri _webhookUrl = webhookUrl;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
-    private readonly IMessageCacheService _cache = cache;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
-    private readonly IGitHubUserMapManager _userMapManager = userMapManager;
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0052", Justification = "スタブシグネチャ互換性のためフィールドを保持する。")]
-    private readonly JsonElement _body = body;
+    private readonly ILogger _logger;
 
     /// <summary>スタブがハンドルするイベント名。</summary>
-    protected string EventName { get; } = eventName;
+    protected string EventName { get; }
+
+    protected StubAction(
+        IDiscordClient discord,
+        Uri webhookUrl,
+        string eventName,
+        JsonElement body,
+        IMessageCacheService cache,
+        IGitHubUserMapManager userMapManager,
+        ILogger logger)
+    {
+        // スタブは discord / webhookUrl / body / cache / userMapManager を使用しない。
+        // シグネチャ互換性のためパラメーターを受け取るが、値は捨てる。
+        _ = discord;
+        _ = webhookUrl;
+        _ = body;
+        _ = cache;
+        _ = userMapManager;
+        EventName = eventName;
+        _logger = logger;
+    }
 
     /// <summary>未実装のイベントハンドラー。常に <see cref="NotImplementedException"/> をスローする。</summary>
     /// <returns>このメソッドは常に例外をスローするため、値を返さない。</returns>
