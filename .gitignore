@@ -27,5 +27,5 @@ local.settings.json
 packages.lock.json
 
 # Test / coverage output
-TestResults/
+TestResults*/
 StrykerOutput/
