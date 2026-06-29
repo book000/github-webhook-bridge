@@ -36,6 +36,20 @@ jobs:
           --settings tests/coverlet.runsettings
           --collect:"XPlat Code Coverage" --results-directory TestResults
 
+      - name: 📏 Check coverage threshold (80% line)
+        shell: pwsh
+        run: |
+          $file = Get-ChildItem -Path TestResults -Filter coverage.cobertura.xml -Recurse | Select-Object -First 1
+          if (-not $file) { Write-Error "coverage.cobertura.xml not found"; exit 1 }
+          [xml]$xml = Get-Content $file.FullName
+          $rate  = [double]$xml.coverage.'line-rate'
+          $pct   = [math]::Round($rate * 100, 1)
+          Write-Host "Line coverage: $pct%"
+          if ($rate -lt 0.80) {
+            Write-Error "Coverage $pct% is below the required 80% threshold"
+            exit 1
+          }
+
       - name: 📊 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
