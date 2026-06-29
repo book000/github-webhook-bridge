@@ -36,6 +36,7 @@ The current implementation has three structural pain points:
 POST /
   WebhookFunction
     SignatureValidator         — unchanged (HMAC-SHA256 on raw body bytes)
+    body read as raw string    — JsonElement parse removed; raw string passed to factory
     ActionFactory.GetAction()  — switch removed; reflection registry instead
       [GitHubEvent] attribute lookup
         hit  → instantiate matching Action via ActivatorUtilities
@@ -55,9 +56,11 @@ POST /
 ### NuGet Changes
 
 ```xml
-<!-- added -->
-<PackageReference Include="Octokit.Webhooks" Version="*" />
+<!-- added — pin to a specific version at implementation time; managed by Renovate thereafter -->
+<PackageReference Include="Octokit.Webhooks" Version="X.Y.Z" />
 ```
+
+`Version="*"` must not be used: the project enables `RestorePackagesWithLockFile`, and a floating reference defeats both the lock file and Renovate's version tracking.
 
 ---
 
@@ -65,54 +68,68 @@ POST /
 
 ### `[GitHubEvent]` Attribute
 
-Maps an action class to its GitHub event name. No string literal is used at the call site — the event name is derived from the Octokit.Webhooks model type's own attribute (Level 2). If Octokit does not expose that attribute, fall back to `WebhookEventType` constants (Level 1).
+Maps an action class to its GitHub event name.
 
 ```csharp
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class GitHubEventAttribute(string eventName) : Attribute
+public sealed class GitHubEventAttribute : Attribute
 {
-    public string EventName { get; } = eventName;
+    // Level 1: explicit constant (always available)
+    public GitHubEventAttribute(string eventName) => EventName = eventName;
+
+    // Level 2: no-arg — event name derived from the payload type's Octokit attribute
+    public GitHubEventAttribute() => EventName = null;
+
+    public string? EventName { get; }
 }
 ```
 
-**Level 2 usage (preferred):**
+**Level 2 usage (preferred — verify at implementation time):**
 
 ```csharp
-// No string literal — event name derived from PullRequestWebhookEvent's Octokit attribute
+// Event name is derived from PullRequestWebhookEvent's own [WebhookEventType] attribute
 [GitHubEvent]
 public sealed class PullRequestAction : BaseAction<PullRequestWebhookEvent> { }
 ```
 
-**Level 1 fallback (if Octokit does not expose attribute):**
+**Level 1 fallback (if Octokit.Webhooks does not expose a resolvable attribute on model types):**
 
 ```csharp
-[GitHubEvent(WebhookEventType.PullRequest)]   // compile-time constant, not a raw string
+[GitHubEvent(WebhookEventType.PullRequest)]  // compile-time constant, not a raw string
 public sealed class PullRequestAction : BaseAction<PullRequestWebhookEvent> { }
 ```
 
-The chosen level is decided at implementation time by inspecting the Octokit.Webhooks API surface.
+`ResolveEventName()` in `ActionFactory` tries Level 2 first; if the Octokit attribute is absent it uses Level 1's explicit string. If neither is available the registry throws at startup.
+
+**Event name casing**: GitHub always sends lowercase snake_case event names (e.g. `pull_request`). `[GitHubEvent]` values must be lowercase; `ActionFactory` stores and looks up keys as-is without case folding. A wrong-case key in the attribute silently misses every request — the startup validator (see below) exists to catch this.
 
 ---
 
 ### `ActionFactory` — Reflection Registry
 
-Built once at startup as a `FrozenDictionary`. No switch expression.
+Built once at startup as a `FrozenDictionary`. No switch expression.  
+Uses `typeof(ActionFactory).Assembly` instead of `Assembly.GetExecutingAssembly()` to be safe in the Azure Functions Isolated Worker process model.
 
 ```csharp
-public class ActionFactory(IServiceProvider sp) : IActionFactory
+public class ActionFactory : IActionFactory
 {
-    private readonly FrozenDictionary<string, (Type Action, Type Payload)> _registry =
-        BuildRegistry();
+    private readonly IServiceProvider _sp;
+    private readonly FrozenDictionary<string, (Type Action, Type Payload)> _registry;
+
+    public ActionFactory(IServiceProvider sp)
+    {
+        _sp = sp;
+        _registry = BuildRegistry();
+    }
 
     private static FrozenDictionary<string, (Type, Type)> BuildRegistry()
     {
-        var entries = Assembly.GetExecutingAssembly().GetTypes()
+        var entries = typeof(ActionFactory).Assembly.GetTypes()
             .Where(t => t.GetCustomAttribute<GitHubEventAttribute>() != null && !t.IsAbstract)
             .Select(t =>
             {
-                var attr   = t.GetCustomAttribute<GitHubEventAttribute>()!;
-                var key    = ResolveEventName(attr, t);   // Level 2 or Level 1
                 var payload = GetPayloadType(t);
+                var key     = ResolveEventName(t, payload);
                 return (key, (t, payload));
             });
 
@@ -122,47 +139,134 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
     public IAction GetAction(string eventName, string rawJson, Uri webhookUrl)
     {
         if (!_registry.TryGetValue(eventName, out var entry))
-            return ActivatorUtilities.CreateInstance<UnhandledAction>(sp, webhookUrl, eventName);
+            return ActivatorUtilities.CreateInstance<UnhandledAction>(_sp, webhookUrl, eventName);
 
         var payload = JsonSerializer.Deserialize(rawJson, entry.Payload, OctokitJsonOptions.Value)
                       ?? throw new InvalidOperationException($"Deserialization failed: {entry.Payload.Name}");
 
-        return (IAction)ActivatorUtilities.CreateInstance(sp, entry.Action, webhookUrl, payload);
+        // Each Action constructor signature: (Uri webhookUrl, TPayload payload, <DI services...>)
+        // ActivatorUtilities resolves DI services from _sp and fills runtime args from the params array.
+        // Uri and the specific TPayload type are unique in the constructor → no ambiguity.
+        return (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, webhookUrl, payload);
     }
 
-    // Walk base types to extract T from BaseAction<T>
+    // Walk BaseAction<T> specifically to extract T; throw if not found.
     private static Type GetPayloadType(Type t)
     {
         var b = t.BaseType;
-        while (b is { IsGenericType: false }) b = b.BaseType;
-        return b?.GetGenericArguments()[0] ?? typeof(JsonElement);
+        while (b != null && !(b.IsGenericType && b.GetGenericTypeDefinition() == typeof(BaseAction<>)))
+            b = b.BaseType;
+        if (b == null)
+            throw new InvalidOperationException(
+                $"{t.Name} must inherit from BaseAction<T> to be registered via [GitHubEvent].");
+        return b.GetGenericArguments()[0];
+    }
+
+    // Level 2: derive from Octokit attribute on the payload type.
+    // Level 1: use the explicit string on [GitHubEvent].
+    // If neither is available, fail fast at startup.
+    private static string ResolveEventName(Type actionType, Type payloadType)
+    {
+        // Level 2 — inspect at implementation time for the exact attribute name Octokit uses
+        var octokitAttr = payloadType.GetCustomAttribute<WebhookEventAttribute>();
+        if (octokitAttr != null)
+            return octokitAttr.EventName;
+
+        // Level 1
+        var explicitName = actionType.GetCustomAttribute<GitHubEventAttribute>()!.EventName;
+        if (explicitName != null)
+            return explicitName;
+
+        throw new InvalidOperationException(
+            $"Cannot resolve event name for {actionType.Name}: " +
+            $"payload type {payloadType.Name} has no Octokit [WebhookEventAttribute] " +
+            $"and [GitHubEvent] was declared without an explicit name.");
     }
 }
 ```
 
-**Startup validation**: at `Program.cs` startup, `ActionFactory` is instantiated eagerly and all registry entries are validated. If Level 2 attribute resolution fails for any registered type, the application fails fast with a descriptive error rather than breaking at the first request.
+---
+
+### Startup Validation
+
+`ActionFactory.BuildRegistry()` runs in the constructor, so a misconfigured action (bad inheritance, unresolvable event name) throws at startup rather than at the first request.
+
+For validating that `ActivatorUtilities.CreateInstance` can actually resolve every action type, a dedicated `IHostedService` is added:
+
+```csharp
+internal sealed class ActionRegistryValidator(IActionFactory factory) : IHostedService
+{
+    public Task StartAsync(CancellationToken _)
+    {
+        // Cast to the concrete type to access the registry without exposing it on the interface
+        ((ActionFactory)factory).ValidateAll();
+        return Task.CompletedTask;
+    }
+    public Task StopAsync(CancellationToken _) => Task.CompletedTask;
+}
+
+// In ActionFactory:
+internal void ValidateAll()
+{
+    foreach (var (key, (actionType, payloadType)) in _registry)
+    {
+        // Attempt dry-run instantiation with a dummy payload to verify DI resolution.
+        // Uses a sentinel Uri and a default-constructed payload (or JsonSerializer default).
+        var dummy = JsonSerializer.Deserialize(
+            JsonSerializer.Serialize(new { }), payloadType, OctokitJsonOptions.Value)!;
+        ActivatorUtilities.CreateInstance(_sp, actionType, new Uri("https://example.com"), dummy);
+    }
+}
+```
+
+Registered in `Program.cs`:
+
+```csharp
+builder.Services.AddHostedService<ActionRegistryValidator>();
+```
+
+---
+
+### `WebhookFunction` — Body Reading Changes
+
+**Before**: body read as bytes → raw string for HMAC → parsed to `JsonElement` → passed to factory.  
+**After**: body read as bytes → raw string for HMAC → raw string passed to factory directly.
+
+The mute check (step 8 in the current function) reads `sender.id` from `JsonElement`. With `JsonElement` removed, this is replaced by a lightweight `Utf8JsonReader` or a minimal `JsonSerializer.Deserialize` into an anonymous/shared record that captures only `sender`:
+
+```csharp
+// Minimal shared record used only for mute pre-check in WebhookFunction
+internal sealed record WebhookSender(long Id);
+internal sealed record WebhookEnvelope(WebhookSender? Sender);
+
+// In WebhookFunction:
+var envelope = JsonSerializer.Deserialize<WebhookEnvelope>(rawBody, OctokitJsonOptions.Value);
+var senderId = envelope?.Sender?.Id;
+```
+
+This keeps `WebhookFunction` independent of the full Octokit model hierarchy for the mute check.
 
 ---
 
 ### `JsonSerializerOptions` Strategy
 
-Octokit.Webhooks may provide its own `JsonSerializerOptions` with custom converters (enum string policies, etc.). The factory uses Octokit's options as the base and layers on leniency settings:
+Octokit.Webhooks may provide its own `JsonSerializerOptions` with custom converters (enum string policies, etc.). The factory uses Octokit's options as the base and layers on leniency settings. The instance is made read-only after construction to prevent accidental mutation across tests.
 
 ```csharp
 internal static class OctokitJsonOptions
 {
-    // Determined at implementation time — use Octokit's options if exposed,
-    // otherwise build from scratch with matching settings.
     public static readonly JsonSerializerOptions Value = BuildOptions();
 
     private static JsonSerializerOptions BuildOptions()
     {
-        // Start from Octokit's options (if accessible) or new JsonSerializerOptions()
-        var opts = /* OctokitWebhooksDefaults.SerializerOptions ?? */ new JsonSerializerOptions();
+        // Start from Octokit's options if exposed; otherwise start from scratch.
+        // Determine the correct base at implementation time.
+        var opts = /* OctokitWebhooksDefaults.SerializerOptions?.Clone() ?? */ new JsonSerializerOptions();
         opts.PropertyNameCaseInsensitive   = true;
         opts.AllowTrailingCommas           = true;
         opts.ReadCommentHandling           = JsonCommentHandling.Skip;
         opts.UnmappedMemberHandling        = JsonUnmappedMemberHandling.Skip;
+        opts.MakeReadOnly();
         return opts;
     }
 }
@@ -175,12 +279,10 @@ internal static class OctokitJsonOptions
 ```csharp
 public interface IActionFactory
 {
-    // Raw JSON string instead of JsonElement — deserialization happens inside the factory
+    // Raw JSON string instead of JsonElement — deserialization happens inside the factory.
     IAction GetAction(string eventName, string rawJson, Uri webhookUrl);
 }
 ```
-
-`WebhookFunction.cs` passes the raw request body string (already read for signature verification) directly to the factory. No intermediate `JsonElement` parsing.
 
 ---
 
@@ -201,25 +303,33 @@ All internal logic (5-minute cache edit, mute check, Discord send) is unchanged.
 
 ### `UnhandledAction`
 
-Single class, no `[GitHubEvent]` attribute — never entered into the registry.
+Does not extend `BaseAction<T>` — it has no payload to process and requires no Octokit type. Only the minimal DI dependencies needed to return a 406 are injected.
 
 ```csharp
-public sealed class UnhandledAction(Uri webhookUrl, string eventName, ...) : IAction
+// No [GitHubEvent] attribute — never entered into the registry.
+public sealed class UnhandledAction(ILogger<UnhandledAction> logger) : IAction
 {
+    // webhookUrl and eventName are passed as runtime args by ActionFactory
+    private string _eventName = string.Empty;
+
+    internal void SetContext(string eventName) => _eventName = eventName;
+
     public Task RunAsync() =>
-        throw new NotImplementedException($"Event '{eventName}' is not implemented.");
+        throw new NotImplementedException($"Event '{_eventName}' is not implemented.");
     // WebhookFunction catches NotImplementedException → 406 (existing behavior unchanged)
 }
 ```
+
+> **Note**: The exact constructor shape for `UnhandledAction` (how `eventName` is threaded in) may be adjusted at implementation time depending on how `ActivatorUtilities` resolves parameters. A simple alternative is a factory method rather than `ActivatorUtilities` for the unhandled case.
 
 ---
 
 ### Adding a New Action (post-redesign workflow)
 
 1. Create a file in `Actions/Impl/`.
-2. Attach `[GitHubEvent]` (with event name constant or auto-derived).
+2. Attach `[GitHubEvent]` (Level 2 preferred, Level 1 as fallback).
 3. Extend `BaseAction<OctokitEventModel>` and implement `RunAsync()`.
-4. Done — ActionFactory, StubActions, and IActionFactory require no changes.
+4. Done — `ActionFactory`, `StubActions`, and `IActionFactory` require no changes.
 
 ---
 
@@ -230,7 +340,7 @@ public sealed class UnhandledAction(Uri webhookUrl, string eventName, ...) : IAc
 Detects new or removed top-level event types after a Renovate update.
 
 ```csharp
-// KnownEventTypes is the single source of truth — update it when the test fails
+// KnownEventTypes is the single source of truth — update it when the test fails.
 private static readonly IReadOnlySet<string> KnownEventTypes = new HashSet<string> { ... };
 
 [Fact]
@@ -241,21 +351,29 @@ public void AllOctokitEventTypesMustBeInKnownList()
         .Select(t => t.GetCustomAttribute<WebhookEventAttribute>()!.EventName)
         .ToHashSet();
 
-    Assert.Empty(actual.Except(KnownEventTypes));   // Octokit added new events
-    Assert.Empty(KnownEventTypes.Except(actual));   // Octokit removed events
+    var added   = actual.Except(KnownEventTypes).ToHashSet();
+    var removed = KnownEventTypes.Except(actual).ToHashSet();
+
+    Assert.True(added.Count   == 0, $"Octokit.Webhooks added new events: {Join(added)}. Implement or add to KnownEventTypes.");
+    Assert.True(removed.Count == 0, $"Octokit.Webhooks removed events: {Join(removed)}. Remove from KnownEventTypes.");
+
+    static string Join(IEnumerable<string> s) => string.Join(", ", s.OrderBy(x => x));
 }
 ```
 
 ### `OctokitPayloadSchemaSnapshotTests` — Implemented Model Drift
 
-Detects property additions, removals, type changes, `[JsonPropertyName]` changes, and enum value changes within the payload types used by **implemented** actions. Snapshot is committed to the repository.
+Detects property additions, removals, type changes, `[JsonPropertyName]` changes, and enum value changes within the payload types used by **implemented** actions. The snapshot file is committed to the repository.
+
+**Snapshot path**: `tests/GitHubWebhookBridge.Tests/Snapshots/octokit-payload-schema.json`.  
+Resolved at runtime via `Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "Snapshots", "octokit-payload-schema.json")` so it is stable across `dotnet test` invocations regardless of working directory.
 
 ```csharp
 [Fact]
 public void ImplementedPayloadTypes_MustMatchSnapshot()
 {
     var payloadTypes = GetImplementedPayloadTypes();   // from [GitHubEvent] classes
-    var actual = Serialize(BuildSchema(payloadTypes)); // recursive property + enum walk
+    var actual       = JsonSerializer.Serialize(BuildSchema(payloadTypes), PrettyOptions);
 
     if (Environment.GetEnvironmentVariable("UPDATE_SNAPSHOTS") == "1")
     {
@@ -263,20 +381,25 @@ public void ImplementedPayloadTypes_MustMatchSnapshot()
         return;
     }
 
-    Assert.Equal(File.ReadAllText(SnapshotPath), actual);
+    var expected = File.ReadAllText(SnapshotPath);
+    Assert.True(expected == actual,
+        $"Octokit.Webhooks model schema has changed. Run UPDATE_SNAPSHOTS=1 dotnet test, " +
+        $"review the diff in {SnapshotPath}, then commit.");
 }
 
-// BuildSchema recurses into nested types (cycle-safe via visited set)
-// and includes:
-//   - Property name, CLR type, JsonPropertyName
-//   - Enum members (name + underlying value) for any enum-typed property
+// BuildSchema:
+//   - Recurses into nested types (cycle-safe via visited HashSet<Type>)
+//   - Captures: property CLR name, JsonPropertyName, CLR type name
+//   - For enum-typed properties: captures all member names and underlying int values
+private static Dictionary<string, object> BuildSchema(IEnumerable<Type> types) { ... }
 ```
 
 **Snapshot update workflow** (when Renovate updates Octokit.Webhooks and the test fails):
 
 ```bash
 UPDATE_SNAPSHOTS=1 dotnet test --filter OctokitPayloadSchemaSnapshotTests
-# Review the diff, then commit the updated snapshot file
+# Review the diff in tests/.../Snapshots/octokit-payload-schema.json
+# Commit the updated snapshot
 ```
 
 ### Existing Tests
@@ -291,10 +414,14 @@ UPDATE_SNAPSHOTS=1 dotnet test --filter OctokitPayloadSchemaSnapshotTests
 
 | Risk | Mitigation |
 |---|---|
-| Octokit.Webhooks does not expose `[WebhookEvent]` attribute on model classes | Fall back to Level 1 (`WebhookEventType` constants); decide at implementation time |
-| Octokit.Webhooks custom JSON converters conflict with our `JsonSerializerOptions` | Adopt Octokit's options as the base; add only additive leniency settings |
-| `ActivatorUtilities.CreateInstance` parameter resolution fails at runtime | Validate all registry entries at startup; fail fast with descriptive error |
-| Snapshot test file conflicts on concurrent PR branches | Treat snapshot conflict as a merge conflict requiring manual resolution |
+| Octokit.Webhooks does not expose a `[WebhookEvent]`-style attribute on model classes | Fall back to Level 1 (`WebhookEventType` constants); `ResolveEventName()` handles both paths |
+| Octokit.Webhooks custom JSON converters conflict with our `JsonSerializerOptions` | Adopt Octokit's options as the base (clone if API allows); add only additive leniency settings on top |
+| `ActivatorUtilities.CreateInstance` parameter resolution fails at runtime | `Uri` and the specific `TPayload` type are unique in each constructor — no ambiguity. `ActionRegistryValidator` performs a dry-run of every entry at startup |
+| `ActivatorUtilities` `string`-typed parameters collide | `UnhandledAction` is not instantiated via `ActivatorUtilities` if a simpler factory method is used; for normal actions `string` params are avoided in constructors (use typed Octokit models instead) |
+| Snapshot file conflicts on concurrent PR branches | Treat as a merge conflict requiring manual resolution; prefer rebasing over merging |
+| `[GitHubEvent]` declared with wrong-case event name | `ActionRegistryValidator` catches missing keys at startup; case-sensitive `FrozenDictionary` is intentional — all GitHub event names are lowercase |
+| Renovate updates Octokit.Webhooks and new events are silently ignored | `OctokitWebhooksCompatibilityTests` fails CI with the list of new event names |
+| Renovate updates Octokit.Webhooks and implemented model properties change | `OctokitPayloadSchemaSnapshotTests` fails CI with a path to the diff |
 
 ---
 
