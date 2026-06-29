@@ -181,4 +181,64 @@ public class PullRequestActionTests
                     m.Content.Contains("<@discord-user-id-300>"))),
             Times.Once);
     }
+
+    /// <summary>review_requested と review_request_removed は共通のキーサフィックス "review_requested" を使用する。</summary>
+    [Fact]
+    public async Task RunAsyncReviewRequestedAndRemovedShareCacheKeySuffix()
+    {
+        (Mock<IDiscordClient>? discord1, Mock<IMessageCacheService>? cache1, Mock<IGitHubUserMapManager>? userMap1) = CreateMocks();
+        (Mock<IDiscordClient>? discord2, Mock<IMessageCacheService>? cache2, Mock<IGitHubUserMapManager>? userMap2) = CreateMocks();
+
+        User reviewer = new() { Login = "reviewer-user", Id = 300 };
+
+        PullRequestEvent prEventRequested = MakePrEvent("review_requested");
+        prEventRequested.RequestedReviewer = reviewer;
+
+        PullRequestEvent prEventRemoved = MakePrEvent("review_request_removed");
+        prEventRemoved.RequestedReviewer = reviewer;
+
+        PullRequestAction action1 = new(
+            discord1.Object, _webhookUri, "pull_request",
+            prEventRequested, cache1.Object, userMap1.Object,
+            Mock.Of<ILogger>());
+
+        PullRequestAction action2 = new(
+            discord2.Object, _webhookUri, "pull_request",
+            prEventRemoved, cache2.Object, userMap2.Object,
+            Mock.Of<ILogger>());
+
+        await action1.RunAsync();
+        await action2.RunAsync();
+
+        // 両方とも "review_requested" サフィックスのキーを使う
+        cache1.Verify(c => c.GetAsync(_webhookUri, "test/repo#42-review_requested"), Times.Once);
+        cache2.Verify(c => c.GetAsync(_webhookUri, "test/repo#42-review_requested"), Times.Once);
+    }
+
+    /// <summary>Draft PR で review_requested が来てもメンションを送信しない。</summary>
+    [Fact]
+    public async Task RunAsyncDoesNotSendMentionForReviewRequestedOnDraftPr()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        User reviewer = new() { Login = "reviewer-user", Id = 300 };
+        PullRequestEvent prEvent = MakePrEvent("review_requested", draft: true);
+        prEvent.RequestedReviewer = reviewer;
+
+        userMap.Setup(u => u.GetById(300L)).Returns("discord-user-id-300");
+
+        PullRequestAction action = new(
+            discord.Object, _webhookUri, "pull_request",
+            prEvent, cache.Object, userMap.Object,
+            Mock.Of<ILogger>());
+
+        await action.RunAsync();
+
+        // Draft PR ではメンションなし（Content が null か空）
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => m.Content == null || m.Content == string.Empty)),
+            Times.Once);
+    }
 }

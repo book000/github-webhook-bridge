@@ -164,6 +164,8 @@ public class PullRequestReviewActionTests
         // NOTE: これは既知のバグ (B2) です。
         // COMMENTED レビューが PullRequestReviewApproved (緑) で表示されてしまう。
         // 本来は専用の色（例: EmbedColors.PullRequestReviewCommented）を使うべき。
+        // TODO (B2 修正時): このテストを削除し、EmbedColors.PullRequestReviewCommented 色を
+        // 検証する新しいテストに差し替えること。
         var color = await RunAndCaptureColor(discord, cache, userMap, "submitted", "COMMENTED");
 
         // バグの現在挙動を文書化: COMMENTED でも Approved 色が使われる

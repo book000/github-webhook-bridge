@@ -108,7 +108,7 @@ public class MonkeyTests
 
         var result = InvokeSanitizeRowKey(longKey);
 
-        Assert.True(result.Length <= 512);
+        Assert.Equal(512, result.Length);
     }
 
     /// <summary>Azure Table Storage 禁止文字（/ \ # ?）は URL エンコードされる。</summary>
