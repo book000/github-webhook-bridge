@@ -5,28 +5,15 @@ Stack: C# / .NET 10, Azure Functions v4 Isolated, Azure Table + Blob Storage, xU
 
 ---
 
-## Critical Rules
+## Code Rules
 
-**Language**
-
-- Conversation: Japanese. Half-width space between Japanese and alphanumeric characters.
 - Code comments and XML doc (`///`): Japanese. Error / log messages: English.
-- Commit message descriptions: Japanese (Conventional Commits format).
-- Branch names: Conventional Branch short-form (`feat`, `fix`, `docs`, …).
-
-**Code discipline**
-
 - Never use `#pragma warning disable` to silence analyzer/type errors — fix the code.
-  Exception: test-only conventions belong in the `[tests/**/*.cs]` block in `.editorconfig`.
+  Test-only suppressions belong in the `[tests/**/*.cs]` block in `.editorconfig`.
 - Never instantiate `HttpClient` directly — inject `IHttpClientFactory` via DI.
 - Send Discord messages via `IDiscordClient` / `DiscordClient`; never call Discord APIs directly.
 - Use `IMessageCacheService` / `MessageCacheService` for Azure Table Storage — no raw Azure SDK calls.
 - Configuration is read via `IConfiguration` (DI-injected), not `Environment.GetEnvironmentVariable`.
-
-**Repository hygiene**
-
-- Do not add commits to Renovate-created PRs.
-- `master` branch is protected — branch before committing.
 
 ---
 
@@ -51,7 +38,8 @@ pwsh scripts/generate-models.ps1  # or: dotnet tool run nswag
 1. `Functions/WebhookFunction.cs` receives the HTTP POST.
 2. `Utils/SignatureValidator.cs` verifies HMAC-SHA256 (`x-hub-signature-256`, timing-safe, lowercases hex).
 3. `x-github-event` header selects the handler via `Actions/ActionFactory.cs`.
-4. `ActionFactory` instantiates the matching `BaseAction<TEvent>` subclass from `Actions/Impl/` (payload passed via constructor; override `RunAsync()` — no parameters).
+4. `ActionFactory` instantiates the matching `BaseAction<TEvent>` subclass from `Actions/Impl/`
+   (payload passed via constructor; override `RunAsync()` — no parameters).
 5. `Managers/MuteManager.cs` checks mute rules (include / exclude / all modes).
 6. `Services/DiscordClient.cs` sends the formatted Discord Embed.
 
@@ -63,7 +51,7 @@ pwsh scripts/generate-models.ps1  # or: dotnet tool run nswag
 - Managers: `MuteManager` / `IMuteManager`, `GitHubUserMapManager` / `IGitHubUserMapManager`.
 - Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`.
 - Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`.
-- Models in `Models/` are generated from OpenAPI via `scripts/generate-models.ps1`.
+- Models in `Models/GitHubWebhooks/Generated/` are generated via `scripts/generate-models.ps1` — do not edit by hand.
 
 ---
 
@@ -103,23 +91,13 @@ All keys are read via `IConfiguration`. Required keys must be set in `local.sett
 
 - Framework: xUnit, project at `tests/GitHubWebhookBridge.Tests/`.
 - Add tests for any new behaviour; `dotnet test -c Release` must stay green.
-- Analyzer/style rules (including CA1707, IDE1006, CA1308 suppressions for tests) live in `.editorconfig` — do not duplicate them in code suppressions.
+- Analyzer/style rules (including CA1707, IDE1006, CA1308 suppressions for tests) live in `.editorconfig`.
 
 ---
 
-## Boundaries & Gotchas
+## Reference
 
-- **12 implemented** + **46 stub** event types (stubs return HTTP 406). Total: 58 GitHub Webhook event types handled.
-- CI: `.github/workflows/dotnet-ci.yml` (windows-latest, .NET 10.0.x — restore → `build -c Release` → `test`).
-- Deploy: `.github/workflows/azure-functions-deploy.yml` (push to `master`, OIDC, `dotnet publish` → `Azure/functions-action`).
-- Docs to keep in sync: `README.md` and XML doc comments (`///`) on all public classes and methods.
-
----
-
-## Checklist
-
-**Before commit**: `dotnet build -c Release` passes, `dotnet test -c Release` passes, no secrets, Conventional Commit (description in Japanese).
-
-**Before PR**: user has requested it, no conflicts with `master`.
-
-**After PR**: see global `workflow.md` for CI, Copilot review, and monitoring steps.
+- **12 implemented** + **46 stub** event types (stubs return HTTP 406).
+- CI: `.github/workflows/dotnet-ci.yml` (windows-latest, .NET 10.0.x).
+- Deploy: `.github/workflows/azure-functions-deploy.yml` (push to `master`, OIDC → `Azure/functions-action`).
+- Keep in sync on any change: `README.md` and XML doc comments (`///`) on public classes/methods.
