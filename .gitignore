@@ -2,7 +2,6 @@
 bin/
 obj/
 dist/
-*.tsbuildinfo
 
 # Logs
 *.log
@@ -15,16 +14,13 @@ dist/
 .env.local
 
 # Coverage
-coverage/
 *.lcov
-.nyc_output
 
 # Data directory (user-managed JSON files)
 data/
 
 # Azure Functions
 local.settings.json
-packages.lock.json
 
 # Test / coverage output
 TestResults*/

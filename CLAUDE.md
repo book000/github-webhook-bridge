@@ -94,7 +94,7 @@ All keys are read via `IConfiguration`. Required keys must be set in `local.sett
 
 ## Reference
 
-- **12 implemented** + **46 stub** event types (stubs return HTTP 406).
+- **12 implemented** event types; unhandled events return HTTP 406 via `UnhandledAction`.
 - CI: `.github/workflows/dotnet-ci.yml` (windows-latest, .NET 10.0.x).
 - Deploy: `.github/workflows/azure-functions-deploy.yml` (push to `master`, OIDC → `Azure/functions-action`).
 - Keep in sync on any change: `README.md` and XML doc comments (`///`) on public classes/methods.

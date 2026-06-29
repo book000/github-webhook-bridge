@@ -4,7 +4,7 @@
 
 - 目的: GitHub の Webhook を受信し、Discord に通知メッセージを送信する
 - 主な機能:
-  - 59 種類の GitHub Webhook イベントタイプをサポート（12 種類実装済み、47 種類はスタブ HTTP 406）
+  - 12 種類の GitHub Webhook イベントタイプを実装済み（その他のイベントは `UnhandledAction` が HTTP 406 を返す）
   - Discord Embed メッセージのフォーマット
   - ユーザーミュート機能（include/exclude/all モード）
   - GitHub から Discord へのユーザーマッピング
@@ -118,7 +118,7 @@ func start
 │   ├── BaseAction.cs               # 抽象基底クラス
 │   ├── ActionFactory.cs            # イベント→Action マッピング
 │   ├── Impl/                       # 実装済み 12 Action
-│   └── Stubs/                      # スタブ 47 Action（HTTP 406）
+│   └── UnhandledAction.cs          # 未実装イベントへの HTTP 406 フォールバック
 ├── Managers/
 │   ├── MuteManager.cs              # ミュートルール管理
 │   └── GitHubUserMapManager.cs     # ユーザーマッピング管理
@@ -156,22 +156,17 @@ func start
    // Actions/Impl/PushAction.cs （既存実装の例）
    namespace GitHubWebhookBridge.Actions.Impl;
 
-   public class PushAction(Uri webhookUrl, IDiscordClient discordClient,
-       IMessageCacheService messageCache, ILogger<PushAction> logger)
-       : BaseAction(webhookUrl, discordClient, messageCache, logger)
+   [GitHubEvent(WebhookEventType.Push)]
+   public class PushAction(IDiscordClient discord, Uri webhookUrl, string eventName,
+       PushEvent @event, IMessageCacheService cache, IGitHubUserMapManager userMap,
+       ILogger<PushAction> logger)
+       : BaseAction<PushEvent>(discord, webhookUrl, eventName, @event, cache, userMap, logger)
    {
-       public override async Task<IActionResult> ExecuteAsync(JsonElement payload) { ... }
+       public override async Task RunAsync() { ... }
    }
    ```
 
-2. **`Actions/ActionFactory.cs` の switch 文に追加**:
-
-   ```csharp
-   "push" => new PushAction(webhookUrl, discordClient, messageCache,
-       loggerFactory.CreateLogger<PushAction>()),
-   ```
-
-3. **`Actions/Stubs/StubActions.cs` からスタブを削除する**
+2. **`[GitHubEvent]` 属性を付与するだけで `ActionFactory` が起動時にリフレクションで自動登録する**（switch 文への手動追加は不要）
 
 ### Discord 連携パターン
 
@@ -184,7 +179,7 @@ func start
 - **dotnet CLI を使用**: `dotnet restore`、`dotnet build`、`dotnet test`
 - **Azure Functions v4 Isolated**: `Functions/WebhookFunction.cs` が HTTP トリガー
 - **エンドポイント**: `POST /GitHubWebhook`
-- **59 種類の GitHub Webhook イベントタイプ**: 12 種実装済み、47 種スタブ（HTTP 406）
+- **GitHub Webhook イベントタイプ**: 12 種実装済み、未実装イベントは `UnhandledAction` が HTTP 406 を返す
 - **Renovate**: 依存関係を自動更新（base-public config）
 - **CI/CD**:
   - `dotnet-ci.yml`: メイン CI（ビルド・テスト）

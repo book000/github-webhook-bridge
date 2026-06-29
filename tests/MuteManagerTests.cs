@@ -67,7 +67,6 @@ public class MuteManagerTests
     public void IsMutedTypeIncludeWithActionsListNullActionFalse()
     {
         // Include モード: actions リストが非 null だが action パラメータが null → ミュートされない
-        // TypeScript 版 mute.ts line ~72 相当: if (action === null) return false
         MuteManager mgr = CreateFromJson(
             """[{"userId":1,"type":"include","events":[{"eventName":"issues","actions":["opened"]}]}]""");
         Assert.False(mgr.IsMuted(1, "issues", null));
