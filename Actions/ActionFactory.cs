@@ -104,6 +104,6 @@ public class ActionFactory(
             "workflow_job" => new WorkflowJobAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<WorkflowJobAction>()),
             "workflow_run" => new WorkflowRunAction(_discordClient, webhookUrl, eventName, body, _cache, _userMapManager, Logger<WorkflowRunAction>()),
 
-            _ => throw new NotSupportedException($"Event '{eventName}' is not supported"),
+            _ => throw new NotImplementedException($"Event '{eventName}' is not supported"),
         };
 }

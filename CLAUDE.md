@@ -9,7 +9,7 @@ Stack: C# / .NET 10, Azure Functions v4 Isolated, Azure Table + Blob Storage, xU
 
 - Code comments and XML doc (`///`): Japanese. Error / log messages: English.
 - Never use `#pragma warning disable` to silence analyzer/type errors — fix the code.
-  Test-only suppressions belong in the `[tests/**/*.cs]` block in `.editorconfig`.
+  (Exception: test-only suppressions go in the `[tests/**/*.cs]` block in `.editorconfig`, never in `#pragma`.)
 - Never instantiate `HttpClient` directly — inject `IHttpClientFactory` via DI.
 - Send Discord messages via `IDiscordClient` / `DiscordClient`; never call Discord APIs directly.
 - Use `IMessageCacheService` / `MessageCacheService` for Azure Table Storage — no raw Azure SDK calls.
@@ -41,17 +41,16 @@ pwsh scripts/generate-models.ps1  # or: dotnet tool run nswag
 4. `ActionFactory` instantiates the matching `BaseAction<TEvent>` subclass from `Actions/Impl/`
    (payload passed via constructor; override `RunAsync()` — no parameters).
 5. `Managers/MuteManager.cs` checks mute rules (include / exclude / all modes).
-6. `Services/DiscordClient.cs` sends the formatted Discord Embed.
+6. `BaseAction.SendMessageAsync(key, message)` sends via `DiscordClient`; if the same key was sent within the last 5 minutes, it **edits** the existing Discord message instead. On edit failure the cache entry is deleted and a new message is sent. Every message has `SuppressNotifications` forced on.
 
 **Key patterns**
 
 - `BaseAction<TEvent>` — generic abstract base; `abstract Task RunAsync()`.
-- `IAction.RunAsync()` — the interface contract.
 - `BaseManager<TData>(IConfiguration, IHttpClientFactory) : IDisposable` — load priority: **Blob > HTTPS URL > local file**.
 - Managers: `MuteManager` / `IMuteManager`, `GitHubUserMapManager` / `IGitHubUserMapManager`.
 - Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`.
 - Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`.
-- Models in `Models/GitHubWebhooks/Generated/` are generated via `scripts/generate-models.ps1` — do not edit by hand.
+- `Models/GitHubWebhooks/Generated/` — generated reference files, **excluded from compilation** (`.csproj` `<Compile Remove>`). The models actually compiled and used are the hand-written files in `Models/GitHubWebhooks/*.cs`; do not wire up the `.g.cs` files.
 
 ---
 
@@ -81,6 +80,7 @@ All keys are read via `IConfiguration`. Required keys must be set in `local.sett
 | `MUTES_FILE_PATH` | — | Local file path for mute rules |
 | `MUTES_FILE_URL` | — | HTTPS URL for mute rules |
 | `MUTES_BLOB` | — | Azure Blob URI for mute rules |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | — | Azure Monitor / Application Insights telemetry (OpenTelemetry exporter) |
 
 **SSRF guard**: `?url=` query parameter is restricted to prefixes  
 `https://discord.com/api/webhooks/` and `https://discordapp.com/api/webhooks/` (`IsAllowedWebhookUrl`).
@@ -92,6 +92,7 @@ All keys are read via `IConfiguration`. Required keys must be set in `local.sett
 - Framework: xUnit, project at `tests/GitHubWebhookBridge.Tests/`.
 - Add tests for any new behaviour; `dotnet test -c Release` must stay green.
 - Analyzer/style rules (including CA1707, IDE1006, CA1308 suppressions for tests) live in `.editorconfig`.
+- Tests access internal members via `InternalsVisibleTo`; use `SetDataForTest` / `LoadForTest` on managers as test seams — do not make members public to enable testing.
 
 ---
 

@@ -1,7 +1,9 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
+using GitHubWebhookBridge.Actions.Stubs;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Models.GitHubWebhooks;
@@ -217,6 +219,27 @@ public class MonkeyTests
         Exception? ex = Record.Exception(() => mgr.IsMuted(1, "", null));
 
         Assert.Null(ex);
+    }
+
+    // ---- StubAction 境界値テスト ----
+
+    /// <summary>スタブアクションの RunAsync は NotImplementedException をスローする（HTTP 406 経路の担保）。</summary>
+    [Fact]
+    public async Task StubActionRunAsyncThrowsNotImplementedException()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateActionMocks();
+
+        // 任意の具象スタブを代表として使用
+        var action = new CheckRunAction(
+            discord.Object,
+            new Uri("https://discord.com/api/webhooks/1/x"),
+            "check_run",
+            JsonDocument.Parse("{}").RootElement,
+            cache.Object,
+            userMap.Object,
+            Mock.Of<ILogger>());
+
+        await Assert.ThrowsAsync<NotImplementedException>(() => action.RunAsync());
     }
 
     // ---- PullRequestAction 境界値テスト ----
