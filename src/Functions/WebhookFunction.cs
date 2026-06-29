@@ -25,12 +25,6 @@ public class WebhookFunction(
     private readonly IConfiguration _config = config;
     private readonly ILogger<WebhookFunction> _logger = logger;
 
-    // JSON デシリアライズオプション（キャッシュして再利用）
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        ReadCommentHandling = JsonCommentHandling.Skip,
-    };
-
     /// <summary>
     /// GitHub Webhook リクエストを受け取り、署名検証・ミュートチェックを経て Discord に通知する。
     /// </summary>
@@ -119,31 +113,40 @@ public class WebhookFunction(
                 return new ObjectResult(new { message = "Disabled event" }) { StatusCode = 202 };
         }
 
-        // 7. JSON バリデーション（不正 JSON は 400 を返す）
-        var rawJson = System.Text.Encoding.UTF8.GetString(rawBody);
-        JsonElement body;
+        // 7. JSON 妥当性を維持しつつ raw string として保持する（400 レスポンスを維持するため）
+        string rawJson;
         try
         {
-            body = JsonSerializer.Deserialize<JsonElement>(rawBody, _jsonOptions);
+            rawJson = System.Text.Encoding.UTF8.GetString(rawBody);
+            // 軽量バリデーション: JSON オブジェクトとして開始しているか確認する
+            using var doc = JsonDocument.Parse(rawJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                return new BadRequestObjectResult(new { message = "Bad Request: JSON body must be an object" });
         }
         catch (JsonException)
         {
             return new BadRequestObjectResult(new { message = "Bad Request: Invalid JSON body" });
         }
 
-        // 8. 送信者ミュートチェック
+        // 8. ミュートチェック（Id が null の場合はスキップ — 非数値 id への安全なフォールバック）
         await _muteManager.EnsureLoadedAsync();
-        if (body.TryGetProperty("sender", out JsonElement sender)
-            && sender.TryGetProperty("id", out JsonElement senderId)
-            && senderId.ValueKind == JsonValueKind.Number)
+        WebhookEnvelope? envelope = null;
+        try
         {
-            var actionProp = body.TryGetProperty("action", out JsonElement actionElement) ? actionElement.GetString() : null;
-            if (_muteManager.IsMuted(senderId.GetInt64(), eventName, actionProp))
+            envelope = JsonSerializer.Deserialize<WebhookEnvelope>(rawJson, OctokitJsonOptions.Value);
+        }
+        catch (JsonException)
+        {
+            // デシリアライズ失敗時はミュートチェックをスキップして処理を続行する
+        }
+        if (envelope?.Sender?.Id is { } senderId)
+        {
+            if (_muteManager.IsMuted(senderId, eventName, envelope.Action))
                 return new OkObjectResult(new { message = "Muted user" });
         }
 
         // 9-10. アクションハンドラーへディスパッチ
-        IAction? actionHandler;
+        IAction actionHandler;
         try
         {
             actionHandler = _actionFactory.GetAction(eventName, rawJson, webhookUrl);
@@ -152,13 +155,6 @@ public class WebhookFunction(
         {
             // 未実装イベント（スタブ以外の未知のイベント）は 400 を返す
             _logger.LogWarning("Unknown event type: {EventName}", eventName);
-            return new BadRequestObjectResult(new { message = $"Bad Request: Unknown event '{eventName}'" });
-        }
-
-        // アクションが null の場合（未知のイベント）は 400 を返す
-        if (actionHandler is null)
-        {
-            _logger.LogWarning("ActionFactory returned null for event: {EventName}", eventName);
             return new BadRequestObjectResult(new { message = $"Bad Request: Unknown event '{eventName}'" });
         }
 

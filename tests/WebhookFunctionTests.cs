@@ -337,6 +337,27 @@ public class WebhookFunctionTests
         Assert.IsType<OkResult>(result);
     }
 
+    /// <summary>sender フィールドが存在しない場合はミュートチェックをスキップして正常処理する。</summary>
+    [Fact]
+    public async Task RunAsync_SenderFieldMissing_SkipsMuteCheckAndContinues()
+    {
+        Mock<IActionFactory> factory = new();
+        Mock<IAction> action = new();
+        action.Setup(a => a.RunAsync()).Returns(Task.CompletedTask);
+        factory.Setup(f => f.GetAction(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Uri>()))
+               .Returns(action.Object);
+
+        HttpRequest req = BuildRequest(
+            body: """{"action":"opened"}""",
+            secret: TestSecret,
+            eventName: "push");
+
+        WebhookFunction fn = CreateFunction(factoryMock: factory);
+        IActionResult result = await fn.RunAsync(req);
+
+        Assert.IsType<OkResult>(result);
+    }
+
     // ---- JSON / ディスパッチテスト ----
 
     /// <summary>不正な JSON ボディは 400 を返す。</summary>
