@@ -21,8 +21,6 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
 
-    # NOTE: jobs.<job_id>.environment.url では secrets コンテキストが使用できず、
-    #       ワークフロー自体が invalid 判定されジョブが起動しなくなるため指定しない
     environment: production
 
     permissions:
