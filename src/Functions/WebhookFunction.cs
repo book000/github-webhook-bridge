@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -33,14 +34,17 @@ public class WebhookFunction(
     /// <c>Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore</c> の ASP.NET Core 統合は
     /// Windows Consumption プランで「Timed out waiting for the function start call」という既知の
     /// 未解決バグ（Azure/azure-functions-dotnet-worker#3348）を抱えているため使用しない。
-    /// <see cref="HttpRequestData"/> / <see cref="HttpResponseData"/> ベースの標準 HTTP トリガーを使用する
+    /// <see cref="HttpRequestData"/> / <see cref="HttpResponseData"/> ベースの標準 HTTP トリガーを使用する。
+    /// <c>Route = ""</c>（空文字）は <c>routePrefix = ""</c> と組み合わせても関数名 (<c>/githubwebhook</c>)
+    /// にフォールバックしてしまう既知の挙動のため使用しない。正規表現で空セグメントにマッチさせることで
+    /// 文字通りのルートパス（<c>/</c>）にバインドする
     /// </remarks>
     /// <param name="req">Azure Functions が受け取った HTTP リクエスト</param>
     /// <returns>処理結果を表す <see cref="HttpResponseData"/></returns>
     [Function("GitHubWebhook")]
     [SuppressMessage("Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Webhook エントリーポイントは必然的に多くの型を参照する")]
     public async Task<HttpResponseData> RunAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "/")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "{x:regex(^$)?}")] HttpRequestData req)
     {
         ArgumentNullException.ThrowIfNull(req);
 
@@ -181,11 +185,12 @@ public class WebhookFunction(
         }
     }
 
-    /// <summary>Content-Length ヘッダーの値を取得する。未設定または非数値の場合は <see langword="false"/> を返す</summary>
+    /// <summary>Content-Length ヘッダーの値を取得する。未設定・非数値・負数の場合は <see langword="false"/> を返す</summary>
     private static bool TryGetContentLength(HttpRequestData req, out long length)
     {
         if (req.Headers.TryGetValues("Content-Length", out IEnumerable<string>? values)
-            && long.TryParse(values.FirstOrDefault(), out var parsed))
+            && long.TryParse(values.FirstOrDefault(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            && parsed >= 0)
         {
             length = parsed;
             return true;

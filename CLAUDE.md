@@ -30,7 +30,8 @@ cd src && func start              # run Azure Functions locally
 
 ## Architecture
 
-**Request flow** — `POST /` (function named `GitHubWebhook`, `Route = "/"`, `routePrefix = ""` in `host.json`):
+**Request flow** — `POST /` (function named `GitHubWebhook`, `Route = "{x:regex(^$)?}"`, `routePrefix = ""` in `host.json` —
+`Route = ""` falls back to the function name as the path segment, a known Azure Functions behavior, so an empty-match regex constraint is used instead to bind literal root):
 
 1. `Functions/WebhookFunction.cs` receives the HTTP POST.
 2. `Utils/SignatureValidator.cs` verifies HMAC-SHA256 (`x-hub-signature-256`, timing-safe, lowercases hex).
