@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <!--
+            除外対象:
+            - Actions.Stubs.*          : HTTP 406 を返すだけのスタブ実装 (46 クラス)
+            - Models.*                 : JSON デシリアライズ用 POCO (テスト対象外)
+            - Program                  : Azure Functions エントリーポイント (生成コード)
+            - DirectFunctionExecutor / FunctionExecutor* / GeneratedFunctionMetadata* :
+                                         AF ワーカー生成コード (テスト対象外)
+            - DiscordClient            : Discord HTTP API 実装 (外部 API 依存)
+            - MessageCacheService      : Azure Table Storage 実装 (Azure SDK 依存)
+            - MessageCacheEntity       : Table Storage エンティティ POCO
+            - TableStorageInitializer  : Azure Table 初期化 IHostedService
+            - BaseManager              : Blob / HTTPS / ローカルファイル読み込み基底 (Azure SDK 依存)
+            - GitHubUserMapManager     : ユーザーマップ読み込み (BaseManager サブクラス)
+          -->
+          <Exclude>
+            [GitHubWebhookBridge]GitHubWebhookBridge.Actions.Stubs.*,
+            [GitHubWebhookBridge]GitHubWebhookBridge.Models.*,
+            [GitHubWebhookBridge]Program,
+            [GitHubWebhookBridge]GitHubWebhookBridge.DirectFunctionExecutor*,
+            [GitHubWebhookBridge]GitHubWebhookBridge.FunctionExecutorHostBuilderExtensions,
+            [GitHubWebhookBridge]GitHubWebhookBridge.FunctionExecutorAutoStartup,
+            [GitHubWebhookBridge]GitHubWebhookBridge.GeneratedFunctionMetadataProvider,
+            [GitHubWebhookBridge]GitHubWebhookBridge.WorkerHostBuilderFunctionMetadataProviderExtension,
+            [GitHubWebhookBridge]GitHubWebhookBridge.FunctionMetadataProviderAutoStartup,
+            [GitHubWebhookBridge]GitHubWebhookBridge.Services.DiscordClient,
+            [GitHubWebhookBridge]GitHubWebhookBridge.Services.MessageCacheService,
+            [GitHubWebhookBridge]GitHubWebhookBridge.Services.MessageCacheEntity,
+            [GitHubWebhookBridge]GitHubWebhookBridge.Services.TableStorageInitializer,
+            [GitHubWebhookBridge]GitHubWebhookBridge.Managers.BaseManager*,
+            [GitHubWebhookBridge]GitHubWebhookBridge.Managers.GitHubUserMapManager*
+          </Exclude>
+          <!-- ライン カバレッジ 80% を下限とする -->
+          <Threshold>80</Threshold>
+          <ThresholdType>line</ThresholdType>
+          <ThresholdStat>minimum</ThresholdStat>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

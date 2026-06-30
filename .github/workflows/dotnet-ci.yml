@@ -1,0 +1,102 @@
+name: .NET CI
+
+on:
+  push:
+  pull_request:
+    branches:
+      - master
+
+permissions: {}
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: 🛎 Checkout
+        uses: actions/checkout@v7
+
+      - name: 🏗 Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: 📦 Restore dependencies
+        run: dotnet restore
+
+      - name: 🔨 Build
+        run: dotnet build --no-restore -c Release
+
+      - name: 🧪 Run tests with coverage
+        run: >
+          dotnet test --no-build -c Release
+          --logger "trx"
+          --settings tests/coverlet.runsettings
+          --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: 📏 Check coverage threshold (80% line)
+        shell: pwsh
+        run: |
+          $file = Get-ChildItem -Path TestResults -Filter coverage.cobertura.xml -Recurse | Select-Object -First 1
+          if (-not $file) { Write-Error "coverage.cobertura.xml not found"; exit 1 }
+          [xml]$xml = Get-Content $file.FullName
+          $rate  = [double]$xml.coverage.'line-rate'
+          $pct   = [math]::Round($rate * 100, 1)
+          Write-Host "Line coverage: $pct%"
+          if ($rate -lt 0.80) {
+            Write-Error "Coverage $pct% is below the required 80% threshold"
+            exit 1
+          }
+
+      - name: 📊 Upload test results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          retention-days: 7
+
+      - name: 📈 Upload coverage report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage-report
+          path: TestResults/**/coverage.cobertura.xml
+          retention-days: 7
+
+  mutation-test:
+    runs-on: windows-latest
+    # mutation test は master への PR 時のみ実行（時間がかかるため push ごとには実行しない）
+    if: github.event_name == 'pull_request' && github.base_ref == 'master'
+    permissions:
+      contents: read
+    steps:
+      - name: 🛎 Checkout
+        uses: actions/checkout@v7
+
+      - name: 🏗 Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: 📦 Restore dependencies
+        run: dotnet restore
+
+      - name: 🔨 Build
+        run: dotnet build --no-restore -c Release
+
+      - name: 🔧 Restore dotnet tools
+        run: dotnet tool restore
+
+      - name: 🧬 Run Stryker mutation tests
+        run: dotnet dotnet-stryker --config-file stryker-config.json
+
+      - name: 📊 Upload Stryker report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: stryker-report
+          path: StrykerOutput/**/reports/**
+          retention-days: 14
