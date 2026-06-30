@@ -38,8 +38,8 @@ builder.Services
     .Services
     // Discord クライアント
     .AddSingleton<IDiscordClient, DiscordClient>()
-    // MessageCacheService を具象型とインターフェースの両方で登録
-    // （TableStorageInitializer が具象型を直接注入できるようにするため）
+    // MessageCacheService をクラス直接・インターフェースの両方で登録
+    // （TableStorageInitializer がクラス直接で注入できるようにするため）
     .AddSingleton<MessageCacheService>()
     .AddSingleton<IMessageCacheService>(sp => sp.GetRequiredService<MessageCacheService>())
     // ミュートマネージャー（起動時に一度だけロード）

@@ -71,7 +71,7 @@ public class ActionFactoryTests
         Assert.Equal(12, factory.Registry.Count);
     }
 
-    /// <summary>既知イベント名で GetAction を呼ぶと対応する具象型が返ることを検証する。</summary>
+    /// <summary>既知イベント名で GetAction を呼ぶと対応する実装クラスが返ることを検証する。</summary>
     public static IEnumerable<object[]> KnownEventData()
     {
         yield return

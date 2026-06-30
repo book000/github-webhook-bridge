@@ -183,7 +183,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
 
 /// <summary>
 /// ホスト起動時に Table Storage を非同期で初期化する IHostedService。
-/// MessageCacheService を具象型で注入してコンストラクタでのブロッキング I/O を回避する。
+/// MessageCacheService をクラス直接で注入してコンストラクタでのブロッキング I/O を回避する。
 /// </summary>
 public class TableStorageInitializer(MessageCacheService service) : IHostedService
 {
