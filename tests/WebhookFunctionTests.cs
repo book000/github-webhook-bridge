@@ -314,9 +314,9 @@ public class WebhookFunctionTests
         Assert.Contains("Muted user", ReadBody(result), StringComparison.Ordinal);
     }
 
-    /// <summary>sender.id が数値でない場合（文字列）でも 500 にならず正常に処理する（F1 修正確認）。</summary>
+    /// <summary>sender.id が数値でない場合（文字列）でも 500 にならず正常に処理する。</summary>
     [Fact]
-    public async Task RunSenderIdIsStringDoesNotThrowF1BugFix()
+    public async Task RunSenderIdAsStringDoesNotThrow()
     {
         var actionMock = new Mock<IAction>();
         actionMock.Setup(a => a.RunAsync()).Returns(Task.CompletedTask);
@@ -331,16 +331,14 @@ public class WebhookFunctionTests
             TestSecret,
             "push");
 
-        // InvalidOperationException でなく正常に完了すること
         HttpResponseData result = await fn.RunAsync(req);
 
-        // ミュートチェックをスキップして正常にアクション実行へ進む
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
     }
 
     /// <summary>sender フィールドが存在しない場合はミュートチェックをスキップして正常処理する。</summary>
     [Fact]
-    public async Task RunAsync_SenderFieldMissing_SkipsMuteCheckAndContinues()
+    public async Task RunSenderFieldMissingSkipsMuteCheckAndContinues()
     {
         Mock<IActionFactory> factory = new();
         Mock<IAction> action = new();

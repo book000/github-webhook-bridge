@@ -51,11 +51,10 @@ public class WebhookFunction(
         // リクエストボディの上限サイズ (10 MB)
         const long MaxBodyBytes = 10L * 1024 * 1024;
 
-        // 1. Content-Length 事前チェック（10MB 超過は Bad Request）
+        // Content-Length ヘッダーは偽装され得るため、宣言値の事前チェックに加えて実読み取りバイト数でも上限を再チェックする
         if (TryGetContentLength(req, out var declaredLength) && declaredLength > MaxBodyBytes)
             return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Body too large").ConfigureAwait(false);
 
-        // 2. ボディを MaxBodyBytes まで逐次読み取り
         using var ms = new MemoryStream();
         var chunk = new byte[81920];
         int bytesRead;
@@ -71,14 +70,13 @@ public class WebhookFunction(
         if (rawBody.Length == 0)
             return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Empty body").ConfigureAwait(false);
 
-        // 3. HMAC-SHA256 署名検証
         var secret = _config["GITHUB_WEBHOOK_SECRET"]
             ?? throw new InvalidOperationException("GITHUB_WEBHOOK_SECRET not set");
         var signatureHeader = GetHeaderValue(req, "X-Hub-Signature-256");
         if (!SignatureValidator.Validate(rawBody, signatureHeader, secret))
             return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid X-Hub-Signature-256").ConfigureAwait(false);
 
-        // 4. X-GitHub-Event ヘッダー検証（ログインジェクション防止のためサニタイズ）
+        // ログインジェクション防止のため、許可文字以外を含む X-GitHub-Event ヘッダーは拒否する
         var rawEventName = GetHeaderValue(req, "X-GitHub-Event");
         if (string.IsNullOrEmpty(rawEventName))
             return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Missing X-GitHub-Event").ConfigureAwait(false);
@@ -93,7 +91,7 @@ public class WebhookFunction(
         // ActionFactory のリフレクションレジストリは Ordinal 比較のため小文字に正規化する
         var eventName = NormalizeEventName(rawEventName);
 
-        // 5. ?url= — discord.com Webhook URL に限定（SSRF 対策）
+        // SSRF 対策として discord.com / discordapp.com の Webhook URL のみ許可する
         Uri webhookUrl;
         var urlParam = req.Query["url"];
         if (!string.IsNullOrEmpty(urlParam))
@@ -104,13 +102,12 @@ public class WebhookFunction(
         }
         else
         {
-            // ?url= が省略された場合は環境変数のデフォルト Webhook URL を使用
             var defaultUrl = _config["DISCORD_WEBHOOK_URL"]
                 ?? throw new InvalidOperationException("DISCORD_WEBHOOK_URL not set");
             webhookUrl = new Uri(defaultUrl);
         }
 
-        // 6. ?disabled-events= チェック（カンマ区切り、イベント名が含まれる場合は 202 を返す）
+        // ?disabled-events= が省略された場合は環境変数 DISABLED_EVENTS にフォールバックする
         var disabledEventsParam = req.Query["disabled-events"];
         var disabledEvents = !string.IsNullOrEmpty(disabledEventsParam)
             ? disabledEventsParam
@@ -122,12 +119,11 @@ public class WebhookFunction(
                 return await CreateJsonResponseAsync(req, HttpStatusCode.Accepted, "Disabled event").ConfigureAwait(false);
         }
 
-        // 7. JSON 妥当性を維持しつつ raw string として保持する（400 レスポンスを維持するため）
+        // デシリアライズ前に JSON として妥当か確認しつつ、後続処理のために raw string も保持する
         string rawJson;
         try
         {
             rawJson = Encoding.UTF8.GetString(rawBody);
-            // 軽量バリデーション: JSON オブジェクトとして開始しているか確認する
             using var doc = JsonDocument.Parse(rawJson);
             if (doc.RootElement.ValueKind != JsonValueKind.Object)
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: JSON body must be an object").ConfigureAwait(false);
@@ -137,7 +133,6 @@ public class WebhookFunction(
             return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid JSON body").ConfigureAwait(false);
         }
 
-        // 8. ミュートチェック（Id が null の場合はスキップ — 非数値 id への安全なフォールバック）
         await _muteManager.EnsureLoadedAsync().ConfigureAwait(false);
         WebhookEnvelope? envelope = null;
         try
@@ -146,7 +141,7 @@ public class WebhookFunction(
         }
         catch (JsonException)
         {
-            // デシリアライズ失敗時はミュートチェックをスキップして処理を続行する
+            // デシリアライズに失敗した場合（例: sender.id が非数値）はミュートチェックをスキップして処理を続行する
         }
         if (envelope?.Sender?.Id is { } senderId)
         {
@@ -154,7 +149,6 @@ public class WebhookFunction(
                 return await CreateJsonResponseAsync(req, HttpStatusCode.OK, "Muted user").ConfigureAwait(false);
         }
 
-        // 9-10. アクションハンドラーへディスパッチ
         IAction actionHandler;
         try
         {
