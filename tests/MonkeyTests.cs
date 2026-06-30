@@ -8,7 +8,6 @@ using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -21,14 +20,6 @@ public class MonkeyTests
 {
     // ---- SignatureValidator モンキーテスト ----
 
-    private static IHeaderDictionary MakeHeaders(string sig)
-    {
-        Mock<IHeaderDictionary> mock = new();
-        mock.Setup(h => h["X-Hub-Signature-256"])
-            .Returns(new Microsoft.Extensions.Primitives.StringValues(sig));
-        return mock.Object;
-    }
-
     /// <summary>空のボディでも例外が発生しない。</summary>
     [Fact]
     public void SignatureValidatorEmptyBodyDoesNotThrow()
@@ -37,7 +28,7 @@ public class MonkeyTests
         using HMACSHA256 hmac = new(Encoding.UTF8.GetBytes(secret));
         var sig = "sha256=" + Convert.ToHexString(hmac.ComputeHash([])).ToLowerInvariant();
 
-        Exception? ex = Record.Exception(() => SignatureValidator.Validate([], MakeHeaders(sig), secret));
+        Exception? ex = Record.Exception(() => SignatureValidator.Validate([], sig, secret));
 
         Assert.Null(ex);
     }
@@ -49,7 +40,7 @@ public class MonkeyTests
         var body = Encoding.UTF8.GetBytes("test");
         var longSig = "sha256=" + new string('a', 993); // 合計 1000 文字
 
-        var result = SignatureValidator.Validate(body, MakeHeaders(longSig), "secret");
+        var result = SignatureValidator.Validate(body, longSig, "secret");
 
         Assert.False(result);
     }
@@ -63,8 +54,8 @@ public class MonkeyTests
         using HMACSHA256 hmac = new(Encoding.UTF8.GetBytes(secret));
         var validSig = "sha256=" + Convert.ToHexString(hmac.ComputeHash(body)).ToLowerInvariant();
 
-        var result1 = SignatureValidator.Validate(body, MakeHeaders(validSig), secret);
-        var result2 = SignatureValidator.Validate(body, MakeHeaders(validSig), secret);
+        var result1 = SignatureValidator.Validate(body, validSig, secret);
+        var result2 = SignatureValidator.Validate(body, validSig, secret);
 
         Assert.True(result1);
         Assert.Equal(result1, result2);
@@ -76,7 +67,7 @@ public class MonkeyTests
     {
         var body = Encoding.UTF8.GetBytes("{}");
         // 不完全なシグネチャ（プレフィックスのみ）
-        var result = SignatureValidator.Validate(body, MakeHeaders("sha256="), "secret");
+        var result = SignatureValidator.Validate(body, "sha256=", "secret");
 
         Assert.False(result);
     }

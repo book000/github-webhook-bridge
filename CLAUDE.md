@@ -30,7 +30,7 @@ cd src && func start              # run Azure Functions locally
 
 ## Architecture
 
-**Request flow** — `POST /` (function named `GitHubWebhook`, `Route = ""`, `routePrefix = ""` in `host.json`):
+**Request flow** — `POST /` (function named `GitHubWebhook`, `Route = "/"`, `routePrefix = ""` in `host.json`):
 
 1. `Functions/WebhookFunction.cs` receives the HTTP POST.
 2. `Utils/SignatureValidator.cs` verifies HMAC-SHA256 (`x-hub-signature-256`, timing-safe, lowercases hex).

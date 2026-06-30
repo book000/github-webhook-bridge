@@ -20,7 +20,13 @@
     <!-- Azure Functions -->
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.1.0" />
+    <!--
+      Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore (ConfigureFunctionsWebApplication) は
+      Windows Consumption プランで "Timed out waiting for the function start call" という
+      既知の未解決バグ (Azure/azure-functions-dotnet-worker#3348) を抱えているため使用しない。
+      標準の Microsoft.Azure.Functions.Worker.Extensions.Http (HttpRequestData/HttpResponseData) を使用する
+    -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.7" />
     <!-- OpenTelemetry / Azure Monitor -->
     <PackageReference Include="Microsoft.Azure.Functions.Worker.OpenTelemetry" Version="1.2.0" />
