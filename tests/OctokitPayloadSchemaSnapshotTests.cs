@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -88,14 +89,14 @@ public class OctokitPayloadSchemaSnapshotTests
                      && propType != typeof(string)
                      && propType != typeof(Uri)
                      && !propType.IsArray
-                     && !(propType.IsGenericType && typeof(System.Collections.IEnumerable).IsAssignableFrom(propType))
+                     && !(propType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(propType))
                      && propType.Namespace?.StartsWith("Octokit", StringComparison.Ordinal) == true)
             {
                 // ネストした Octokit 型: 再帰的にスキーマを構築する
                 props[jsonName] = BuildTypeSchema(propType, new HashSet<Type>(visited));
             }
             else if (propType.IsGenericType
-                     && typeof(System.Collections.IEnumerable).IsAssignableFrom(propType))
+                     && typeof(IEnumerable).IsAssignableFrom(propType))
             {
                 var elemType = propType.GetGenericArguments().FirstOrDefault();
                 props[jsonName] = "array:" + (elemType?.Name ?? "object");

@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using GitHubWebhookBridge.Actions;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Utils;
@@ -117,7 +119,7 @@ public class WebhookFunction(
         string rawJson;
         try
         {
-            rawJson = System.Text.Encoding.UTF8.GetString(rawBody);
+            rawJson = Encoding.UTF8.GetString(rawBody);
             // 軽量バリデーション: JSON オブジェクトとして開始しているか確認する
             using var doc = JsonDocument.Parse(rawJson);
             if (doc.RootElement.ValueKind != JsonValueKind.Object)
@@ -181,7 +183,7 @@ public class WebhookFunction(
     /// ログインジェクション攻撃を防ぐ。
     /// </summary>
     private static string SanitizeEventName(string raw)
-        => System.Text.RegularExpressions.Regex.Replace(raw, "[^a-zA-Z0-9_-]", string.Empty);
+        => Regex.Replace(raw, "[^a-zA-Z0-9_-]", string.Empty);
 
     /// <summary>
     /// GitHub イベント名を小文字に正規化する。

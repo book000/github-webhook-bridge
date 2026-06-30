@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
 using Azure;
@@ -157,7 +158,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         return escaped[..cut];
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "Azure Table Storage のパーティションキーは小文字 hex で統一する")]
+    [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "Azure Table Storage のパーティションキーは小文字 hex で統一する")]
     private static string HashWebhookUrl(Uri webhookUrl)
     {
         var hash = SHA256.HashData(
