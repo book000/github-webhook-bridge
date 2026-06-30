@@ -11,7 +11,7 @@ using OpenTelemetry;
 FunctionsApplicationBuilder builder = FunctionsApplication.CreateBuilder(args);
 builder.ConfigureFunctionsWebApplication();
 
-// OpenTelemetry: Azure Functions 向け計装 + Azure Monitor エクスポーター
+// OpenTelemetry: Azure Functions 向けトレース収集 + Azure Monitor エクスポーター
 // AspNetCoreInstrumentation を含まない低レイヤーエクスポーターを使用し、
 // Functions ホストとの二重テレメトリを防ぐ（公式推奨構成）
 // APPLICATIONINSIGHTS_CONNECTION_STRING 環境変数が設定されている場合に有効
