@@ -8,7 +8,7 @@ namespace GitHubWebhookBridge.Actions;
 
 /// <summary>
 /// リフレクションによりアセンブリをスキャンし、
-/// <see cref="GitHubEventAttribute"/> 付きのアクションハンドラーを自動登録するクラス。
+/// <see cref="GitHubEventAttribute"/> 付きのアクションハンドラーを自動登録するクラス
 /// </summary>
 public class ActionFactory(IServiceProvider sp) : IActionFactory
 {
@@ -67,6 +67,6 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
         return (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, webhookUrl, eventName, payload);
     }
 
-    /// <summary>レジストリを取得する（テスト・ActionRegistryValidator 用）。</summary>
+    /// <summary>レジストリを取得する（テスト・ActionRegistryValidator 用）</summary>
     internal IReadOnlyDictionary<string, (Type Action, Type Payload)> Registry => _registry;
 }

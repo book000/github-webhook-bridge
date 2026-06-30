@@ -10,7 +10,7 @@ using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub discussion イベントを Discord に通知するクラス。</summary>
+/// <summary>GitHub discussion イベントを Discord に通知するクラス</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.Discussion)]
 public sealed class DiscussionAction(

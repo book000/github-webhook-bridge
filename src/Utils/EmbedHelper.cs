@@ -2,14 +2,14 @@ using GitHubWebhookBridge.Models.Discord;
 
 namespace GitHubWebhookBridge.Utils;
 
-/// <summary>Discord Embed を生成するヘルパークラス。</summary>
+/// <summary>Discord Embed を生成するヘルパークラス</summary>
 public static class EmbedHelper
 {
     private static readonly Uri _footerIconUri = new("https://i.imgur.com/PdvExHP.png");
 
     /// <summary>
     /// 標準フッター・タイムスタンプ付きの Discord Embed を生成する。
-    /// TypeScript 版の createEmbed() に相当。
+    /// TypeScript 版の createEmbed() に相当
     /// </summary>
     /// <param name="eventName">フッターに表示する GitHub Webhook イベント名</param>
     /// <param name="color">Embed のサイドバー色（16 進数整数）</param>
@@ -18,7 +18,7 @@ public static class EmbedHelper
     /// <param name="url">タイトルのリンク先 URL（省略可）</param>
     /// <param name="author">Embed の著者情報（省略可）</param>
     /// <param name="fields">Embed のフィールド一覧（省略可）</param>
-    /// <returns>フッターとタイムスタンプが付与された <see cref="DiscordEmbed"/> インスタンス。</returns>
+    /// <returns>フッターとタイムスタンプが付与された <see cref="DiscordEmbed"/> インスタンス</returns>
     public static DiscordEmbed CreateEmbed(
         string eventName,
         int color,

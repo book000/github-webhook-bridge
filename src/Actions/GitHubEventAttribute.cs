@@ -10,13 +10,13 @@ namespace GitHubWebhookBridge.Actions;
 public sealed class GitHubEventAttribute : Attribute
 {
     /// <summary>
-    /// イベント名を明示指定するコンストラクター。
+    /// イベント名を明示指定するコンストラクター
     /// </summary>
     /// <param name="eventName">GitHub Webhook イベント名（小文字スネークケース）</param>
     public GitHubEventAttribute(string eventName) => EventName = eventName;
 
     /// <summary>
-    /// <c>[GitHubEvent]</c> 属性で指定されたイベント名を取得する。
+    /// <c>[GitHubEvent]</c> 属性で指定されたイベント名を取得する
     /// </summary>
     public string EventName { get; }
 }

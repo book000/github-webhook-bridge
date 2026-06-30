@@ -7,11 +7,11 @@ using Microsoft.Extensions.Hosting;
 namespace GitHubWebhookBridge.Services;
 
 /// <summary>
-/// 起動時にアクションレジストリの全エントリーをドライラン検証する <see cref="IHostedService"/> 実装クラス。
+/// 起動時にアクションレジストリの全エントリーをドライラン検証する <see cref="IHostedService"/> 実装クラス
 /// </summary>
 public sealed class ActionRegistryValidator(ActionFactory factory, IServiceProvider sp) : IHostedService
 {
-    /// <summary>全登録アクションをドライラン検証する。テストから直接呼び出し可能。</summary>
+    /// <summary>全登録アクションをドライラン検証する。テストから直接呼び出し可能</summary>
     internal void ValidateAll()
     {
         var dummyUri = new Uri("https://example.invalid");

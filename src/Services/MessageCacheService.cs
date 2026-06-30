@@ -9,27 +9,27 @@ using Microsoft.Extensions.Logging;
 
 namespace GitHubWebhookBridge.Services;
 
-/// <summary>Azure Table Storage のキャッシュエントリを表すクラス。</summary>
+/// <summary>Azure Table Storage のキャッシュエントリを表すクラス</summary>
 public class MessageCacheEntity : ITableEntity
 {
-    /// <summary>webhookUrl の SHA-256 ハッシュ（32 文字小文字 hex）を取得または設定する。</summary>
+    /// <summary>webhookUrl の SHA-256 ハッシュ（32 文字小文字 hex）を取得または設定する</summary>
     public string PartitionKey { get; set; } = string.Empty;
 
-    /// <summary>サニタイズ済みメッセージキーを取得または設定する。</summary>
+    /// <summary>サニタイズ済みメッセージキーを取得または設定する</summary>
     public string RowKey { get; set; } = string.Empty;
 
-    /// <summary>キャッシュされた Discord メッセージ ID を取得または設定する。</summary>
+    /// <summary>キャッシュされた Discord メッセージ ID を取得または設定する</summary>
     public string MessageId { get; set; } = string.Empty;
 
-    /// <summary>サーバー管理プロパティ（書き込み不可）を取得または設定する。TTL チェックに使用する。</summary>
+    /// <summary>サーバー管理プロパティ（書き込み不可）を取得または設定する。TTL チェックに使用する</summary>
     public DateTimeOffset? Timestamp { get; set; }
 
-    /// <summary>楽観的同時実行制御用 ETag を取得または設定する。</summary>
+    /// <summary>楽観的同時実行制御用 ETag を取得または設定する</summary>
     public ETag ETag { get; set; }
 }
 
 /// <summary>
-/// Azure Table Storage を使用して Discord メッセージ ID を 5 分間キャッシュするクラス。
+/// Azure Table Storage を使用して Discord メッセージ ID を 5 分間キャッシュするクラス
 /// </summary>
 public class MessageCacheService : IMessageCacheService, IDisposable
 {
@@ -53,10 +53,10 @@ public class MessageCacheService : IMessageCacheService, IDisposable
 
     /// <summary>
     /// テーブルを非同期で作成する。
-    /// TableStorageInitializer (IHostedService) から呼ばれる。
+    /// TableStorageInitializer (IHostedService) から呼ばれる
     /// </summary>
     /// <param name="cancellationToken">キャンセルトークン</param>
-    /// <returns>処理完了を表す <see cref="Task"/>。</returns>
+    /// <returns>処理完了を表す <see cref="Task"/></returns>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (_initialized) return;
@@ -145,7 +145,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
     /// <summary>
     /// Azure Table Storage の RowKey に使用できない文字をエスケープする。
     /// 使用禁止文字: /, \, #, ? および制御文字。
-    /// 512 文字で切断する際は %XX エンコード三文字組を分断しないよう調整する。
+    /// 512 文字で切断する際は %XX エンコード三文字組を分断しないよう調整する
     /// </summary>
     private static string SanitizeRowKey(string key)
     {
@@ -166,7 +166,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         return Convert.ToHexString(hash)[..32].ToLowerInvariant();
     }
 
-    /// <summary>マネージドリソースを解放する。</summary>
+    /// <summary>マネージドリソースを解放する</summary>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)
@@ -183,7 +183,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
 
 /// <summary>
 /// ホスト起動時に Table Storage を非同期で初期化する IHostedService 実装クラス。
-/// MessageCacheService をクラス直接で注入してコンストラクタでのブロッキング I/O を回避する。
+/// MessageCacheService をクラス直接で注入してコンストラクタでのブロッキング I/O を回避する
 /// </summary>
 public class TableStorageInitializer(MessageCacheService service) : IHostedService
 {

@@ -12,7 +12,7 @@ using OctokitPR = Octokit.Webhooks.Models.PullRequestEvent.PullRequest;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub pull_request イベントを Discord に通知するクラス。</summary>
+/// <summary>GitHub pull_request イベントを Discord に通知するクラス</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.PullRequest)]
 public sealed class PullRequestAction(
@@ -25,7 +25,7 @@ public sealed class PullRequestAction(
     PullRequestEvent pullRequestEvent)
     : BaseAction<PullRequestEvent>(discord, webhookUrl, eventName, pullRequestEvent, cache, userMapManager, logger)
 {
-    /// <summary>アクションに対応するキャッシュキーのサフィックスを取得する。</summary>
+    /// <summary>アクションに対応するキャッシュキーのサフィックスを取得する</summary>
     private string GetCacheKeySuffix() => Event.Action switch
     {
         "assigned" or "unassigned" => "assigned",
@@ -38,18 +38,18 @@ public sealed class PullRequestAction(
         _ => Event.Action,
     };
 
-    /// <summary>PR とアクションに対応するキャッシュキーを取得する。</summary>
+    /// <summary>PR とアクションに対応するキャッシュキーを取得する</summary>
     private string GetCacheKey() =>
         $"{Event.Repository.FullName}#{Event.PullRequest.Number}-{GetCacheKeySuffix()}";
 
-    /// <summary>タイトルが WIP（作業中）かどうかを判定する。</summary>
+    /// <summary>タイトルが WIP（作業中）かどうかを判定する</summary>
     private static bool IsWipTitle(string title) =>
         Regex.IsMatch(title, @"\bwip\b", RegexOptions.IgnoreCase) ||
         title.Contains("[WIP]", StringComparison.OrdinalIgnoreCase) ||
         title.StartsWith("WIP:", StringComparison.OrdinalIgnoreCase) ||
         title.StartsWith("wip ", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>PR アクション名をタイトル動詞と Embed カラーにマッピングする。</summary>
+    /// <summary>PR アクション名をタイトル動詞と Embed カラーにマッピングする</summary>
     /// <param name="action">GitHub Webhook の pull_request.action 値</param>
     /// <param name="merged">PR がマージ済みかどうか（"closed" アクション時に参照）</param>
     /// <returns>タイトル動詞と Discord Embed カラーのタプル</returns>
@@ -124,7 +124,7 @@ public sealed class PullRequestAction(
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 
-    /// <summary>PR の各種情報を Embed フィールドのリストとして構築する。</summary>
+    /// <summary>PR の各種情報を Embed フィールドのリストとして構築する</summary>
     private static List<DiscordEmbedField> BuildFields(
         OctokitPR pr, Repository repo,
         Label? label, User? assignee, User? requestedReviewer)
@@ -155,7 +155,7 @@ public sealed class PullRequestAction(
 
     /// <summary>
     /// アクションに応じてメンション文字列を構築する。
-    /// Draft PR および WIP タイトル解除前はメンションを抑制する。
+    /// Draft PR および WIP タイトル解除前はメンションを抑制する
     /// </summary>
     private async Task<string?> BuildContentAsync(
         OctokitPR pr, User sender,
@@ -204,7 +204,7 @@ public sealed class PullRequestAction(
 
     /// <summary>
     /// opened / edited アクション時に Embed の説明文を構築する。
-    /// edited かつタイトル変更がある場合は diff 形式で表示する。
+    /// edited かつタイトル変更がある場合は diff 形式で表示する
     /// </summary>
     private string? BuildDescription(
         OctokitPR pr,

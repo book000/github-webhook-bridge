@@ -14,8 +14,8 @@ using Microsoft.Extensions.Primitives;
 
 namespace GitHubWebhookBridge.Functions;
 
-/// <summary>GitHub Webhook を受信し Discord に通知する Azure Functions のクラス。</summary>
-/// <remarks>依存サービスをコンストラクタインジェクションで受け取る。</remarks>
+/// <summary>GitHub Webhook を受信し Discord に通知する Azure Functions のクラス</summary>
+/// <remarks>依存サービスをコンストラクタインジェクションで受け取る</remarks>
 public class WebhookFunction(
     IActionFactory actionFactory,
     IMuteManager muteManager,
@@ -28,10 +28,10 @@ public class WebhookFunction(
     private readonly ILogger<WebhookFunction> _logger = logger;
 
     /// <summary>
-    /// GitHub Webhook リクエストを受け取り、署名検証・ミュートチェックを経て Discord に通知する。
+    /// GitHub Webhook リクエストを受け取り、署名検証・ミュートチェックを経て Discord に通知する
     /// </summary>
     /// <param name="req">Azure Functions が受け取った HTTP リクエスト</param>
-    /// <returns>処理結果を表す <see cref="IActionResult"/>。</returns>
+    /// <returns>処理結果を表す <see cref="IActionResult"/></returns>
     [Function("GitHubWebhook")]
     [SuppressMessage("Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Webhook エントリーポイントは必然的に多くの型を参照する")]
     public async Task<IActionResult> RunAsync(
@@ -180,20 +180,20 @@ public class WebhookFunction(
 
     /// <summary>
     /// GitHub イベント名として有効な文字（英小文字・アンダースコア・ハイフン・英数字）のみ許可する。
-    /// ログインジェクション攻撃を防ぐ。
+    /// ログインジェクション攻撃を防ぐ
     /// </summary>
     private static string SanitizeEventName(string raw)
         => Regex.Replace(raw, "[^a-zA-Z0-9_-]", string.Empty);
 
     /// <summary>
     /// GitHub イベント名を小文字に正規化する。
-    /// GitHub のイベント名は仕様上小文字のため ToLowerInvariant を使用する。
+    /// GitHub のイベント名は仕様上小文字のため ToLowerInvariant を使用する
     /// </summary>
     [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "GitHub イベント名は仕様上小文字のため ToLowerInvariant が正しい")]
     private static string NormalizeEventName(string eventName)
         => eventName.ToLowerInvariant();
 
-    /// <summary>SSRF 対策: discord.com Webhook URL プレフィックスのみ許可する。</summary>
+    /// <summary>SSRF 対策: discord.com Webhook URL プレフィックスのみ許可する</summary>
     private static bool IsAllowedWebhookUrl(string url)
         => url.StartsWith("https://discord.com/api/webhooks/", StringComparison.OrdinalIgnoreCase)
         || url.StartsWith("https://discordapp.com/api/webhooks/", StringComparison.OrdinalIgnoreCase);

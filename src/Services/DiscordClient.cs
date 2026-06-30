@@ -3,7 +3,7 @@ using GitHubWebhookBridge.Models.Discord;
 
 namespace GitHubWebhookBridge.Services;
 
-/// <summary>Discord Webhook API クライアントを実装するクラス。</summary>
+/// <summary>Discord Webhook API クライアントを実装するクラス</summary>
 public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClient
 {
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
@@ -33,7 +33,7 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
 
     /// <summary>
     /// <paramref name="webhookUrl"/> に ?wait=true を安全に付加する。
-    /// 既にクエリパラメータが存在する場合は &amp; で連結する。
+    /// 既にクエリパラメータが存在する場合は &amp; で連結する
     /// </summary>
     private static Uri BuildSendUrl(Uri webhookUrl)
     {
@@ -44,14 +44,14 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
 
     /// <summary>
     /// <paramref name="webhookUrl"/> のパス部分に /messages/{messageId} を付加し、クエリを保持する。
-    /// クエリがある URL（例: ?thread_id=...）に対しても正しい URL を生成する。
+    /// クエリがある URL（例: ?thread_id=...）に対しても正しい URL を生成する
     /// </summary>
     private static Uri BuildEditUrl(Uri webhookUrl, string messageId)
         => new($"{webhookUrl.GetLeftPart(UriPartial.Path)}/messages/{messageId}{webhookUrl.Query}");
 
     /// <summary>
     /// Discord Webhook トークンが Application Insights テレメトリに漏洩しないよう、
-    /// EnsureSuccessStatusCode() の代わりに独自エラー処理を行う。
+    /// EnsureSuccessStatusCode() の代わりに独自エラー処理を行う
     /// </summary>
     private static void EnsureSuccess(HttpResponseMessage response)
     {

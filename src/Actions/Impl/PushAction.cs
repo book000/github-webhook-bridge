@@ -9,7 +9,7 @@ using OctokitCommit = Octokit.Webhooks.Models.PushEvent.Commit;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub push イベントを Discord に通知するクラス。</summary>
+/// <summary>GitHub push イベントを Discord に通知するクラス</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.Push)]
 public sealed class PushAction(
@@ -54,9 +54,9 @@ public sealed class PushAction(
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 
-    /// <summary>コミット一覧の説明文を生成する。</summary>
+    /// <summary>コミット一覧の説明文を生成する</summary>
     /// <param name="commits">表示するコミット一覧（最大 5 件）</param>
-    /// <param name="totalCount">全コミット数。5 を超える場合は末尾に省略メッセージを付加する。</param>
+    /// <param name="totalCount">全コミット数。5 を超える場合は末尾に省略メッセージを付加する</param>
     private static string GetDescription(List<OctokitCommit> commits, int totalCount)
     {
         var lines = commits.Select(c =>
