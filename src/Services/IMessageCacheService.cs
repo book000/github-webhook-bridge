@@ -1,6 +1,6 @@
 namespace GitHubWebhookBridge.Services;
 
-/// <summary>Discord メッセージ ID を 5 分間キャッシュするインターフェース</summary>
+/// <summary>Discord メッセージ ID を 5 分間キャッシュする機能を定義するインターフェース</summary>
 public interface IMessageCacheService
 {
     /// <summary>指定キーに対応するキャッシュエントリを取得する</summary>
@@ -23,5 +23,5 @@ public interface IMessageCacheService
     Task DeleteAsync(Uri webhookUrl, string key);
 }
 
-/// <summary>キャッシュされたメッセージ情報を表すクラス</summary>
+/// <summary>キャッシュされたメッセージ情報を表すレコード</summary>
 public record CachedMessage(string MessageId);

@@ -1,6 +1,6 @@
 namespace GitHubWebhookBridge.Actions;
 
-/// <summary>イベント名から IAction を生成するファクトリインターフェース</summary>
+/// <summary>イベント名から <see cref="IAction"/> を生成する処理を定義するインターフェース</summary>
 public interface IActionFactory
 {
     /// <summary>イベント名と生 JSON から適切な <see cref="IAction"/> インスタンスを生成して返す</summary>
