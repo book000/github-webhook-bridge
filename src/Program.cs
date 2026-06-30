@@ -49,7 +49,10 @@ builder.Services
     // CAPTIVE DEPENDENCY GUARD: ActionFactory が受け取る IServiceProvider は root SP。
     // Action の依存はすべて Singleton であること。
     // Scoped サービスを Action に追加した場合は IServiceScopeFactory を使う設計に変更すること。
-    .AddSingleton<IActionFactory, ActionFactory>()
+    // ActionFactory をクラス直接・インターフェースの両方で登録
+    // （ActionRegistryValidator が具象型 ActionFactory を直接注入できるようにするため）
+    .AddSingleton<ActionFactory>()
+    .AddSingleton<IActionFactory>(sp => sp.GetRequiredService<ActionFactory>())
     // 起動時にアクションレジストリの DI 解決を検証
     .AddHostedService<ActionRegistryValidator>()
     // テーブルストレージの初期化をホスト起動時に非同期実行
