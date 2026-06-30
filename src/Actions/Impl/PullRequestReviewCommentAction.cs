@@ -9,7 +9,7 @@ using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub pull_request_review_comment イベントを Discord に通知する。</summary>
+/// <summary>GitHub pull_request_review_comment イベントを Discord に通知するクラス。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.PullRequestReviewComment)]
 public sealed class PullRequestReviewCommentAction(

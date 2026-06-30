@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace GitHubWebhookBridge.Managers;
 
-/// <summary>GitHub ユーザー ID から Discord ユーザー ID へのマッピングを管理する。</summary>
+/// <summary>GitHub ユーザー ID から Discord ユーザー ID へのマッピングを管理するクラス。</summary>
 public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory httpClientFactory) : BaseManager<Dictionary<long, string>>(config, httpClientFactory), IGitHubUserMapManager
 {
     protected override string? FilePath { get; } = config["GITHUB_USER_MAP_FILE_PATH"];
@@ -23,7 +23,7 @@ public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory http
 
     protected override string GetDefaultFilePath() => "data/github-user-map.json";
 
-    /// <summary>ユーザーマップのデフォルト内容は空オブジェクト。</summary>
+    /// <summary>ユーザーマップのデフォルト内容として空オブジェクトを返す。</summary>
     protected override string GetDefaultContent() => "{}";
 
     /// <inheritdoc/>
@@ -31,8 +31,8 @@ public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory http
         => DeserializeJson<Dictionary<long, string>>(json);
 
     /// <summary>GitHub ユーザー ID から Discord ユーザー ID を取得する。</summary>
-    /// <param name="githubUserId">検索対象の GitHub ユーザー ID。</param>
-    /// <returns>対応する Discord ユーザー ID。マッピングが存在しない場合は null。</returns>
+    /// <param name="githubUserId">検索対象の GitHub ユーザー ID</param>
+    /// <returns>対応する Discord ユーザー ID。マッピングが存在しない場合は <see langword="null"/>。</returns>
     public string? GetById(long githubUserId)
     {
         if (Data is null)
@@ -48,8 +48,8 @@ public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory http
     /// GitHub API でユーザー名から数値 ID を引き、マップを検索する。
     /// ログイン名を URL パスに埋め込む前に形式を検証する（パストラバーサル防止）。
     /// </summary>
-    /// <param name="login">検索対象の GitHub ログイン名。</param>
-    /// <returns>対応する Discord ユーザー ID。マッピングが存在しない、またはユーザーが見つからない場合は null。</returns>
+    /// <param name="login">検索対象の GitHub ログイン名</param>
+    /// <returns>対応する Discord ユーザー ID。マッピングが存在しない、またはユーザーが見つからない場合は <see langword="null"/>。</returns>
     public async Task<string?> GetFromUsernameAsync(string login)
     {
         if (!_loginRegex.IsMatch(login))

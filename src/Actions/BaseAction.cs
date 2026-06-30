@@ -23,22 +23,22 @@ public abstract class BaseAction<TEvent>(
     ILogger logger) : IAction
     where TEvent : WebhookEvent
 {
-    /// <summary>Discord Webhook API クライアント。</summary>
+    /// <summary>Discord Webhook API クライアントを取得する。</summary>
     protected IDiscordClient Discord { get; } = discord;
 
-    /// <summary>通知先 Discord Webhook URL。</summary>
+    /// <summary>通知先 Discord Webhook URL を取得する。</summary>
     protected Uri WebhookUrl { get; } = webhookUrl;
 
-    /// <summary>GitHub Webhook イベント名。</summary>
+    /// <summary>GitHub Webhook イベント名を取得する。</summary>
     protected string EventName { get; } = eventName;
 
-    /// <summary>デシリアライズされた Webhook ペイロード。</summary>
+    /// <summary>デシリアライズされた Webhook ペイロードを取得する。</summary>
     protected TEvent Event { get; } = @event;
 
-    /// <summary>GitHub → Discord ユーザーマッピングマネージャー。</summary>
+    /// <summary>GitHub → Discord ユーザーマッピングマネージャーを取得する。</summary>
     protected IGitHubUserMapManager UserMapManager { get; } = userMapManager;
 
-    /// <summary>ロガーインスタンス。</summary>
+    /// <summary>ロガーインスタンスを取得する。</summary>
     protected ILogger Logger { get; } = logger;
 
     private readonly IMessageCacheService _cache = cache;

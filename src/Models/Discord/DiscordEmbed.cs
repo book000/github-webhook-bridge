@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace GitHubWebhookBridge.Models.Discord;
 
-/// <summary>Discord Embed オブジェクト。</summary>
+/// <summary>Discord Embed を表すクラス。</summary>
 public record DiscordEmbed(
     [property: JsonPropertyName("title")] string? Title = null,
     [property: JsonPropertyName("description")] string? Description = null,

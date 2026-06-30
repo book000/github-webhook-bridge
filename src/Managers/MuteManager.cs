@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace GitHubWebhookBridge.Managers;
 
-/// <summary>ユーザーミュート設定を管理する。</summary>
+/// <summary>ユーザーのミュート設定を管理するクラス。</summary>
 public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFactory) : BaseManager<List<MuteRecord>>(config, httpClientFactory), IMuteManager
 {
     protected override string? FilePath { get; } = config["MUTES_FILE_PATH"];
@@ -26,13 +26,11 @@ public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFac
         SetDataForTest(data);
     }
 
-    /// <summary>
-    /// ユーザーがミュートされているかどうかを返す。
-    /// </summary>
-    /// <param name="userId">判定対象の GitHub ユーザー ID。</param>
-    /// <param name="eventName">GitHub Webhook イベント名。</param>
-    /// <param name="action">イベントのアクション種別（省略可）。</param>
-    /// <returns>ミュート対象の場合は true、それ以外は false。</returns>
+    /// <summary>ユーザーが指定イベントでミュートされているかどうかを返す。</summary>
+    /// <param name="userId">判定対象の GitHub ユーザー ID</param>
+    /// <param name="eventName">GitHub Webhook イベント名</param>
+    /// <param name="action">イベントのアクション種別（省略可）</param>
+    /// <returns>ミュート対象の場合は <see langword="true"/>、それ以外は <see langword="false"/>。</returns>
     public bool IsMuted(long userId, string eventName, string? action)
     {
         if (Data is null)
@@ -63,18 +61,18 @@ public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFac
     }
 }
 
-/// <summary>ユーザーごとのミュート設定レコード。</summary>
+/// <summary>ユーザーごとのミュート設定を表すレコード。</summary>
 public record MuteRecord(
     [property: JsonPropertyName("userId")] long UserId,
     [property: JsonPropertyName("type")] MuteType Type,
     [property: JsonPropertyName("events")] IList<MuteEvent> Events);
 
-/// <summary>ミュート対象のイベント設定。</summary>
+/// <summary>ミュート対象のイベント設定を表すレコード。</summary>
 public record MuteEvent(
     [property: JsonPropertyName("eventName")] string EventName,
     [property: JsonPropertyName("actions")] IList<string>? Actions);
 
-/// <summary>ミュート方式。</summary>
+/// <summary>ミュート方式を表す列挙型。</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<MuteType>))]
 public enum MuteType
 {

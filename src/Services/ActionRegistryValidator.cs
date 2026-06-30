@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 namespace GitHubWebhookBridge.Services;
 
 /// <summary>
-/// 起動時にアクションレジストリの全エントリーをドライラン検証する <see cref="IHostedService"/>。
+/// 起動時にアクションレジストリの全エントリーをドライラン検証する <see cref="IHostedService"/> 実装クラス。
 /// </summary>
 public sealed class ActionRegistryValidator(ActionFactory factory, IServiceProvider sp) : IHostedService
 {

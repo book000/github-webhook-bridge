@@ -10,22 +10,22 @@ namespace GitHubWebhookBridge.Managers;
 /// 設定ファイルを Blob / HTTPS URL / ローカルファイルから読み込む抽象基底クラス。
 /// 優先順位: Blob > HTTPS URL > ローカルファイル
 /// </summary>
-/// <typeparam name="TData">デシリアライズ対象のデータ型。</typeparam>
+/// <typeparam name="TData">デシリアライズ対象のデータ型</typeparam>
 public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFactory httpClientFactory) : IDisposable
 {
-    /// <summary>ローカルファイルパス（環境変数から設定）。</summary>
+    /// <summary>環境変数から設定されるローカルファイルパスを取得する。</summary>
     protected abstract string? FilePath { get; }
 
-    /// <summary>設定ファイルの HTTPS URL（HTTPS のみ許可）。</summary>
+    /// <summary>設定ファイルの HTTPS URL を取得する（HTTPS のみ許可）。</summary>
     protected abstract Uri? FileUrl { get; }
 
     /// <summary>
-    /// Blob のパス。形式: "container/path/to/file.json"
+    /// Blob のパスを取得する。形式: "container/path/to/file.json"
     /// 最初の '/' より前がコンテナ名、後がブロブ名。
     /// </summary>
     protected abstract string? BlobPath { get; }
 
-    /// <summary>ロード済みのデータ。<see cref="EnsureLoadedAsync"/> 呼び出し後に有効になる。</summary>
+    /// <summary>ロード済みのデータを取得する。<see cref="EnsureLoadedAsync"/> 呼び出し後に有効になる。</summary>
     protected TData Data { get; private set; } = default!;
 
     private volatile bool _loaded;
@@ -62,11 +62,11 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
     }
 
     /// <summary>JSON 文字列をデシリアライズする。各サブクラスで実装する。</summary>
-    /// <param name="json">デシリアライズ対象の JSON 文字列。</param>
-    /// <returns>デシリアライズされたデータ。失敗時は null。</returns>
+    /// <param name="json">デシリアライズ対象の JSON 文字列</param>
+    /// <returns>デシリアライズされたデータ。失敗時は <see langword="null"/>。</returns>
     protected abstract TData? Deserialize(string json);
 
-    /// <summary>ソース未指定時のデフォルトファイルパス。各サブクラスで実装する。</summary>
+    /// <summary>ソース未指定時のデフォルトファイルパスを返す。各サブクラスで実装する。</summary>
     protected abstract string GetDefaultFilePath();
 
     private Task<string> LoadJsonAsync()
@@ -120,13 +120,13 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
         return await File.ReadAllTextAsync(path);
     }
 
-    /// <summary>ファイルが存在しない場合に書き込むデフォルトの JSON 内容。</summary>
+    /// <summary>ファイルが存在しない場合に書き込むデフォルトの JSON 内容を返す。</summary>
     protected virtual string GetDefaultContent() => "[]";
 
-    /// <summary>型パラメータ T を用いた汎用 JSON デシリアライズ。</summary>
-    /// <typeparam name="T">デシリアライズ対象の型。</typeparam>
-    /// <param name="json">デシリアライズ対象の JSON 文字列。</param>
-    /// <returns>デシリアライズされたインスタンス。失敗時は null。</returns>
+    /// <summary>型パラメータ T を用いて汎用的に JSON をデシリアライズする。</summary>
+    /// <typeparam name="T">デシリアライズ対象の型</typeparam>
+    /// <param name="json">デシリアライズ対象の JSON 文字列</param>
+    /// <returns>デシリアライズされたインスタンス。失敗時は <see langword="null"/>。</returns>
     protected T? DeserializeJson<T>(string json)
         => JsonSerializer.Deserialize<T>(json, _jsonOptions);
 

@@ -12,7 +12,7 @@ using OctokitPR = Octokit.Webhooks.Models.PullRequestEvent.PullRequest;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub pull_request イベントを Discord に通知する。</summary>
+/// <summary>GitHub pull_request イベントを Discord に通知するクラス。</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.PullRequest)]
 public sealed class PullRequestAction(
@@ -25,7 +25,7 @@ public sealed class PullRequestAction(
     PullRequestEvent pullRequestEvent)
     : BaseAction<PullRequestEvent>(discord, webhookUrl, eventName, pullRequestEvent, cache, userMapManager, logger)
 {
-    /// <summary>アクションに対応するキャッシュキーのサフィックスを取得します。</summary>
+    /// <summary>アクションに対応するキャッシュキーのサフィックスを取得する。</summary>
     private string GetCacheKeySuffix() => Event.Action switch
     {
         "assigned" or "unassigned" => "assigned",
@@ -38,11 +38,11 @@ public sealed class PullRequestAction(
         _ => Event.Action,
     };
 
-    /// <summary>PR とアクションに対応するキャッシュキーを取得します。</summary>
+    /// <summary>PR とアクションに対応するキャッシュキーを取得する。</summary>
     private string GetCacheKey() =>
         $"{Event.Repository.FullName}#{Event.PullRequest.Number}-{GetCacheKeySuffix()}";
 
-    /// <summary>タイトルが WIP（作業中）かどうかを判定します。</summary>
+    /// <summary>タイトルが WIP（作業中）かどうかを判定する。</summary>
     private static bool IsWipTitle(string title) =>
         Regex.IsMatch(title, @"\bwip\b", RegexOptions.IgnoreCase) ||
         title.Contains("[WIP]", StringComparison.OrdinalIgnoreCase) ||
@@ -50,9 +50,9 @@ public sealed class PullRequestAction(
         title.StartsWith("wip ", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>PR アクション名をタイトル動詞と Embed カラーにマッピングする。</summary>
-    /// <param name="action">GitHub Webhook の pull_request.action 値。</param>
-    /// <param name="merged">PR がマージ済みかどうか（"closed" アクション時に参照）。</param>
-    /// <returns>タイトル動詞と Discord Embed カラーのタプル。</returns>
+    /// <param name="action">GitHub Webhook の pull_request.action 値</param>
+    /// <param name="merged">PR がマージ済みかどうか（"closed" アクション時に参照）</param>
+    /// <returns>タイトル動詞と Discord Embed カラーのタプル</returns>
     private static (string TitleVerb, int Color) GetTitleVerbAndColor(string action, bool merged)
         => action switch
         {
