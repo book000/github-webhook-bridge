@@ -12,7 +12,7 @@ public sealed class GitHubEventAttribute : Attribute
     /// <summary>
     /// イベント名を明示指定するコンストラクター。
     /// </summary>
-    /// <param name="eventName">GitHub Webhook イベント名（小文字スネークケース）。</param>
+    /// <param name="eventName">GitHub Webhook イベント名（小文字スネークケース）</param>
     public GitHubEventAttribute(string eventName) => EventName = eventName;
 
     /// <summary>

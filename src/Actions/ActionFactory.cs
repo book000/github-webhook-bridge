@@ -8,7 +8,7 @@ namespace GitHubWebhookBridge.Actions;
 
 /// <summary>
 /// リフレクションによりアセンブリをスキャンし、
-/// <see cref="GitHubEventAttribute"/> 付きクラスを自動登録するアクションファクトリクラス。
+/// <see cref="GitHubEventAttribute"/> 付きのアクションハンドラーを自動登録するクラス。
 /// </summary>
 public class ActionFactory(IServiceProvider sp) : IActionFactory
 {
