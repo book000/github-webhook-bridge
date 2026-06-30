@@ -76,7 +76,7 @@ public class OctokitPayloadSchemaSnapshotTests
                 // Enum: メンバー名と基底値をスナップショット化する（追加・削除・変更を検知）
                 props[jsonName] = new
                 {
-                    type    = "enum:" + propType.Name,
+                    type = "enum:" + propType.Name,
                     members = Enum.GetNames(propType)
                                   .Zip(Enum.GetValues(propType).Cast<int>(),
                                        (n, v) => $"{n}={v}")

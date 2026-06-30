@@ -17,10 +17,10 @@ internal static class OctokitJsonOptions
         var opts = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
-            AllowTrailingCommas         = true,
-            ReadCommentHandling         = JsonCommentHandling.Skip,
-            UnmappedMemberHandling      = JsonUnmappedMemberHandling.Skip,
-            TypeInfoResolver            = new DefaultJsonTypeInfoResolver(),
+            AllowTrailingCommas = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
         };
         opts.MakeReadOnly();
         return opts;

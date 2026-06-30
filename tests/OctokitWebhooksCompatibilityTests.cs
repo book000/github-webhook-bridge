@@ -37,7 +37,7 @@ public class OctokitWebhooksCompatibilityTests
             return;
         }
 
-        var added   = actual.Except(known).OrderBy(n => n).ToList();
+        var added = actual.Except(known).OrderBy(n => n).ToList();
         var removed = known.Except(actual).OrderBy(n => n).ToList();
 
         Assert.True(added.Count == 0,

@@ -24,7 +24,7 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
             .Select(t =>
             {
                 var payloadType = GetPayloadType(t);
-                var eventName   = ResolveEventName(t, payloadType);
+                var eventName = ResolveEventName(t, payloadType);
                 return KeyValuePair.Create(eventName, (t, payloadType));
             });
 
