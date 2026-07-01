@@ -51,3 +51,35 @@ internal sealed class FakeHttpResponseData(FunctionContext functionContext) : Ht
     public override Stream Body { get; set; } = new MemoryStream();
     public override HttpCookies Cookies { get; } = null!;
 }
+
+/// <summary>
+/// あらかじめ用意した応答を順番に返す <see cref="HttpMessageHandler"/>。
+/// リトライハンドラーが実際に何回リクエストを送出したかを検証するために使用する。
+/// 用意した応答を使い切った場合は最後の応答を返し続ける
+/// </summary>
+internal sealed class QueueHttpMessageHandler : HttpMessageHandler
+{
+    private readonly Func<HttpRequestMessage, HttpResponseMessage>[] _responders;
+    private int _callCount;
+
+    public QueueHttpMessageHandler(params Func<HttpRequestMessage, HttpResponseMessage>[] responders)
+    {
+        ArgumentNullException.ThrowIfNull(responders);
+        if (responders.Length == 0)
+        {
+            throw new ArgumentException("At least one responder must be provided.", nameof(responders));
+        }
+
+        _responders = responders;
+    }
+
+    /// <summary>実際に送出されたリクエストの回数。</summary>
+    public int CallCount => _callCount;
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        int index = Interlocked.Increment(ref _callCount) - 1;
+        Func<HttpRequestMessage, HttpResponseMessage> responder = _responders[Math.Min(index, _responders.Length - 1)];
+        return Task.FromResult(responder(request));
+    }
+}

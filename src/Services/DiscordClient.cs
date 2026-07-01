@@ -3,7 +3,12 @@ using GitHubWebhookBridge.Models.Discord;
 
 namespace GitHubWebhookBridge.Services;
 
-/// <summary>Discord Webhook API クライアントを実装するクラス</summary>
+/// <summary>
+/// Discord Webhook API クライアントを実装するクラス。
+/// 429 (レート制限) に対する再試行は "discord" 名前付き HttpClient に構成した
+/// Microsoft.Extensions.Http.Resilience のリトライハンドラーが担う
+/// （<see cref="Program"/>、<see cref="Utils.DiscordRetryPolicy"/> 参照）
+/// </summary>
 public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClient
 {
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;

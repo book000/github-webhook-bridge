@@ -2,6 +2,7 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using GitHubWebhookBridge.Actions;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Services;
+using GitHubWebhookBridge.Utils;
 using Microsoft.Azure.Functions.Worker.OpenTelemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -39,7 +40,9 @@ hostBuilder.ConfigureServices(services =>
         .AddHttpClient("config", c => c.Timeout = TimeSpan.FromSeconds(10))
         .Services
         // Discord Webhook 用クライアント（15 秒タイムアウト）
+        // 再試行ポリシーの内容は DiscordRetryPolicy を参照（単体テストとも共有）
         .AddHttpClient("discord", c => c.Timeout = TimeSpan.FromSeconds(15))
+        .AddResilienceHandler(DiscordRetryPolicy.HandlerName, DiscordRetryPolicy.Configure)
         .Services
         // Discord クライアント
         .AddSingleton<IDiscordClient, DiscordClient>()

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
@@ -6,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Octokit.Webhooks;
 using Octokit.Webhooks.Events;
 using Octokit.Webhooks.Models;
-using OctokitReview = Octokit.Webhooks.Models.PullRequestReviewEvent.Review;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
@@ -26,9 +26,9 @@ public sealed class PullRequestReviewThreadAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        // Octokit の PullRequestReviewThreadEvent には Thread プロパティが存在しない。
-        // Review.NodeId をスレッド識別子として使用し、解決状態はアクションから導出する。
-        OctokitReview review = Event.Review;
+        // Event.Review は実ペイロードに存在しない "review" フィールドにマッピングされ常に null になるため、
+        // 実データを持つ AdditionalProperties["thread"].node_id をスレッド識別子として使用する
+        var threadNodeId = GetThreadNodeId();
         SimplePullRequest pr = Event.PullRequest;
         Repository repo = Event.Repository;
         User sender = Event.Sender;
@@ -46,7 +46,7 @@ public sealed class PullRequestReviewThreadAction(
 
         var fields = new List<DiscordEmbedField>
         {
-            new("Thread ID", review.NodeId, false),
+            new("Thread ID", threadNodeId, false),
             new("Resolved", resolved ? "Yes" : "No", true),
         };
 
@@ -69,7 +69,28 @@ public sealed class PullRequestReviewThreadAction(
             author: author,
             fields: fields);
 
-        var key = $"{repo.FullName}-pr-review-thread-{review.NodeId}";
+        // PR 番号を含め、threadNodeId が "unknown" にフォールバックした際のキー衝突を防ぐ
+        var key = $"{repo.FullName}-pr-review-thread-{pr.Number}-{threadNodeId}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
+    }
+
+    /// <summary>
+    /// AdditionalProperties から "thread.node_id" を取得する。
+    /// 想定外のペイロード形状であっても例外にせず、警告ログを出力して代替値を返す
+    /// </summary>
+    private string GetThreadNodeId()
+    {
+        if (Event.AdditionalProperties is { } props
+            && props.TryGetValue("thread", out JsonElement thread)
+            && thread.ValueKind == JsonValueKind.Object
+            && thread.TryGetProperty("node_id", out JsonElement nodeId)
+            && nodeId.ValueKind == JsonValueKind.String
+            && nodeId.GetString() is { Length: > 0 } value)
+        {
+            return value;
+        }
+
+        Logger.LogWarning("pull_request_review_thread payload is missing thread.node_id; falling back to \"unknown\".");
+        return "unknown";
     }
 }

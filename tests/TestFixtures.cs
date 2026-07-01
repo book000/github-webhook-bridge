@@ -122,6 +122,13 @@ internal static class TestFixtures
         return "{\"zen\":\"" + zen + "\",\"hook_id\":" + hookId + ",\"hook\":{\"type\":\"" + hookType + "\",\"id\":1,\"name\":\"web\",\"active\":true,\"events\":[\"push\"],\"config\":{\"content_type\":\"json\",\"url\":\"\",\"insecure_ssl\":\"0\"},\"url\":\"\",\"ping_url\":\"\",\"deliveries_url\":\"\",\"updated_at\":\"2024-01-01T00:00:00Z\",\"created_at\":\"2024-01-01T00:00:00Z\"}" + repoStr + senderStr + "}";
     }
 
+    /// <summary>
+    /// pull_request_review_thread イベントの Thread（node_id・comments）の最小 JSON。
+    /// 実際の GitHub ペイロード（"review" ではなく "thread"）と同じ形状で用意する
+    /// </summary>
+    public static string ThreadJson(string nodeId = "PRRT_1", string? commentJson = null) =>
+        $$$"""{"node_id":"{{{nodeId}}}","comments":[{{{commentJson ?? ReviewCommentJson()}}}]}""";
+
     /// <summary>PullRequestReviewComment の最小 JSON。</summary>
     public static string ReviewCommentJson(long id = 1, string body = "Great!", string path = "src/file.cs", string? htmlUrl = null)
     {
