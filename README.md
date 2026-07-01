@@ -2,7 +2,7 @@
 
 GitHub Webhook を受信して Discord に転送する Azure Functions アプリケーション。
 
-- **エンドポイント**: `POST /`
+- **エンドポイント**: `POST /`（Webhook 受信）、`GET /`（稼働確認）
 - **スタック**: C# / .NET 10 / Azure Functions v4 Isolated / Azure Table + Blob Storage
 - **署名検証**: HMAC-SHA256（`x-hub-signature-256`、タイミングセーフ比較）
 
@@ -55,6 +55,8 @@ cd src && func start
 |------|-----|
 | 本番 | `POST https://<functionapp>.azurewebsites.net/` |
 | ローカル | `POST http://localhost:7071/` |
+
+`GET /` にアクセスすると、稼働確認用に `200 OK` と `{ "message": "book000/github-webhook-bridge is running" }` を返します。
 
 ### クエリパラメータ
 

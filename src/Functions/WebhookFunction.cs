@@ -53,7 +53,7 @@ public class WebhookFunction(
 
         // Content-Length ヘッダーは偽装され得るため、宣言値の事前チェックに加えて実読み取りバイト数でも上限を再チェックする
         if (TryGetContentLength(req, out var declaredLength) && declaredLength > MaxBodyBytes)
-            return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Body too large").ConfigureAwait(false);
+            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Body too large").ConfigureAwait(false);
 
         using var ms = new MemoryStream();
         var chunk = new byte[81920];
@@ -62,30 +62,30 @@ public class WebhookFunction(
         {
             await ms.WriteAsync(chunk.AsMemory(0, bytesRead)).ConfigureAwait(false);
             if (ms.Length > MaxBodyBytes)
-                return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Body too large").ConfigureAwait(false);
+                return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Body too large").ConfigureAwait(false);
         }
 
         var rawBody = ms.ToArray();
 
         if (rawBody.Length == 0)
-            return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Empty body").ConfigureAwait(false);
+            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Empty body").ConfigureAwait(false);
 
         var secret = _config["GITHUB_WEBHOOK_SECRET"]
             ?? throw new InvalidOperationException("GITHUB_WEBHOOK_SECRET not set");
         var signatureHeader = GetHeaderValue(req, "X-Hub-Signature-256");
         if (!SignatureValidator.Validate(rawBody, signatureHeader, secret))
-            return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid X-Hub-Signature-256").ConfigureAwait(false);
+            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid X-Hub-Signature-256").ConfigureAwait(false);
 
         // ログインジェクション防止のため、許可文字以外を含む X-GitHub-Event ヘッダーは拒否する
         var rawEventName = GetHeaderValue(req, "X-GitHub-Event");
         if (string.IsNullOrEmpty(rawEventName))
-            return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Missing X-GitHub-Event").ConfigureAwait(false);
+            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Missing X-GitHub-Event").ConfigureAwait(false);
 
         var sanitizedEventName = SanitizeEventName(rawEventName);
         if (sanitizedEventName != rawEventName)
         {
             _logger.LogWarning("Rejected request with invalid X-GitHub-Event header value");
-            return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid X-GitHub-Event").ConfigureAwait(false);
+            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid X-GitHub-Event").ConfigureAwait(false);
         }
 
         // ActionFactory のリフレクションレジストリは Ordinal 比較のため小文字に正規化する
@@ -97,7 +97,7 @@ public class WebhookFunction(
         if (!string.IsNullOrEmpty(urlParam))
         {
             if (!IsAllowedWebhookUrl(urlParam))
-                return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid url parameter").ConfigureAwait(false);
+                return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid url parameter").ConfigureAwait(false);
             webhookUrl = new Uri(urlParam);
         }
         else
@@ -116,7 +116,7 @@ public class WebhookFunction(
         {
             var disabledEventNames = disabledEvents.Split(',', StringSplitOptions.RemoveEmptyEntries);
             if (disabledEventNames.Contains(eventName, StringComparer.OrdinalIgnoreCase))
-                return await CreateJsonResponseAsync(req, HttpStatusCode.Accepted, "Disabled event").ConfigureAwait(false);
+                return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.Accepted, "Disabled event").ConfigureAwait(false);
         }
 
         // デシリアライズ前に JSON として妥当か確認しつつ、後続処理のために raw string も保持する
@@ -126,11 +126,11 @@ public class WebhookFunction(
             rawJson = Encoding.UTF8.GetString(rawBody);
             using var doc = JsonDocument.Parse(rawJson);
             if (doc.RootElement.ValueKind != JsonValueKind.Object)
-                return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: JSON body must be an object").ConfigureAwait(false);
+                return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: JSON body must be an object").ConfigureAwait(false);
         }
         catch (JsonException)
         {
-            return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid JSON body").ConfigureAwait(false);
+            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid JSON body").ConfigureAwait(false);
         }
 
         await _muteManager.EnsureLoadedAsync().ConfigureAwait(false);
@@ -146,7 +146,7 @@ public class WebhookFunction(
         if (envelope?.Sender?.Id is { } senderId)
         {
             if (_muteManager.IsMuted(senderId, eventName, envelope.Action))
-                return await CreateJsonResponseAsync(req, HttpStatusCode.OK, "Muted user").ConfigureAwait(false);
+                return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.OK, "Muted user").ConfigureAwait(false);
         }
 
         IAction actionHandler;
@@ -158,7 +158,7 @@ public class WebhookFunction(
         {
             // 未実装イベント（スタブ以外の未知のイベント）は 400 を返す
             _logger.LogWarning("Unknown event type: {EventName}", eventName);
-            return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, $"Bad Request: Unknown event '{eventName}'").ConfigureAwait(false);
+            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, $"Bad Request: Unknown event '{eventName}'").ConfigureAwait(false);
         }
 
         try
@@ -170,7 +170,7 @@ public class WebhookFunction(
         {
             // スタブアクションはまだ実装されていないため 406 を返す
             _logger.LogInformation("Method not implemented for event: {EventName}", eventName);
-            return await CreateJsonResponseAsync(req, HttpStatusCode.NotAcceptable, "Method not implemented").ConfigureAwait(false);
+            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.NotAcceptable, "Method not implemented").ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -197,21 +197,6 @@ public class WebhookFunction(
     /// <summary>指定ヘッダーの値を取得する。未設定の場合は <see langword="null"/> を返す</summary>
     private static string? GetHeaderValue(HttpRequestData req, string name)
         => req.Headers.TryGetValues(name, out IEnumerable<string>? values) ? values.FirstOrDefault() : null;
-
-    /// <summary>
-    /// <c>{ "message": ... }</c> 形式の JSON レスポンスを生成する。
-    /// <see cref="HttpResponseData.WriteAsJsonAsync{T}(T, CancellationToken)"/> は
-    /// <c>WorkerOptions.Serializer</c> の DI 解決に依存するため、
-    /// それを必要としない <c>WriteStringAsync</c> ベースで明示的にシリアライズする
-    /// </summary>
-    private static async Task<HttpResponseData> CreateJsonResponseAsync(HttpRequestData req, HttpStatusCode statusCode, string message)
-    {
-        HttpResponseData response = req.CreateResponse(statusCode);
-        response.Headers.Add("Content-Type", "application/json; charset=utf-8");
-        var json = JsonSerializer.Serialize(new { message });
-        await response.WriteStringAsync(json).ConfigureAwait(false);
-        return response;
-    }
 
     /// <summary>
     /// GitHub イベント名として有効な文字（英小文字・アンダースコア・ハイフン・英数字）のみ許可する。

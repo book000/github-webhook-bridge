@@ -41,6 +41,8 @@ cd src && func start              # run Azure Functions locally
 5. `Managers/MuteManager.cs` checks mute rules (include / exclude / all modes).
 6. `BaseAction.SendMessageAsync(key, message)` sends via `DiscordClient`; if the same key was sent within the last 5 minutes, it **edits** the existing Discord message instead. On edit failure the cache entry is deleted and a new message is sent. Every message has `SuppressNotifications` forced on.
 
+`GET /` is handled separately by `Functions/RootFunction.cs` (same route regex, `"get"` method) and returns a `200 OK` health-check style JSON body — this avoids the Azure Functions default placeholder homepage ("Your Functions x.x app is up and running") that would otherwise appear for unmatched methods on the root route. Shared `{ "message": ... }` JSON response building lives in `Utils/JsonResponseHelper.cs`, used by both `WebhookFunction` and `RootFunction`.
+
 **Key patterns**
 
 - `BaseAction<TEvent>` — generic abstract base; `abstract Task RunAsync()`.
