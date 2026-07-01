@@ -29,7 +29,8 @@ internal sealed class FakeHttpRequestData(
     FunctionContext functionContext,
     Stream body,
     HttpHeadersCollection headers,
-    NameValueCollection query)
+    NameValueCollection query,
+    string method = "POST")
     : HttpRequestData(functionContext)
 {
     public override Stream Body { get; } = body;
@@ -37,7 +38,7 @@ internal sealed class FakeHttpRequestData(
     public override IReadOnlyCollection<IHttpCookie> Cookies { get; } = [];
     public override Uri Url { get; } = new("https://gwb.tomacheese.com/");
     public override IEnumerable<ClaimsIdentity> Identities { get; } = [];
-    public override string Method { get; } = "POST";
+    public override string Method { get; } = method;
     public override NameValueCollection Query { get; } = query;
 
     public override HttpResponseData CreateResponse() => new FakeHttpResponseData(FunctionContext);
