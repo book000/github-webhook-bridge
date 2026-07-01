@@ -34,7 +34,8 @@ public sealed class IssuesAction(
             return;
         }
 
-        var action = Event.Action ?? string.Empty;
+        // 通知タイトルとキャッシュキーの一意性を保つため、欠損時は空文字ではなく明示的な既定値を使う
+        var action = Event.Action ?? "unknown";
         (var title, var color) = GetTitleAndColor(action, issue);
 
         // サブタイプ固有プロパティをパターンマッチで取得する

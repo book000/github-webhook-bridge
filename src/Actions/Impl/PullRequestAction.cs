@@ -93,7 +93,8 @@ public sealed class PullRequestAction(
         }
 
         OctokitPR pr = Event.PullRequest;
-        var action = Event.Action ?? string.Empty;
+        // 通知タイトルとキャッシュキーの一意性を保つため、欠損時は空文字ではなく明示的な既定値を使う
+        var action = Event.Action ?? "unknown";
 
         // サブタイプ固有プロパティをパターンマッチで取得する
         Label? label = (Event as PullRequestLabeledEvent)?.Label
