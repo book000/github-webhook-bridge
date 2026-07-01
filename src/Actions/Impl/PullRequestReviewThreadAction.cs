@@ -30,8 +30,12 @@ public sealed class PullRequestReviewThreadAction(
         // 実データを持つ AdditionalProperties["thread"].node_id をスレッド識別子として使用する
         var threadNodeId = GetThreadNodeId();
         SimplePullRequest pr = Event.PullRequest;
-        Repository repo = Event.Repository;
-        User sender = Event.Sender;
+
+        if (Event.Repository is not { } repo || Event.Sender is not { } sender)
+        {
+            Logger.LogWarning("pull_request_review_thread payload is missing repository or sender; skipping notification.");
+            return;
+        }
 
         var resolved = Event.Action == "resolved";
 
@@ -58,14 +62,14 @@ public sealed class PullRequestReviewThreadAction(
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
-            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
-            url: Uri.TryCreate(pr.HtmlUrl, UriKind.Absolute, out var prUrl) ? prUrl : null,
+            url: Uri.TryCreate(pr.HtmlUrl, UriKind.Absolute, out Uri? prUrl) ? prUrl : null,
             author: author,
             fields: fields);
 

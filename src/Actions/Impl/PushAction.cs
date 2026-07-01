@@ -38,19 +38,25 @@ public sealed class PushAction(
         var commits = allCommits.Take(CommitLimit).ToList();
         var description = GetDescription(commits, allCommits.Count);
 
+        if (Event.Sender is not { } sender || Event.Repository is not { } repo)
+        {
+            Logger.LogWarning("push payload is missing sender or repository; skipping notification.");
+            return;
+        }
+
         var author = new DiscordEmbedAuthor(
-            Name: Event.Sender.Login,
-            Url: Uri.TryCreate(Event.Sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
-            IconUrl: Uri.TryCreate(Event.Sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
+            Name: sender.Login,
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: EmbedColors.Push,
-            title: $"[{Event.Repository.FullName}:{shortRef}] {allCommits.Count} new commit(s)",
+            title: $"[{repo.FullName}:{shortRef}] {allCommits.Count} new commit(s)",
             description: description,
             author: author);
 
-        var key = $"{Event.Repository.FullName}:{Event.Ref}";
+        var key = $"{repo.FullName}:{Event.Ref}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 

@@ -24,19 +24,25 @@ public sealed class ForkAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
+        if (Event.Sender is not { } sender || Event.Repository is not { } repo)
+        {
+            Logger.LogWarning("fork payload is missing sender or repository; skipping notification.");
+            return;
+        }
+
         var author = new DiscordEmbedAuthor(
-            Name: Event.Sender.Login,
-            Url: Uri.TryCreate(Event.Sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
-            IconUrl: Uri.TryCreate(Event.Sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
+            Name: sender.Login,
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: EmbedColors.Fork,
-            title: $"Forked {Event.Repository.FullName} by {Event.Sender.Login} to {Event.Forkee.FullName}",
-            url: Uri.TryCreate(Event.Forkee.HtmlUrl, UriKind.Absolute, out var forkeeUrl) ? forkeeUrl : null,
+            title: $"Forked {repo.FullName} by {sender.Login} to {Event.Forkee.FullName}",
+            url: Uri.TryCreate(Event.Forkee.HtmlUrl, UriKind.Absolute, out Uri? forkeeUrl) ? forkeeUrl : null,
             author: author);
 
-        var key = $"{Event.Repository.FullName}-fork-{Event.Sender.Login}";
+        var key = $"{repo.FullName}-fork-{sender.Login}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 }

@@ -27,8 +27,12 @@ public sealed class DiscussionAction(
     public override async Task RunAsync()
     {
         Discussion discussion = Event.Discussion;
-        Repository repo = Event.Repository;
-        User sender = Event.Sender;
+
+        if (Event.Repository is not { } repo || Event.Sender is not { } sender)
+        {
+            Logger.LogWarning("discussion payload is missing repository or sender; skipping notification.");
+            return;
+        }
 
         (var titleVerb, var color) = Event.Action switch
         {
@@ -86,15 +90,15 @@ public sealed class DiscussionAction(
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
-            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: description,
-            url: Uri.TryCreate(discussion.HtmlUrl, UriKind.Absolute, out var discussionUrl) ? discussionUrl : null,
+            url: Uri.TryCreate(discussion.HtmlUrl, UriKind.Absolute, out Uri? discussionUrl) ? discussionUrl : null,
             author: author,
             fields: fields);
 

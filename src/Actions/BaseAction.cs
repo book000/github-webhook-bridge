@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using DiffPlex.DiffBuilder;
 using DiffPlex.DiffBuilder.Model;
@@ -112,8 +113,8 @@ public abstract class BaseAction<TEvent>(
     {
         DiffPaneModel diff = InlineDiffBuilder.Diff(oldText, newText);
         var sb = new StringBuilder();
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"--- {fileName}");
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"+++ {fileName}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"--- {fileName}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"+++ {fileName}");
 
         foreach (DiffPiece? line in diff.Lines)
         {
@@ -126,7 +127,7 @@ public abstract class BaseAction<TEvent>(
                 ChangeType.Modified => throw new NotImplementedException(),
                 _ => " ",
             };
-            sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"{prefix} {line.Text}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"{prefix} {line.Text}");
         }
 
         return sb.ToString();

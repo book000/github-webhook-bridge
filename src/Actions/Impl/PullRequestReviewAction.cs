@@ -1,3 +1,4 @@
+using System.Globalization;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
@@ -28,11 +29,15 @@ public sealed class PullRequestReviewAction(
     {
         OctokitReview review = Event.Review;
         SimplePullRequest pr = Event.PullRequest;
-        Repository repo = Event.Repository;
-        User sender = Event.Sender;
+
+        if (Event.Repository is not { } repo || Event.Sender is not { } sender)
+        {
+            Logger.LogWarning("pull_request_review payload is missing repository or sender; skipping notification.");
+            return;
+        }
 
         // レビュー状態とアクションを組み合わせて色とタイトルを決定する
-        (var titleVerb, var color) = (Event.Action, review.State.StringValue?.ToUpperInvariant() ?? string.Empty) switch
+        (var titleVerb, var color) = (Event.Action, review.State?.StringValue?.ToUpperInvariant() ?? string.Empty) switch
         {
             ("submitted", "APPROVED") => ("approved", EmbedColors.PullRequestReviewApproved),
             ("submitted", "CHANGES_REQUESTED") => ("requested changes", EmbedColors.PullRequestReviewChangesRequested),
@@ -56,18 +61,18 @@ public sealed class PullRequestReviewAction(
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
-            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: body,
-            url: Uri.TryCreate(review.HtmlUrl, UriKind.Absolute, out var reviewUrl) ? reviewUrl : null,
+            url: Uri.TryCreate(review.HtmlUrl, UriKind.Absolute, out Uri? reviewUrl) ? reviewUrl : null,
             author: author);
 
-        var key = $"{repo.FullName}-pr-review-{review.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        var key = $"{repo.FullName}-pr-review-{review.Id.ToString(CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 }

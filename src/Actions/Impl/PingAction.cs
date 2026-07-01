@@ -1,3 +1,4 @@
+using System.Globalization;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
@@ -31,8 +32,8 @@ public sealed class PingAction(
             description: Event.Zen,
             fields: [
                 new("Hook Type", Event.Hook?.Type.StringValue ?? "N/A", true),
-                new("Hook ID", Event.HookId.ToString(System.Globalization.CultureInfo.InvariantCulture), true),
-                new("Events", (Event.Hook?.Events?.Count ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture), true),
+                new("Hook ID", Event.HookId.ToString(CultureInfo.InvariantCulture), true),
+                new("Events", (Event.Hook?.Events?.Count ?? 0).ToString(CultureInfo.InvariantCulture), true),
                 new("Repository", Event.Repository?.FullName ?? "N/A", true),
                 new("Sender", Event.Sender?.Login ?? "N/A", true),
                 new("Organization", Event.Organization?.Login ?? "N/A", true),

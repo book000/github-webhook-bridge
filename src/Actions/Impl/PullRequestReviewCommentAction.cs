@@ -1,3 +1,4 @@
+using System.Globalization;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
@@ -27,8 +28,12 @@ public sealed class PullRequestReviewCommentAction(
     {
         PullRequestReviewComment comment = Event.Comment;
         SimplePullRequest pr = Event.PullRequest;
-        Repository repo = Event.Repository;
-        User sender = Event.Sender;
+
+        if (Event.Repository is not { } repo || Event.Sender is not { } sender)
+        {
+            Logger.LogWarning("pull_request_review_comment payload is missing repository or sender; skipping notification.");
+            return;
+        }
 
         (var titleVerb, var color) = Event.Action switch
         {
@@ -65,19 +70,19 @@ public sealed class PullRequestReviewCommentAction(
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
-            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: body,
-            url: Uri.TryCreate(comment.HtmlUrl, UriKind.Absolute, out var commentUrl) ? commentUrl : null,
+            url: Uri.TryCreate(comment.HtmlUrl, UriKind.Absolute, out Uri? commentUrl) ? commentUrl : null,
             author: author,
             fields: fields.Count > 0 ? fields : null);
 
-        var key = $"{repo.FullName}-pr-review-comment-{comment.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        var key = $"{repo.FullName}-pr-review-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 }

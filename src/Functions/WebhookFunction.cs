@@ -143,6 +143,7 @@ public class WebhookFunction(
         {
             // デシリアライズに失敗した場合（例: sender.id が非数値）はミュートチェックをスキップして処理を続行する
         }
+
         if (envelope?.Sender?.Id is { } senderId)
         {
             if (_muteManager.IsMuted(senderId, eventName, envelope.Action))

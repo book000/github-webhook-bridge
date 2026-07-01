@@ -17,13 +17,13 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
     private readonly FrozenDictionary<string, (Type Action, Type Payload)> _registry =
         BuildRegistry();
 
-    private static FrozenDictionary<string, (Type, Type)> BuildRegistry()
+    private static FrozenDictionary<string, (Type Action, Type Payload)> BuildRegistry()
     {
-        var entries = typeof(ActionFactory).Assembly.GetTypes()
+        IEnumerable<KeyValuePair<string, (Type Action, Type Payload)>> entries = typeof(ActionFactory).Assembly.GetTypes()
             .Where(t => t.GetCustomAttribute<GitHubEventAttribute>() != null && !t.IsAbstract)
             .Select(t =>
             {
-                var payloadType = GetPayloadType(t);
+                Type payloadType = GetPayloadType(t);
                 var eventName = ResolveEventName(t, payloadType);
                 return KeyValuePair.Create(eventName, (t, payloadType));
             });
@@ -34,18 +34,22 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
 
     private static Type GetPayloadType(Type actionType)
     {
-        var b = actionType.BaseType;
+        Type? b = actionType.BaseType;
         while (b != null && !(b.IsGenericType && b.GetGenericTypeDefinition() == typeof(BaseAction<>)))
             b = b.BaseType;
+
         if (b == null)
+        {
             throw new InvalidOperationException(
                 $"{actionType.Name} must inherit from BaseAction<T> to be registered via [GitHubEvent].");
+        }
+
         return b.GetGenericArguments()[0];
     }
 
     private static string ResolveEventName(Type actionType, Type payloadType)
     {
-        var attr = actionType.GetCustomAttribute<GitHubEventAttribute>()!;
+        GitHubEventAttribute attr = actionType.GetCustomAttribute<GitHubEventAttribute>()!;
         if (attr.EventName != null)
             return attr.EventName;
 
@@ -57,7 +61,7 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
     /// <inheritdoc/>
     public IAction GetAction(string eventName, string rawJson, Uri webhookUrl)
     {
-        if (!_registry.TryGetValue(eventName, out var entry))
+        if (!_registry.TryGetValue(eventName, out (Type Action, Type Payload) entry))
             return new UnhandledAction(eventName);
 
         var payload = JsonSerializer.Deserialize(rawJson, entry.Payload, OctokitJsonOptions.Value)
