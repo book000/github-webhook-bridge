@@ -1,3 +1,4 @@
+using System.Globalization;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
@@ -71,7 +72,7 @@ public sealed class PullRequestReviewAction(
             url: Uri.TryCreate(review.HtmlUrl, UriKind.Absolute, out Uri? reviewUrl) ? reviewUrl : null,
             author: author);
 
-        var key = $"{repo.FullName}-pr-review-{review.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        var key = $"{repo.FullName}-pr-review-{review.Id.ToString(CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 }

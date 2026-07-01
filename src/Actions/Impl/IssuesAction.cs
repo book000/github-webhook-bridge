@@ -7,6 +7,7 @@ using Octokit.Webhooks;
 using Octokit.Webhooks.Events;
 using Octokit.Webhooks.Events.Issues;
 using Octokit.Webhooks.Models;
+using IssuesEventChanges = Octokit.Webhooks.Models.IssuesEvent.Changes;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
@@ -45,7 +46,7 @@ public sealed class IssuesAction(
                          ?? (Event as IssuesUnassignedEvent)?.Assignee;
         Milestone? milestone = (Event as IssuesMilestonedEvent)?.Milestone
                                ?? (Event as IssuesDemilestonedEvent)?.Milestone;
-        Octokit.Webhooks.Models.IssuesEvent.Changes? changes = (Event as IssuesEditedEvent)?.Changes;
+        IssuesEventChanges? changes = (Event as IssuesEditedEvent)?.Changes;
 
         List<DiscordEmbedField> fields = BuildFields(repo, issue, label, assignee, milestone);
         var description = BuildDescription(action, issue, changes);
@@ -119,7 +120,7 @@ public sealed class IssuesAction(
     }
 
     /// <summary>本文（edited イベントの場合はタイトル変更の diff）を組み立てる</summary>
-    private static string? BuildDescription(string action, Issue issue, Octokit.Webhooks.Models.IssuesEvent.Changes? changes)
+    private static string? BuildDescription(string action, Issue issue, IssuesEventChanges? changes)
     {
         // edited イベントの場合、タイトル変更の diff を description として生成する
         if (action == "edited" && changes?.Title?.From is not null)

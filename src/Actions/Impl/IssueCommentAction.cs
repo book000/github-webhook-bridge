@@ -1,3 +1,4 @@
+using System.Globalization;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
@@ -71,7 +72,7 @@ public sealed class IssueCommentAction(
             url: Uri.TryCreate(comment.HtmlUrl, UriKind.Absolute, out Uri? commentUrl) ? commentUrl : null,
             author: author);
 
-        var key = $"{repo.FullName}-issue-comment-{comment.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        var key = $"{repo.FullName}-issue-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 }

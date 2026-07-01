@@ -9,6 +9,7 @@ using Octokit.Webhooks.Events;
 using Octokit.Webhooks.Events.PullRequest;
 using Octokit.Webhooks.Models;
 using OctokitPR = Octokit.Webhooks.Models.PullRequestEvent.PullRequest;
+using PullRequestEditedEventChanges = Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
@@ -102,7 +103,7 @@ public sealed class PullRequestAction(
         User? assignee = (Event as PullRequestAssignedEvent)?.Assignee
                          ?? (Event as PullRequestUnassignedEvent)?.Assignee;
         User? requestedReviewer = (Event as PullRequestReviewRequestedEvent)?.RequestedReviewer;
-        Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges? changes =
+        PullRequestEditedEventChanges? changes =
             (Event as PullRequestEditedEvent)?.Changes;
 
         (var titleVerb, var color) = GetTitleVerbAndColor(action, pr.Merged == true);
@@ -170,7 +171,7 @@ public sealed class PullRequestAction(
         User sender,
         User? assignee,
         User? requestedReviewer,
-        Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges? changes)
+        PullRequestEditedEventChanges? changes)
     {
         string? content = null;
 
@@ -218,7 +219,7 @@ public sealed class PullRequestAction(
     /// </summary>
     private string? BuildDescription(
         OctokitPR pr,
-        Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges? changes)
+        PullRequestEditedEventChanges? changes)
     {
         if (Event.Action is not ("opened" or "edited"))
             return null;

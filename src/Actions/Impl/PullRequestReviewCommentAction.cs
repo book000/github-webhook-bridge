@@ -1,3 +1,4 @@
+using System.Globalization;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
@@ -81,7 +82,7 @@ public sealed class PullRequestReviewCommentAction(
             author: author,
             fields: fields.Count > 0 ? fields : null);
 
-        var key = $"{repo.FullName}-pr-review-comment-{comment.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        var key = $"{repo.FullName}-pr-review-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 }
