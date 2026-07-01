@@ -1,17 +1,17 @@
 namespace GitHubWebhookBridge.Actions;
 
 /// <summary>
-/// GitHub Webhook イベントハンドラークラスをイベント名に紐付ける属性クラス。
+/// Attribute that binds a GitHub Webhook event handler class to an event name.
 /// <para>
-/// 使用例: <c>[GitHubEvent(WebhookEventType.PullRequest)]</c>
+/// Example: <c>[GitHubEvent(WebhookEventType.PullRequest)]</c>
 /// </para>
 /// </summary>
-/// <param name="eventName">GitHub Webhook イベント名（小文字スネークケース）</param>
+/// <param name="eventName">The GitHub Webhook event name (lowercase snake_case).</param>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class GitHubEventAttribute(string eventName) : Attribute
 {
     /// <summary>
-    /// <c>[GitHubEvent]</c> 属性で指定されたイベント名を取得する
+    /// Gets the event name specified via the <c>[GitHubEvent]</c> attribute.
     /// </summary>
     public string EventName { get; } = eventName;
 }

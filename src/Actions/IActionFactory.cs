@@ -1,12 +1,12 @@
 namespace GitHubWebhookBridge.Actions;
 
-/// <summary>イベント名から <see cref="IAction"/> を生成する処理を定義するインターフェース</summary>
+/// <summary>Interface defining the creation of an <see cref="IAction"/> from an event name.</summary>
 public interface IActionFactory
 {
-    /// <summary>イベント名と生 JSON から適切な <see cref="IAction"/> インスタンスを生成して返す</summary>
-    /// <param name="eventName">GitHub Webhook の X-GitHub-Event ヘッダー値（小文字）</param>
-    /// <param name="rawJson">Webhook ペイロードの生 JSON 文字列</param>
-    /// <param name="webhookUrl">通知先 Discord Webhook URL</param>
-    /// <returns>イベントに対応する <see cref="IAction"/> インスタンス</returns>
+    /// <summary>Creates and returns the appropriate <see cref="IAction"/> instance from an event name and raw JSON.</summary>
+    /// <param name="eventName">The GitHub Webhook X-GitHub-Event header value (lowercase).</param>
+    /// <param name="rawJson">The raw JSON string of the Webhook payload.</param>
+    /// <param name="webhookUrl">The destination Discord Webhook URL.</param>
+    /// <returns>The <see cref="IAction"/> instance corresponding to the event.</returns>
     IAction GetAction(string eventName, string rawJson, Uri webhookUrl);
 }

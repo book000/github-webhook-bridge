@@ -4,20 +4,20 @@ using GitHubWebhookBridge.Actions;
 namespace GitHubWebhookBridge.Tests;
 
 /// <summary>
-/// <see cref="GitHubEventAttribute"/> が付与された実装済みアクションすべてに
-/// テストクラスが存在することを保証する。
-/// このテストが失敗した場合、テストのないアクションが存在することを意味する。
+/// Ensures that every implemented action annotated with <see cref="GitHubEventAttribute"/>
+/// has a corresponding test class.
+/// A failure of this test means an action exists without any tests.
 /// </summary>
 public class ActionCoverageTests
 {
     /// <summary>
-    /// <see cref="GitHubEventAttribute"/> 付きの全具象アクションクラスに対応する *Tests クラスが
-    /// テストアセンブリに存在することを検証する。
+    /// Verifies that a matching *Tests class exists in the test assembly for every concrete
+    /// action class annotated with <see cref="GitHubEventAttribute"/>.
     /// </summary>
     [Fact]
     public void AllGitHubEventAnnotatedActionsHaveTestClass()
     {
-        // 本体アセンブリから [GitHubEvent] 付きの具象クラスを収集する
+        // Collect concrete classes annotated with [GitHubEvent] from the main assembly
         Assembly mainAssembly = typeof(IAction).Assembly;
         Type[] implementedActions = mainAssembly.GetTypes()
             .Where(t =>
@@ -26,14 +26,14 @@ public class ActionCoverageTests
                 !t.IsAbstract)
             .ToArray();
 
-        // テストアセンブリから *Tests クラスを収集する
+        // Collect *Tests classes from the test assembly
         Assembly testAssembly = typeof(ActionCoverageTests).Assembly;
         HashSet<string> testClassNames = testAssembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract && t.Name.EndsWith("Tests", StringComparison.Ordinal))
             .Select(t => t.Name)
             .ToHashSet();
 
-        // テストクラスが存在しないアクションを列挙する
+        // Enumerate actions that have no test class
         List<string> uncovered = implementedActions
             .Where(a => !testClassNames.Contains($"{a.Name}Tests"))
             .Select(a => a.Name)
@@ -42,7 +42,7 @@ public class ActionCoverageTests
 
         Assert.True(
             uncovered.Count == 0,
-            $"以下の実装済みアクションにテストクラスがありません:{Environment.NewLine}" +
-            string.Join(Environment.NewLine, uncovered.Select(n => $"  - {n} → {n}Tests.cs が必要")));
+            $"The following implemented actions have no test class:{Environment.NewLine}" +
+            string.Join(Environment.NewLine, uncovered.Select(n => $"  - {n} → {n}Tests.cs required")));
     }
 }

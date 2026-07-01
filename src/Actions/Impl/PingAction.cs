@@ -9,7 +9,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub ping イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub ping events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.Ping)]
 public sealed class PingAction(

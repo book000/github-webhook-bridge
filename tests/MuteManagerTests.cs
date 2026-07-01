@@ -6,7 +6,7 @@ namespace GitHubWebhookBridge.Tests;
 
 public class MuteManagerTests
 {
-    /// <summary>テスト用に MuteManager を JSON 文字列から初期化するヘルパー。</summary>
+    /// <summary>Helper that initializes MuteManager from a JSON string for testing.</summary>
     private static MuteManager CreateFromJson(string json)
     {
         var config = new Mock<IConfiguration>();
@@ -50,9 +50,9 @@ public class MuteManagerTests
     {
         MuteManager mgr = CreateFromJson(
             """[{"userId":1,"type":"exclude","events":[{"eventName":"push","actions":["a"]}]}]""");
-        // push/a は除外 → ミュートされない
+        // push/a is excluded -> not muted
         Assert.False(mgr.IsMuted(1, "push", "a"));
-        // issues はリストにない → ミュートされる
+        // issues is not in the list -> muted
         Assert.True(mgr.IsMuted(1, "issues", "opened"));
     }
 
@@ -66,7 +66,7 @@ public class MuteManagerTests
     [Fact]
     public void IsMutedTypeIncludeWithActionsListNullActionFalse()
     {
-        // Include モード: actions リストが非 null だが action パラメータが null → ミュートされない
+        // Include mode: the actions list is non-null but the action parameter is null -> not muted
         MuteManager mgr = CreateFromJson(
             """[{"userId":1,"type":"include","events":[{"eventName":"issues","actions":["opened"]}]}]""");
         Assert.False(mgr.IsMuted(1, "issues", null));

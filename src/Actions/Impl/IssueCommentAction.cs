@@ -10,7 +10,7 @@ using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub issue_comment イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub issue_comment events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.IssueComment)]
 public sealed class IssueCommentAction(
@@ -35,7 +35,7 @@ public sealed class IssueCommentAction(
             return;
         }
 
-        // Issue に関連するのが PR かどうかで種別を変える（IssuePullRequest.HtmlUrl が空でなければ PR）
+        // Vary the type depending on whether the issue is a PR (it is a PR if IssuePullRequest.HtmlUrl is non-empty).
         var issueType = !string.IsNullOrEmpty(issue.PullRequest?.HtmlUrl) ? "PR" : "Issue";
 
         (var titleVerb, var color) = Event.Action switch
@@ -52,7 +52,7 @@ public sealed class IssueCommentAction(
             ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
             : null;
 
-        // Issue 作成者への @mention (送信者自身を除外)
+        // @mention the issue author (excluding the sender).
         var mentions = await GetUsersMentionsAsync(
             sender.Id,
             [(issue.User.Id, issue.User.Login)]);

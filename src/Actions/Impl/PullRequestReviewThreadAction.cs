@@ -10,7 +10,7 @@ using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub pull_request_review_thread イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub pull_request_review_thread events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.PullRequestReviewThread)]
 public sealed class PullRequestReviewThreadAction(
@@ -26,8 +26,8 @@ public sealed class PullRequestReviewThreadAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        // Event.Review は実ペイロードに存在しない "review" フィールドにマッピングされ常に null になるため、
-        // 実データを持つ AdditionalProperties["thread"].node_id をスレッド識別子として使用する
+        // Event.Review maps to a "review" field that does not exist in the actual payload and is always null,
+        // so use AdditionalProperties["thread"].node_id, which holds the real data, as the thread identifier.
         var threadNodeId = GetThreadNodeId();
         SimplePullRequest pr = Event.PullRequest;
 
@@ -54,7 +54,7 @@ public sealed class PullRequestReviewThreadAction(
             new("Resolved", resolved ? "Yes" : "No", true),
         };
 
-        // PR 作成者への @mention（送信者が PR 作成者の場合は除外）
+        // @mention the PR author (excluded when the sender is the PR author).
         var mentions = await GetUsersMentionsAsync(
             sender.Id,
             [(pr.User.Id, pr.User.Login)]);
@@ -73,14 +73,14 @@ public sealed class PullRequestReviewThreadAction(
             author: author,
             fields: fields);
 
-        // PR 番号を含め、threadNodeId が "unknown" にフォールバックした際のキー衝突を防ぐ
+        // Include the PR number to prevent key collisions when threadNodeId falls back to "unknown".
         var key = $"{repo.FullName}-pr-review-thread-{pr.Number}-{threadNodeId}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 
     /// <summary>
-    /// AdditionalProperties から "thread.node_id" を取得する。
-    /// 想定外のペイロード形状であっても例外にせず、警告ログを出力して代替値を返す
+    /// Retrieves "thread.node_id" from AdditionalProperties.
+    /// Rather than throwing on an unexpected payload shape, it logs a warning and returns a fallback value.
     /// </summary>
     private string GetThreadNodeId()
     {

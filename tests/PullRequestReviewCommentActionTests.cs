@@ -10,7 +10,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>PullRequestReviewCommentAction の通知内容・diff フィールド・メンション・キャッシュキーテスト。</summary>
+/// <summary>Tests for PullRequestReviewCommentAction's notification content, diff field, mention, and cache key.</summary>
 public class PullRequestReviewCommentActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
@@ -54,7 +54,7 @@ public class PullRequestReviewCommentActionTests
             """,
             OctokitJsonOptions.Value)!;
 
-    /// <summary>created イベントのタイトルに "commented on" と PR 番号が含まれる。</summary>
+    /// <summary>The title of the created event contains "commented on" and the PR number.</summary>
     [Fact]
     public async Task RunAsyncCreatedTitleContainsCommentedOnAndPrNumber()
     {
@@ -76,7 +76,7 @@ public class PullRequestReviewCommentActionTests
             Times.Once);
     }
 
-    /// <summary>created は PullRequestReviewCommentCreated 色を使用する。</summary>
+    /// <summary>created uses the PullRequestReviewCommentCreated color.</summary>
     [Fact]
     public async Task RunAsyncCreatedUsesPrReviewCommentCreatedColor()
     {
@@ -97,7 +97,7 @@ public class PullRequestReviewCommentActionTests
         Assert.Equal(EmbedColors.PullRequestReviewCommentCreated, capturedColor);
     }
 
-    /// <summary>TestFixtures.ReviewCommentJson は常に diff_hunk を含むため diff フィールドが追加される。</summary>
+    /// <summary>Since TestFixtures.ReviewCommentJson always includes diff_hunk, a diff field is added.</summary>
     [Fact]
     public async Task RunAsyncWithDiffHunkAddsDiffField()
     {
@@ -119,7 +119,7 @@ public class PullRequestReviewCommentActionTests
             Times.Once);
     }
 
-    /// <summary>path が設定されると Embed フィールドにファイルパスが追加される。</summary>
+    /// <summary>When path is set, the file path is added to an Embed field.</summary>
     [Fact]
     public async Task RunAsyncWithPathAddsFileField()
     {
@@ -141,7 +141,7 @@ public class PullRequestReviewCommentActionTests
             Times.Once);
     }
 
-    /// <summary>キャッシュキーにコメント ID が含まれる。</summary>
+    /// <summary>The cache key contains the comment ID.</summary>
     [Fact]
     public async Task RunAsyncCacheKeyContainsCommentId()
     {
@@ -157,7 +157,7 @@ public class PullRequestReviewCommentActionTests
         cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-pr-review-comment-5001"), Times.Once);
     }
 
-    /// <summary>PR 作成者が Discord にマッピングされている場合はメンション付きで送信する。</summary>
+    /// <summary>When the PR author is mapped to Discord, the message is sent with a mention.</summary>
     [Fact]
     public async Task RunAsyncMentionsPrAuthorWhenMapped()
     {

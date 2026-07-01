@@ -8,9 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace GitHubWebhookBridge.Tests;
 
 /// <summary>
-/// <see cref="HttpRequestData"/> / <see cref="HttpResponseData"/> はいずれも抽象クラスであり、
-/// Functions ランタイム外でインスタンス化するためのテスト専用最小実装。
-/// 公式テストヘルパーが提供されていないため自前で用意する
+/// Both <see cref="HttpRequestData"/> and <see cref="HttpResponseData"/> are abstract classes;
+/// this is a minimal, test-only implementation for instantiating them outside the Functions runtime.
+/// Provided in-house because no official test helper exists.
 /// </summary>
 internal sealed class FakeFunctionContext : FunctionContext
 {
@@ -53,9 +53,9 @@ internal sealed class FakeHttpResponseData(FunctionContext functionContext) : Ht
 }
 
 /// <summary>
-/// あらかじめ用意した応答を順番に返す <see cref="HttpMessageHandler"/>。
-/// リトライハンドラーが実際に何回リクエストを送出したかを検証するために使用する。
-/// 用意した応答を使い切った場合は最後の応答を返し続ける
+/// An <see cref="HttpMessageHandler"/> that returns pre-configured responses in order.
+/// Used to verify how many requests the retry handler actually sent.
+/// Once the configured responses are exhausted, it keeps returning the last one.
 /// </summary>
 internal sealed class QueueHttpMessageHandler : HttpMessageHandler
 {
@@ -73,7 +73,7 @@ internal sealed class QueueHttpMessageHandler : HttpMessageHandler
         _responders = responders;
     }
 
-    /// <summary>実際に送出されたリクエストの回数。</summary>
+    /// <summary>The number of requests actually sent.</summary>
     public int CallCount => _callCount;
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

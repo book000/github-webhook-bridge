@@ -1,19 +1,19 @@
 namespace GitHubWebhookBridge.Managers;
 
-/// <summary>GitHub ユーザー ID と Discord ユーザー ID のマッピングを定義するインターフェース</summary>
+/// <summary>Interface defining the mapping between GitHub user IDs and Discord user IDs.</summary>
 public interface IGitHubUserMapManager
 {
-    /// <summary>初回呼び出し時のみデータをロードする（二重初期化防止）</summary>
-    /// <returns>処理完了を表す <see cref="Task"/></returns>
+    /// <summary>Loads the data only on the first call (prevents double initialization).</summary>
+    /// <returns>A <see cref="Task"/> representing completion.</returns>
     Task EnsureLoadedAsync();
 
-    /// <summary>GitHub ユーザー ID から Discord ユーザー ID を取得する</summary>
-    /// <param name="githubUserId">検索対象の GitHub ユーザー ID</param>
-    /// <returns>対応する Discord ユーザー ID。マッピングが存在しない場合は <see langword="null"/></returns>
+    /// <summary>Gets the Discord user ID from a GitHub user ID.</summary>
+    /// <param name="githubUserId">The GitHub user ID to look up.</param>
+    /// <returns>The corresponding Discord user ID, or <see langword="null"/> if no mapping exists.</returns>
     string? GetById(long githubUserId);
 
-    /// <summary>GitHub API でユーザー名から数値 ID を引き、マップを検索する</summary>
-    /// <param name="login">検索対象の GitHub ログイン名</param>
-    /// <returns>対応する Discord ユーザー ID。マッピングが存在しない場合は <see langword="null"/></returns>
+    /// <summary>Resolves a numeric ID from a username via the GitHub API and looks it up in the map.</summary>
+    /// <param name="login">The GitHub login name to look up.</param>
+    /// <returns>The corresponding Discord user ID, or <see langword="null"/> if no mapping exists.</returns>
     Task<string?> GetFromUsernameAsync(string login);
 }

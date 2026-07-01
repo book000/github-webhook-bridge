@@ -71,7 +71,7 @@ public class PushActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        // 空のコミットリストで PushEvent を作成する
+        // Create a PushEvent with an empty commit list
         var repoJson = TestFixtures.RepoJson("test/repo", "https://github.com/test/repo");
         var senderJson = TestFixtures.UserJson();
         var emptyPush = JsonSerializer.Deserialize<PushEvent>(
@@ -122,7 +122,7 @@ public class PushActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        string longMessage = new('a', 60); // 60 文字 > 50 文字上限
+        string longMessage = new('a', 60); // 60 chars > 50 char limit
         PushAction action = new(
             discord.Object, cache.Object, userMap.Object,
             Mock.Of<ILogger<PushAction>>(),

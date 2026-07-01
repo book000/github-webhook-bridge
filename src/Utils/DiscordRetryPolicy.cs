@@ -6,27 +6,27 @@ using Polly;
 namespace GitHubWebhookBridge.Utils;
 
 /// <summary>
-/// "discord" 名前付き HttpClient に適用する再試行ポリシーを定義する。
-/// 対象は 429 (レート制限) のみとし、Retry-After ヘッダーを尊重しつつ短い上限で打ち切ることで、
-/// Discord 側の障害・輻輳時に Webhook 処理全体が長時間ブロックされるのを防ぐ。
-/// <see cref="Program"/> と単体テストの両方から参照し、実装を一箇所に集約する
+/// Defines the retry policy applied to the "discord" named HttpClient.
+/// Targets only 429 (rate limit), respecting the Retry-After header while capping at a short limit,
+/// to prevent the entire Webhook processing from being blocked for a long time during Discord-side failures or congestion.
+/// Referenced from both <see cref="Program"/> and unit tests to consolidate the implementation in one place
 /// </summary>
 public static class DiscordRetryPolicy
 {
-    /// <summary>AddResilienceHandler に渡すハンドラー名。</summary>
+    /// <summary>Handler name passed to AddResilienceHandler.</summary>
     public const string HandlerName = "discord-retry";
 
-    /// <summary>再試行の最大回数（初回試行を含まない）。</summary>
+    /// <summary>Maximum number of retries (not including the initial attempt).</summary>
     public const int MaxRetryAttempts = 2;
 
-    /// <summary>Retry-After ヘッダーが無い場合の基準待機時間。</summary>
+    /// <summary>Base wait time used when there is no Retry-After header.</summary>
     public static readonly TimeSpan Delay = TimeSpan.FromMilliseconds(500);
 
-    /// <summary>Retry-After ヘッダーの指定値を含め、待機時間の上限とする値。</summary>
+    /// <summary>Upper bound on the wait time, including the value specified by the Retry-After header.</summary>
     public static readonly TimeSpan MaxDelay = TimeSpan.FromSeconds(2);
 
     /// <summary>
-    /// <see cref="ResiliencePipelineBuilder{HttpResponseMessage}"/> に再試行戦略を追加する
+    /// Adds a retry strategy to <see cref="ResiliencePipelineBuilder{HttpResponseMessage}"/>
     /// </summary>
     public static void Configure(ResiliencePipelineBuilder<HttpResponseMessage> builder)
     {
@@ -39,8 +39,8 @@ public static class DiscordRetryPolicy
             Delay = Delay,
             MaxDelay = MaxDelay,
             UseJitter = true,
-            // 既定の ShouldRetryAfterHeader = true は Retry-After の値をそのまま採用し MaxDelay で
-            // 頭打ちにしないため（v10.7.0 で確認済み）、無効化し下記 DelayGenerator で丸める
+            // The default ShouldRetryAfterHeader = true adopts the Retry-After value as-is and does not
+            // cap it at MaxDelay (confirmed in v10.7.0), so disable it and round via the DelayGenerator below
             ShouldRetryAfterHeader = false,
             DelayGenerator = args =>
             {

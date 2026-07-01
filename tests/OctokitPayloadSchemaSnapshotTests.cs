@@ -8,10 +8,10 @@ using Octokit.Webhooks;
 namespace GitHubWebhookBridge.Tests;
 
 /// <summary>
-/// 実装済みアクションのペイロード型スキーマが変化したことを検知するスナップショットテスト。
-/// Renovate による Octokit.Webhooks 更新後にこのテストが落ちた場合:
-///   UPDATE_SNAPSHOTS=1 dotnet test --filter OctokitPayloadSchemaSnapshotTests
-///   を実行してスナップショットを更新し、差分をレビューしてからコミットすること。
+/// Snapshot test that detects changes in the payload type schemas of implemented actions.
+/// If this test fails after a Renovate-driven Octokit.Webhooks update:
+///   Run UPDATE_SNAPSHOTS=1 dotnet test --filter OctokitPayloadSchemaSnapshotTests
+///   to update the snapshot, then review the diff before committing.
 /// </summary>
 public class OctokitPayloadSchemaSnapshotTests
 {
@@ -41,8 +41,8 @@ public class OctokitPayloadSchemaSnapshotTests
 
         var expected = File.ReadAllText(SnapshotPath);
         Assert.True(expected == actual,
-            $"Octokit.Webhooks モデルスキーマが変化しました。" +
-            $"UPDATE_SNAPSHOTS=1 dotnet test --filter OctokitPayloadSchemaSnapshotTests を実行して差分を確認してください。");
+            $"The Octokit.Webhooks model schema has changed. " +
+            $"Run UPDATE_SNAPSHOTS=1 dotnet test --filter OctokitPayloadSchemaSnapshotTests to inspect the diff.");
     }
 
     private static SortedDictionary<string, object> BuildSchema()
@@ -74,7 +74,7 @@ public class OctokitPayloadSchemaSnapshotTests
 
             if (propType.IsEnum)
             {
-                // Enum: メンバー名と基底値をスナップショット化する（追加・削除・変更を検知）
+                // Enum: snapshot the member names and underlying values (detects additions, removals, and changes)
                 props[jsonName] = new
                 {
                     type = "enum:" + propType.Name,
@@ -92,7 +92,7 @@ public class OctokitPayloadSchemaSnapshotTests
                      && !(propType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(propType))
                      && propType.Namespace?.StartsWith("Octokit", StringComparison.Ordinal) == true)
             {
-                // ネストした Octokit 型: 再帰的にスキーマを構築する
+                // Nested Octokit type: build the schema recursively
                 props[jsonName] = BuildTypeSchema(propType, new HashSet<Type>(visited));
             }
             else if (propType.IsGenericType

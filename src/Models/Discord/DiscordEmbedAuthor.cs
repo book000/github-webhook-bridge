@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace GitHubWebhookBridge.Models.Discord;
 
-/// <summary>Discord Embed の著者情報を表すレコード</summary>
+/// <summary>Record representing the author information of a Discord Embed</summary>
 public record DiscordEmbedAuthor(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("url")] Uri? Url = null,

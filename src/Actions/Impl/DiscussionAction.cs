@@ -10,7 +10,7 @@ using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub discussion イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub discussion events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.Discussion)]
 public sealed class DiscussionAction(
@@ -54,7 +54,7 @@ public sealed class DiscussionAction(
 
         var title = $"Discussion {titleVerb}: #{discussion.Number} {discussion.Title}";
 
-        // サブタイプ固有プロパティをパターンマッチで取得する
+        // Retrieve subtype-specific properties via pattern matching.
         Label? label = (Event as DiscussionLabeledEvent)?.Label
                        ?? (Event as DiscussionUnlabeledEvent)?.Label;
         DiscussionAnswer? answer = (Event as DiscussionAnsweredEvent)?.Answer;
@@ -74,7 +74,7 @@ public sealed class DiscussionAction(
         if (newCategory is not null)
             fields.Add(new("New Category", newCategory.Name, true));
 
-        // answered イベント時は回答の本文を表示する
+        // On the answered event, show the answer body.
         string? description = null;
         if (Event.Action == "answered" && answer is not null)
         {

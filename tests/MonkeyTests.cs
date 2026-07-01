@@ -15,12 +15,12 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>境界値・モンキーテスト。予期しない入力でクラッシュしないことを確認する。</summary>
+/// <summary>Boundary-value and monkey tests. Confirm that unexpected input does not cause a crash.</summary>
 public class MonkeyTests
 {
-    // ---- SignatureValidator モンキーテスト ----
+    // ---- SignatureValidator monkey tests ----
 
-    /// <summary>空のボディでも例外が発生しない。</summary>
+    /// <summary>An empty body does not throw.</summary>
     [Fact]
     public void SignatureValidatorEmptyBodyDoesNotThrow()
     {
@@ -33,19 +33,19 @@ public class MonkeyTests
         Assert.Null(ex);
     }
 
-    /// <summary>非常に長い署名ヘッダー（1000 文字）は false を返し、例外が発生しない。</summary>
+    /// <summary>A very long signature header (1000 characters) returns false without throwing.</summary>
     [Fact]
     public void SignatureValidatorVeryLongSignatureHeaderReturnsFalseNoThrow()
     {
         var body = Encoding.UTF8.GetBytes("test");
-        var longSig = "sha256=" + new string('a', 993); // 合計 1000 文字
+        var longSig = "sha256=" + new string('a', 993); // 1000 characters total
 
         var result = SignatureValidator.Validate(body, longSig, "secret");
 
         Assert.False(result);
     }
 
-    /// <summary>すべてゼロのバイト列でも決定的な結果を返す（非例外）。</summary>
+    /// <summary>An all-zero byte array returns a deterministic result (no exception).</summary>
     [Fact]
     public void SignatureValidatorAllZeroBodyReturnsDeterministicResult()
     {
@@ -61,18 +61,18 @@ public class MonkeyTests
         Assert.Equal(result1, result2);
     }
 
-    /// <summary>ヘッダー値が ASCII 非対応文字列（%XX 不完全エンコード等）でも例外が発生しない。</summary>
+    /// <summary>A header value with non-ASCII strings (e.g. incomplete %XX encoding) does not throw.</summary>
     [Fact]
     public void SignatureValidatorWeirdHeaderValueReturnsFalseNoThrow()
     {
         var body = Encoding.UTF8.GetBytes("{}");
-        // 不完全なシグネチャ（プレフィックスのみ）
+        // Incomplete signature (prefix only)
         var result = SignatureValidator.Validate(body, "sha256=", "secret");
 
         Assert.False(result);
     }
 
-    // ---- MessageCacheService.SanitizeRowKey モンキーテスト ----
+    // ---- MessageCacheService.SanitizeRowKey monkey tests ----
 
     private static string InvokeSanitizeRowKey(string key)
     {
@@ -82,7 +82,7 @@ public class MonkeyTests
         return (string)method.Invoke(null, [key])!;
     }
 
-    /// <summary>空文字列を渡しても例外が発生せず空文字列を返す。</summary>
+    /// <summary>Passing an empty string returns an empty string without throwing.</summary>
     [Fact]
     public void SanitizeRowKeyEmptyStringReturnsEmpty()
     {
@@ -91,7 +91,7 @@ public class MonkeyTests
         Assert.Equal("", result);
     }
 
-    /// <summary>512 文字超の文字列は 512 文字以下に切り詰められる。</summary>
+    /// <summary>A string exceeding 512 characters is truncated to 512 characters or fewer.</summary>
     [Fact]
     public void SanitizeRowKeyLongStringTruncatesToMax512()
     {
@@ -102,7 +102,7 @@ public class MonkeyTests
         Assert.Equal(512, result.Length);
     }
 
-    /// <summary>Azure Table Storage 禁止文字（/ \ # ?）は URL エンコードされる。</summary>
+    /// <summary>Azure Table Storage forbidden characters (/ \ # ?) are URL-encoded.</summary>
     [Fact]
     public void SanitizeRowKeyForbiddenCharsUrlEncoded()
     {
@@ -116,21 +116,21 @@ public class MonkeyTests
         Assert.DoesNotContain("?", result);
     }
 
-    /// <summary>切り詰め境界で %XX エンコード三文字組が分断されない。</summary>
+    /// <summary>A %XX encoded triplet is not split at the truncation boundary.</summary>
     [Fact]
     public void SanitizeRowKeyTruncationDoesNotSplitPercentEncoding()
     {
-        // Uri.EscapeDataString は非 ASCII 文字を %XX%XX 形式でエンコードする。
-        // 切り詰め後の末尾が % や %X で終わらないことを確認する。
-        string key = new('あ', 300); // 各文字が %E3%81%82 (9 bytes) にエンコードされる
+        // Uri.EscapeDataString encodes non-ASCII characters in %XX%XX form.
+        // Confirm that the truncated tail does not end with % or %X.
+        string key = new('あ', 300); // Each character encodes to %E3%81%82 (9 bytes)
 
         var result = InvokeSanitizeRowKey(key);
 
-        // %XX の途中で切れていないこと（末尾が % または %[0-9A-F] でないこと）
+        // Not cut off in the middle of a %XX (the tail is not % or %[0-9A-F])
         Assert.Matches(@"^([^%]|%[0-9A-Fa-f]{2})*$", result);
     }
 
-    /// <summary>日本語文字列は正しく URL エンコードされる。</summary>
+    /// <summary>Japanese strings are correctly URL-encoded.</summary>
     [Fact]
     public void SanitizeRowKeyJapaneseCharsUrlEncoded()
     {
@@ -138,13 +138,13 @@ public class MonkeyTests
 
         var result = InvokeSanitizeRowKey(key);
 
-        // エンコードされているため元の日本語文字が含まれない
+        // Because it is encoded, the original Japanese characters are not present
         Assert.DoesNotContain("テスト", result);
-        // %XX 形式のエンコード文字列が含まれる
+        // Contains %XX-form encoded strings
         Assert.Contains("%", result);
     }
 
-    // ---- MuteManager 境界値テスト ----
+    // ---- MuteManager boundary-value tests ----
 
     private static MuteManager CreateMuteManager(string json)
     {
@@ -158,7 +158,7 @@ public class MonkeyTests
         return mgr;
     }
 
-    /// <summary>空のミュートリストではどのユーザーも false を返す。</summary>
+    /// <summary>With an empty mute list, every user returns false.</summary>
     [Fact]
     public void MuteManagerEmptyListReturnsFalse()
     {
@@ -168,7 +168,7 @@ public class MonkeyTests
         Assert.False(mgr.IsMuted(long.MaxValue, "issues", "opened"));
     }
 
-    /// <summary>type = "all" でイベント・アクションリストが空でも true を返す。</summary>
+    /// <summary>With type = "all", it returns true even when the event/action list is empty.</summary>
     [Fact]
     public void MuteManagerTypeAllEmptyEventsListReturnsTrue()
     {
@@ -178,7 +178,7 @@ public class MonkeyTests
         Assert.True(mgr.IsMuted(42, "issues", "opened"));
     }
 
-    /// <summary>userId = 0 でもクラッシュしない。</summary>
+    /// <summary>userId = 0 does not crash.</summary>
     [Fact]
     public void MuteManagerUserIdZeroDoesNotThrow()
     {
@@ -190,7 +190,7 @@ public class MonkeyTests
         Assert.True(mgr.IsMuted(0, "push", null));
     }
 
-    /// <summary>userId = long.MaxValue でもクラッシュしない。</summary>
+    /// <summary>userId = long.MaxValue does not crash.</summary>
     [Fact]
     public void MuteManagerUserIdMaxValueDoesNotThrow()
     {
@@ -201,7 +201,7 @@ public class MonkeyTests
         Assert.Null(ex);
     }
 
-    /// <summary>eventName に空文字列を渡してもクラッシュしない。</summary>
+    /// <summary>Passing an empty string for eventName does not crash.</summary>
     [Fact]
     public void MuteManagerEmptyEventNameDoesNotThrow()
     {
@@ -212,9 +212,9 @@ public class MonkeyTests
         Assert.Null(ex);
     }
 
-    // ---- UnhandledAction 境界値テスト ----
+    // ---- UnhandledAction boundary-value tests ----
 
-    /// <summary>UnhandledAction の RunAsync は NotImplementedException をスローする（HTTP 406 経路の担保）。</summary>
+    /// <summary>UnhandledAction.RunAsync throws NotImplementedException (guarantees the HTTP 406 path).</summary>
     [Fact]
     public async Task UnhandledActionRunAsyncThrowsNotImplementedException()
     {
@@ -223,7 +223,7 @@ public class MonkeyTests
         await Assert.ThrowsAsync<NotImplementedException>(() => action.RunAsync());
     }
 
-    // ---- PullRequestAction 境界値テスト ----
+    // ---- PullRequestAction boundary-value tests ----
 
     private static readonly Uri _actionWebhookUri = new("https://discord.com/api/webhooks/1/x");
 
@@ -249,13 +249,13 @@ public class MonkeyTests
         var prJson = TestFixtures.PullRequestJson(number: 1, title: "Test PR", body: body);
         var repoJson = TestFixtures.RepoJson("owner/repo");
         var senderJson = TestFixtures.UserJson("author", 100);
-        // PullRequestSynchronizeEvent が action="synchronize" で before/after を required にするため常に含める
+        // Always include before/after because PullRequestSynchronizeEvent requires them when action="synchronize"
         return JsonSerializer.Deserialize<PullRequestEvent>(
             $$$"""{"action":"{{{action}}}","number":1,"before":"aaa000","after":"bbb111","pull_request":{{{prJson}}},"repository":{{{repoJson}}},"sender":{{{senderJson}}}}""",
             OctokitJsonOptions.Value)!;
     }
 
-    /// <summary>PR の Body と RequestedReviewers が null でも NullReferenceException が発生しない。</summary>
+    /// <summary>A null PR Body and null RequestedReviewers do not cause a NullReferenceException.</summary>
     [Fact]
     public async Task PullRequestActionNullBodyAndNullRequestedReviewersDoesNotThrow()
     {
@@ -271,7 +271,7 @@ public class MonkeyTests
         Assert.Null(ex);
     }
 
-    /// <summary>synchronize アクションは Discord に送信せずに正常終了する。</summary>
+    /// <summary>The synchronize action completes successfully without sending to Discord.</summary>
     [Fact]
     public async Task PullRequestActionSynchronizeActionSendsNoMessage()
     {

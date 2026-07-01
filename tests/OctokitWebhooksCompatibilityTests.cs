@@ -5,11 +5,11 @@ using Octokit.Webhooks;
 namespace GitHubWebhookBridge.Tests;
 
 /// <summary>
-/// Octokit.Webhooks のトップレベルイベント型が既知リストと一致することを検証する。
-/// Renovate による NuGet 更新後にこのテストが落ちた場合:
-///   1. UPDATE_KNOWN_EVENTS=1 dotnet test --filter OctokitWebhooksCompatibilityTests を実行
-///   2. tests/Snapshots/octokit-known-events.txt の差分を確認
-///   3. 新イベントは実装 or コメントで「意図的に未実装」を記録してからコミット
+/// Verifies that the top-level event types in Octokit.Webhooks match the known list.
+/// If this test fails after a Renovate-driven NuGet update:
+///   1. Run UPDATE_KNOWN_EVENTS=1 dotnet test --filter OctokitWebhooksCompatibilityTests
+///   2. Review the diff in tests/Snapshots/octokit-known-events.txt
+///   3. Either implement new events or record "intentionally unimplemented" in a comment before committing
 /// </summary>
 public class OctokitWebhooksCompatibilityTests
 {
@@ -41,13 +41,13 @@ public class OctokitWebhooksCompatibilityTests
         var removed = known.Except(actual).OrderBy(n => n).ToList();
 
         Assert.True(added.Count == 0,
-            $"Octokit.Webhooks に新しいイベント型が追加されました。実装するか既知リストに追記してください: {string.Join(", ", added)}");
+            $"New event types were added to Octokit.Webhooks. Implement them or append to the known list: {string.Join(", ", added)}");
         Assert.True(removed.Count == 0,
-            $"Octokit.Webhooks からイベント型が削除されました。既知リストから除去してください: {string.Join(", ", removed)}");
+            $"Event types were removed from Octokit.Webhooks. Remove them from the known list: {string.Join(", ", removed)}");
     }
 
     /// <summary>
-    /// イベント型からイベント名を取得する（型名 → snake_case 変換）。
+    /// Derives the event name from the event type (type name -> snake_case conversion).
     /// </summary>
     private static string GetEventName(Type t)
     {

@@ -10,7 +10,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>PullRequestReviewAction の色・タイトル検証テスト。</summary>
+/// <summary>Tests that verify PullRequestReviewAction's color and title.</summary>
 public class PullRequestReviewActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.com/api/webhooks/1/x");
@@ -32,7 +32,7 @@ public class PullRequestReviewActionTests
         return (discord, cache, userMap);
     }
 
-    /// <summary>テスト用 PullRequestReviewEvent を TestFixtures から生成する。</summary>
+    /// <summary>Creates a test PullRequestReviewEvent from TestFixtures.</summary>
     private static PullRequestReviewEvent MakePrReviewEvent(string action, string reviewState) =>
         JsonSerializer.Deserialize<PullRequestReviewEvent>(
             $$"""
@@ -50,7 +50,7 @@ public class PullRequestReviewActionTests
             """,
             OctokitJsonOptions.Value)!;
 
-    /// <summary>キャプチャされた Embed の色を取得するヘルパー。</summary>
+    /// <summary>Helper that captures and returns the color of the sent Embed.</summary>
     private static async Task<int> RunAndCaptureColor(
         Mock<IDiscordClient> discord,
         Mock<IMessageCacheService> cache,
@@ -81,7 +81,7 @@ public class PullRequestReviewActionTests
         return capturedColor;
     }
 
-    /// <summary>submitted + APPROVED のレビューは PullRequestReviewApproved 色を使用する。</summary>
+    /// <summary>A submitted + APPROVED review uses the PullRequestReviewApproved color.</summary>
     [Fact]
     public async Task RunAsyncSubmittedApprovedUsesApprovedColor()
     {
@@ -92,7 +92,7 @@ public class PullRequestReviewActionTests
         Assert.Equal(EmbedColors.PullRequestReviewApproved, color);
     }
 
-    /// <summary>submitted + CHANGES_REQUESTED は PullRequestReviewChangesRequested 色を使用する。</summary>
+    /// <summary>submitted + CHANGES_REQUESTED uses the PullRequestReviewChangesRequested color.</summary>
     [Fact]
     public async Task RunAsyncSubmittedChangesRequestedUsesChangesRequestedColor()
     {
@@ -103,7 +103,7 @@ public class PullRequestReviewActionTests
         Assert.Equal(EmbedColors.PullRequestReviewChangesRequested, color);
     }
 
-    /// <summary>dismissed は PullRequestReviewDismissed 色を使用する。</summary>
+    /// <summary>dismissed uses the PullRequestReviewDismissed color.</summary>
     [Fact]
     public async Task RunAsyncDismissedUsesDismissedColor()
     {
@@ -115,28 +115,28 @@ public class PullRequestReviewActionTests
     }
 
     /// <summary>
-    /// 既知のバグ (B2): submitted + COMMENTED が Approved 色（緑）で表示されてしまう。
-    /// 本来は専用の色（例: PullRequestReviewCommented）を使うべきだが、現在は
-    /// <see cref="EmbedColors.PullRequestReviewApproved"/> が使われている。
-    /// このテストは現在の（バグのある）挙動を文書化する。
+    /// Known bug (B2): submitted + COMMENTED is displayed with the Approved color (green).
+    /// It should use a dedicated color (e.g. PullRequestReviewCommented), but currently
+    /// <see cref="EmbedColors.PullRequestReviewApproved"/> is used.
+    /// This test documents the current (buggy) behavior.
     /// </summary>
     [Fact]
     public async Task RunAsyncSubmittedCommentedUsesApprovedColorIncorrectlyKnownBug()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        // NOTE: これは既知のバグ (B2) です。
-        // COMMENTED レビューが PullRequestReviewApproved (緑) で表示されてしまう。
-        // 本来は専用の色（例: EmbedColors.PullRequestReviewCommented）を使うべき。
-        // TODO (B2 修正時): このテストを削除し、EmbedColors.PullRequestReviewCommented 色を
-        // 検証する新しいテストに差し替えること。
+        // NOTE: This is a known bug (B2).
+        // A COMMENTED review is displayed with PullRequestReviewApproved (green).
+        // It should use a dedicated color (e.g. EmbedColors.PullRequestReviewCommented).
+        // TODO (when fixing B2): remove this test and replace it with a new test that
+        // verifies the EmbedColors.PullRequestReviewCommented color.
         var color = await RunAndCaptureColor(discord, cache, userMap, "submitted", "COMMENTED");
 
-        // バグの現在挙動を文書化: COMMENTED でも Approved 色が使われる
+        // Document the current buggy behavior: COMMENTED also uses the Approved color
         Assert.Equal(EmbedColors.PullRequestReviewApproved, color);
     }
 
-    /// <summary>approved アクションのタイトルに "approved" が含まれる。</summary>
+    /// <summary>The title of the approved action contains "approved".</summary>
     [Fact]
     public async Task RunAsyncSubmittedApprovedTitleContainsApproved()
     {
@@ -166,7 +166,7 @@ public class PullRequestReviewActionTests
         Assert.Contains("approved", capturedTitle, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>changes_requested アクションのタイトルに "changes" が含まれる。</summary>
+    /// <summary>The title of the changes_requested action contains "changes".</summary>
     [Fact]
     public async Task RunAsyncSubmittedChangesRequestedTitleContainsChanges()
     {
@@ -196,7 +196,7 @@ public class PullRequestReviewActionTests
         Assert.Contains("changes", capturedTitle, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>dismissed アクションのタイトルに "dismissed" が含まれる。</summary>
+    /// <summary>The title of the dismissed action contains "dismissed".</summary>
     [Fact]
     public async Task RunAsyncDismissedTitleContainsDismissed()
     {

@@ -14,22 +14,22 @@ using Moq;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>WebhookFunction.RunAsync() のセキュリティパス・機能・境界値テスト。</summary>
+/// <summary>Security-path, functional, and boundary-value tests for WebhookFunction.RunAsync().</summary>
 public class WebhookFunctionTests
 {
     private const string TestSecret = "test-webhook-secret";
     private const string TestDiscordUrl = "https://discord.com/api/webhooks/123456/test-token";
 
-    // ---- ヘルパーメソッド ----
+    // ---- Helper methods ----
 
-    /// <summary>HMAC-SHA256 署名を計算する。</summary>
+    /// <summary>Computes the HMAC-SHA256 signature.</summary>
     private static string ComputeSignature(byte[] body, string secret)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         return "sha256=" + Convert.ToHexString(hmac.ComputeHash(body)).ToLowerInvariant();
     }
 
-    /// <summary>テスト用 <see cref="HttpRequestData"/> を組み立てる。</summary>
+    /// <summary>Builds an <see cref="HttpRequestData"/> for tests.</summary>
     private static FakeHttpRequestData BuildRequest(
         string body,
         string secret,
@@ -61,7 +61,7 @@ public class WebhookFunctionTests
         return new FakeHttpRequestData(context, new MemoryStream(bodyBytes), headers, query);
     }
 
-    /// <summary>WebhookFunction インスタンスを生成するファクトリ。</summary>
+    /// <summary>Factory that creates a WebhookFunction instance.</summary>
     private static WebhookFunction CreateFunction(
         Mock<IActionFactory>? factoryMock = null,
         Mock<IMuteManager>? muteMock = null,
@@ -70,7 +70,7 @@ public class WebhookFunctionTests
     {
         Mock<IActionFactory> factory = factoryMock ?? new Mock<IActionFactory>();
 
-        // muteMock が指定されていない場合のみデフォルトを生成・設定する
+        // Create and configure a default only when muteMock is not provided
         Mock<IMuteManager> mute;
         if (muteMock is null)
         {
@@ -95,16 +95,16 @@ public class WebhookFunctionTests
         return new WebhookFunction(factory.Object, mute.Object, configMock.Object, logger.Object);
     }
 
-    /// <summary>レスポンスボディを UTF-8 文字列として読み出す。</summary>
+    /// <summary>Reads the response body as a UTF-8 string.</summary>
     private static string ReadBody(HttpResponseData response)
     {
         var stream = (MemoryStream)response.Body;
         return Encoding.UTF8.GetString(stream.ToArray());
     }
 
-    // ---- セキュリティパステスト ----
+    // ---- Security-path tests ----
 
-    /// <summary>Content-Length が 10 MB 超のリクエストは 400 を返す。</summary>
+    /// <summary>A request with Content-Length over 10 MB returns 400.</summary>
     [Fact]
     public async Task RunBodyTooLargeReturns400()
     {
@@ -116,7 +116,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>空ボディのリクエストは 400 を返す。</summary>
+    /// <summary>A request with an empty body returns 400.</summary>
     [Fact]
     public async Task RunEmptyBodyReturns400()
     {
@@ -128,7 +128,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>X-Hub-Signature-256 ヘッダーが欠落していると 400 を返す。</summary>
+    /// <summary>Returns 400 when the X-Hub-Signature-256 header is missing.</summary>
     [Fact]
     public async Task RunMissingSignatureReturns400()
     {
@@ -140,7 +140,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>無効な署名は 400 を返す。</summary>
+    /// <summary>An invalid signature returns 400.</summary>
     [Fact]
     public async Task RunInvalidSignatureReturns400()
     {
@@ -158,7 +158,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>X-GitHub-Event ヘッダーが欠落していると 400 を返す。</summary>
+    /// <summary>Returns 400 when the X-GitHub-Event header is missing.</summary>
     [Fact]
     public async Task RunMissingEventHeaderReturns400()
     {
@@ -170,7 +170,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>X-GitHub-Event に特殊文字が含まれると 400 を返す（ログインジェクション防止）。</summary>
+    /// <summary>Returns 400 when X-GitHub-Event contains special characters (log injection prevention).</summary>
     [Fact]
     public async Task RunEventHeaderWithSpecialCharsReturns400()
     {
@@ -182,7 +182,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>?url= に非 Discord URL が指定されると 400 を返す（SSRF 対策）。</summary>
+    /// <summary>Returns 400 when a non-Discord URL is passed in ?url= (SSRF protection).</summary>
     [Fact]
     public async Task RunNonDiscordWebhookUrlReturns400()
     {
@@ -198,7 +198,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>?url= に HTTP（非 HTTPS）の Discord URL が指定されると 400 を返す。</summary>
+    /// <summary>Returns 400 when an HTTP (non-HTTPS) Discord URL is passed in ?url=.</summary>
     [Fact]
     public async Task RunHttpDiscordUrlReturns400()
     {
@@ -214,7 +214,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>?url= に discord.com の有効な URL が指定された場合は正常処理する。</summary>
+    /// <summary>Processes normally when a valid discord.com URL is passed in ?url=.</summary>
     [Fact]
     public async Task RunValidDiscordComUrlSucceeds()
     {
@@ -237,7 +237,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
     }
 
-    /// <summary>?url= に discordapp.com の有効な URL が指定された場合は正常処理する。</summary>
+    /// <summary>Processes normally when a valid discordapp.com URL is passed in ?url=.</summary>
     [Fact]
     public async Task RunValidDiscordappComUrlSucceeds()
     {
@@ -260,9 +260,9 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
     }
 
-    // ---- イベント無効化テスト ----
+    // ---- Event-disabling tests ----
 
-    /// <summary>?disabled-events= で指定されたイベントは 202 を返す。</summary>
+    /// <summary>An event specified in ?disabled-events= returns 202.</summary>
     [Fact]
     public async Task RunDisabledEventViaQueryReturns202()
     {
@@ -278,7 +278,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.Accepted, result.StatusCode);
     }
 
-    /// <summary>設定値 DISABLED_EVENTS で指定されたイベントは 202 を返す。</summary>
+    /// <summary>An event specified in the DISABLED_EVENTS config value returns 202.</summary>
     [Fact]
     public async Task RunDisabledEventViaConfigReturns202()
     {
@@ -293,9 +293,9 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.Accepted, result.StatusCode);
     }
 
-    // ---- ミュートテスト ----
+    // ---- Mute tests ----
 
-    /// <summary>ミュート対象ユーザーからのリクエストは 200 "Muted user" を返す。</summary>
+    /// <summary>A request from a muted user returns 200 "Muted user".</summary>
     [Fact]
     public async Task RunMutedUserReturns200WithMutedMessage()
     {
@@ -315,7 +315,7 @@ public class WebhookFunctionTests
         Assert.Contains("Muted user", ReadBody(result), StringComparison.Ordinal);
     }
 
-    /// <summary>sender.id が数値でない場合（文字列）でも 500 にならず正常に処理する。</summary>
+    /// <summary>Even when sender.id is not a number (a string), it does not return 500 and processes normally.</summary>
     [Fact]
     public async Task RunSenderIdAsStringDoesNotThrow()
     {
@@ -337,7 +337,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
     }
 
-    /// <summary>sender フィールドが存在しない場合はミュートチェックをスキップして正常処理する。</summary>
+    /// <summary>When the sender field is missing, the mute check is skipped and processing continues normally.</summary>
     [Fact]
     public async Task RunSenderFieldMissingSkipsMuteCheckAndContinues()
     {
@@ -358,9 +358,9 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
     }
 
-    // ---- JSON / ディスパッチテスト ----
+    // ---- JSON / dispatch tests ----
 
-    /// <summary>不正な JSON ボディは 400 を返す。</summary>
+    /// <summary>An invalid JSON body returns 400.</summary>
     [Fact]
     public async Task RunInvalidJsonReturns400()
     {
@@ -372,7 +372,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>ファクトリが NotImplementedException をスローした場合は 400 を返す。</summary>
+    /// <summary>Returns 400 when the factory throws a NotImplementedException.</summary>
     [Fact]
     public async Task RunUnknownEventFactoryThrowsReturns400()
     {
@@ -388,7 +388,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
     }
 
-    /// <summary>スタブアクション（RunAsync が NotImplementedException をスロー）は 406 を返す。</summary>
+    /// <summary>A stub action (whose RunAsync throws NotImplementedException) returns 406.</summary>
     [Fact]
     public async Task RunStubActionReturns406()
     {
@@ -407,7 +407,7 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.NotAcceptable, result.StatusCode);
     }
 
-    /// <summary>ping イベントは正常処理されて 200 を返す。</summary>
+    /// <summary>A ping event is processed normally and returns 200.</summary>
     [Fact]
     public async Task RunPingEventReturns200()
     {

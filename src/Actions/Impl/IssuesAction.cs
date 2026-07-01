@@ -11,7 +11,7 @@ using IssuesEventChanges = Octokit.Webhooks.Models.IssuesEvent.Changes;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub issues イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub issues events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.Issues)]
 public sealed class IssuesAction(
@@ -35,11 +35,11 @@ public sealed class IssuesAction(
             return;
         }
 
-        // 通知タイトルとキャッシュキーの一意性を保つため、欠損時は空文字ではなく明示的な既定値を使う
+        // Use an explicit default rather than an empty string when missing, to keep the notification title and cache key unique.
         var action = Event.Action ?? "unknown";
         (var title, var color) = GetTitleAndColor(action, issue);
 
-        // サブタイプ固有プロパティをパターンマッチで取得する
+        // Retrieve subtype-specific properties via pattern matching.
         Label? label = (Event as IssuesLabeledEvent)?.Label
                        ?? (Event as IssuesUnlabeledEvent)?.Label;
         User? assignee = (Event as IssuesAssignedEvent)?.Assignee
@@ -65,13 +65,13 @@ public sealed class IssuesAction(
             author: author,
             fields: fields);
 
-        // アクション別キー（同一性質のペアは共通キーで編集対象を統一）
+        // Per-action key (pairs of the same nature share a common key to unify the edit target).
         var keySuffix = GetKeySuffix(action);
         var key = $"{repo.FullName}#{issue.Number}-{keySuffix}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 
-    /// <summary>action ごとの埋め込みタイトルと色を決定する</summary>
+    /// <summary>Determines the embed title and color for each action.</summary>
     private static (string Title, int Color) GetTitleAndColor(string action, Issue issue) => action switch
     {
         "opened" => ($"Issue opened: #{issue.Number} {issue.Title}", EmbedColors.IssueOpened),
@@ -93,7 +93,7 @@ public sealed class IssuesAction(
         _ => ($"Issue {action}: #{issue.Number} {issue.Title}", EmbedColors.Unknown),
     };
 
-    /// <summary>埋め込みフィールド一覧を組み立てる</summary>
+    /// <summary>Builds the list of embed fields.</summary>
     private static List<DiscordEmbedField> BuildFields(
         Repository repo,
         Issue issue,
@@ -119,10 +119,10 @@ public sealed class IssuesAction(
         return fields;
     }
 
-    /// <summary>本文（edited イベントの場合はタイトル変更の diff）を組み立てる</summary>
+    /// <summary>Builds the body (a title-change diff for the edited event).</summary>
     private static string? BuildDescription(string action, Issue issue, IssuesEventChanges? changes)
     {
-        // edited イベントの場合、タイトル変更の diff を description として生成する
+        // For the edited event, generate a title-change diff as the description.
         if (action == "edited" && changes?.Title?.From is not null)
         {
             var patch = CreatePatch(changes.Title.From, issue.Title, "title");
@@ -134,7 +134,7 @@ public sealed class IssuesAction(
             : null;
     }
 
-    /// <summary>同一性質のアクションペアを共通キーに統一する</summary>
+    /// <summary>Unifies pairs of actions of the same nature under a common key.</summary>
     private static string GetKeySuffix(string action) => action switch
     {
         "assigned" or "unassigned" => "assigned",

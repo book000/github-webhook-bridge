@@ -7,7 +7,7 @@ Stack: C# / .NET 10, Azure Functions v4 Isolated, Azure Table + Blob Storage, xU
 
 ## Code Rules
 
-- Code comments and XML doc (`///`): Japanese. Error / log messages: English.
+- English is mandatory for all project artifacts: code comments, XML doc (`///`), error / log messages, commit messages, PR titles/bodies, and documentation. Japanese is permitted only where quoting real-world Japanese data verbatim is unavoidable (e.g. test fixtures containing actual GitHub payload text).
 - Never use `#pragma warning disable` to silence analyzer/type errors — fix the code.
   (Exception: test-only suppressions go in the `[tests/**/*.cs]` block in `.editorconfig`, never in `#pragma`.)
 - Never instantiate `HttpClient` directly — inject `IHttpClientFactory` via DI.

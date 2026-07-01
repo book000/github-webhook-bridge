@@ -93,7 +93,7 @@ public class PullRequestActionTests
 
         await action.RunAsync();
 
-        // "merged" というテキストがタイトルに含まれることを確認する
+        // Verify the title contains the text "merged"
         discord.Verify(
             d => d.SendMessageAsync(
                 It.IsAny<Uri>(),
@@ -165,8 +165,8 @@ public class PullRequestActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        // レビュアーに Discord ID がマッピングされている場合
-        // WebhookConverter が "review_requested" から PullRequestReviewRequestedEvent にデシリアライズする
+        // When the reviewer is mapped to a Discord ID
+        // WebhookConverter deserializes "review_requested" into a PullRequestReviewRequestedEvent
         userMap.Setup(u => u.GetById(300L)).Returns("discord-user-id-300");
 
         PullRequestAction action = new(
@@ -186,7 +186,7 @@ public class PullRequestActionTests
             Times.Once);
     }
 
-    /// <summary>review_requested と review_request_removed は共通のキーサフィックス "review_requested" を使用する。</summary>
+    /// <summary>review_requested and review_request_removed share the common key suffix "review_requested".</summary>
     [Fact]
     public async Task RunAsyncReviewRequestedAndRemovedShareCacheKeySuffix()
     {
@@ -208,12 +208,12 @@ public class PullRequestActionTests
         await action1.RunAsync();
         await action2.RunAsync();
 
-        // 両方とも "review_requested" サフィックスのキーを使う
+        // Both use the key with the "review_requested" suffix
         cache1.Verify(c => c.GetAsync(_webhookUri, "test/repo#42-review_requested"), Times.Once);
         cache2.Verify(c => c.GetAsync(_webhookUri, "test/repo#42-review_requested"), Times.Once);
     }
 
-    /// <summary>Draft PR で review_requested が来てもメンションを送信しない。</summary>
+    /// <summary>No mention is sent when review_requested arrives for a draft PR.</summary>
     [Fact]
     public async Task RunAsyncDoesNotSendMentionForReviewRequestedOnDraftPr()
     {
@@ -229,7 +229,7 @@ public class PullRequestActionTests
 
         await action.RunAsync();
 
-        // Draft PR ではメンションなし（Content が null か空）
+        // No mention for a draft PR (Content is null or empty)
         discord.Verify(
             d => d.SendMessageAsync(
                 It.IsAny<Uri>(),

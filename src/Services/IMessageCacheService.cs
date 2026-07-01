@@ -1,27 +1,27 @@
 namespace GitHubWebhookBridge.Services;
 
-/// <summary>Discord メッセージ ID を 5 分間キャッシュする機能を定義するインターフェース</summary>
+/// <summary>Interface defining functionality that caches Discord message IDs for 5 minutes</summary>
 public interface IMessageCacheService
 {
-    /// <summary>指定キーに対応するキャッシュエントリを取得する</summary>
-    /// <param name="webhookUrl">キャッシュを区別する Webhook URL</param>
-    /// <param name="key">メッセージを識別するキー文字列</param>
-    /// <returns>キャッシュされたメッセージ情報。存在しない、または期限切れの場合は <see langword="null"/></returns>
+    /// <summary>Gets the cache entry corresponding to the specified key</summary>
+    /// <param name="webhookUrl">Webhook URL that distinguishes the cache</param>
+    /// <param name="key">Key string identifying the message</param>
+    /// <returns>Cached message information, or <see langword="null"/> if it does not exist or has expired</returns>
     Task<CachedMessage?> GetAsync(Uri webhookUrl, string key);
 
-    /// <summary>指定キーでメッセージ ID をキャッシュに保存する</summary>
-    /// <param name="webhookUrl">キャッシュを区別する Webhook URL</param>
-    /// <param name="key">メッセージを識別するキー文字列</param>
-    /// <param name="messageId">保存する Discord メッセージ ID</param>
-    /// <returns>処理完了を表す <see cref="Task"/></returns>
+    /// <summary>Stores a message ID in the cache under the specified key</summary>
+    /// <param name="webhookUrl">Webhook URL that distinguishes the cache</param>
+    /// <param name="key">Key string identifying the message</param>
+    /// <param name="messageId">Discord message ID to store</param>
+    /// <returns>A <see cref="Task"/> representing completion of the operation</returns>
     Task SetAsync(Uri webhookUrl, string key, string messageId);
 
-    /// <summary>指定キーのキャッシュエントリを削除する。編集失敗時のフォールバック用</summary>
-    /// <param name="webhookUrl">キャッシュを区別する Webhook URL</param>
-    /// <param name="key">削除対象のキー文字列</param>
-    /// <returns>処理完了を表す <see cref="Task"/></returns>
+    /// <summary>Deletes the cache entry for the specified key. Used as a fallback on edit failure</summary>
+    /// <param name="webhookUrl">Webhook URL that distinguishes the cache</param>
+    /// <param name="key">Key string to delete</param>
+    /// <returns>A <see cref="Task"/> representing completion of the operation</returns>
     Task DeleteAsync(Uri webhookUrl, string key);
 }
 
-/// <summary>キャッシュされたメッセージ情報を表すレコード</summary>
+/// <summary>Record representing cached message information</summary>
 public record CachedMessage(string MessageId);

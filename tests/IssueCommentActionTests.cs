@@ -10,7 +10,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>IssueCommentAction の通知内容・Issue/PR 判定・メンション・キャッシュキーテスト。</summary>
+/// <summary>Tests for IssueCommentAction notification content, Issue/PR detection, mentions, and cache keys.</summary>
 public class IssueCommentActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
@@ -40,7 +40,7 @@ public class IssueCommentActionTests
         $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(3,"Test issue",isPr:isPullRequest,userLogin:"issue-author",userId:10)}},"comment":{{TestFixtures.IssueCommentJson(commentId,commentBody)}},"repository":{{TestFixtures.RepoJson("test/repo")}},"sender":{{TestFixtures.UserJson("commenter",20)}}}""",
         OctokitJsonOptions.Value)!;
 
-    /// <summary>created + 通常 Issue のタイトルに "Issue" と "commented on" が含まれる。</summary>
+    /// <summary>For created + a regular Issue, the title contains "Issue" and "commented on".</summary>
     [Fact]
     public async Task RunAsyncCreatedOnIssueTitleContainsIssue()
     {
@@ -62,7 +62,7 @@ public class IssueCommentActionTests
             Times.Once);
     }
 
-    /// <summary>created + PR コメントのタイトルに "PR" が含まれる。</summary>
+    /// <summary>For created + a PR comment, the title contains "PR".</summary>
     [Fact]
     public async Task RunAsyncCreatedOnPullRequestTitleContainsPr()
     {
@@ -82,7 +82,7 @@ public class IssueCommentActionTests
             Times.Once);
     }
 
-    /// <summary>created イベントは IssueCommentCreated 色を使用する。</summary>
+    /// <summary>The created event uses the IssueCommentCreated color.</summary>
     [Fact]
     public async Task RunAsyncCreatedUsesIssueCommentCreatedColor()
     {
@@ -103,7 +103,7 @@ public class IssueCommentActionTests
         Assert.Equal(EmbedColors.IssueCommentCreated, capturedColor);
     }
 
-    /// <summary>キャッシュキーにコメント ID が含まれる。</summary>
+    /// <summary>The cache key contains the comment ID.</summary>
     [Fact]
     public async Task RunAsyncCacheKeyContainsCommentId()
     {
@@ -119,7 +119,7 @@ public class IssueCommentActionTests
         cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-issue-comment-9001"), Times.Once);
     }
 
-    /// <summary>コメント本文が 500 文字超の場合は切り詰められる。</summary>
+    /// <summary>The comment body is truncated when it exceeds 500 characters.</summary>
     [Fact]
     public async Task RunAsyncBodyTruncatedAt500Chars()
     {
@@ -139,13 +139,13 @@ public class IssueCommentActionTests
             Times.Once);
     }
 
-    /// <summary>Issue 作成者が Discord にマッピングされている場合はメンション付きで送信する。</summary>
+    /// <summary>When the Issue author is mapped to Discord, the message is sent with a mention.</summary>
     [Fact]
     public async Task RunAsyncMentionsIssueAuthorWhenMapped()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        // Issue 作成者 (id=10) が Discord にマッピングされている
+        // The Issue author (id=10) is mapped to Discord
         userMap.Setup(u => u.GetById(10L)).Returns("discord-id-of-author");
 
         IssueCommentAction action = new(

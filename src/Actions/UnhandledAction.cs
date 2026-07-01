@@ -1,10 +1,10 @@
 namespace GitHubWebhookBridge.Actions;
 
 /// <summary>
-/// 未実装イベントのフォールバックハンドラークラス。
-/// <see cref="GitHubEventAttribute"/> を持たないため <see cref="ActionFactory"/> のレジストリに登録されない。
-/// 呼び出されると常に <see cref="NotImplementedException"/> をスローし、
-/// <see cref="GitHubWebhookBridge.Functions.WebhookFunction"/> が HTTP 406 に変換する
+/// Fallback handler for unimplemented events.
+/// Because it lacks a <see cref="GitHubEventAttribute"/>, it is not registered in the <see cref="ActionFactory"/> registry.
+/// When invoked it always throws a <see cref="NotImplementedException"/>, which
+/// <see cref="GitHubWebhookBridge.Functions.WebhookFunction"/> converts into an HTTP 406.
 /// </summary>
 public sealed class UnhandledAction(string eventName) : IAction
 {

@@ -9,7 +9,7 @@ using OctokitCommit = Octokit.Webhooks.Models.PushEvent.Commit;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub push イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub push events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.Push)]
 public sealed class PushAction(
@@ -28,12 +28,12 @@ public sealed class PushAction(
         IReadOnlyList<OctokitCommit> allCommits = Event.Commits;
         if (allCommits.Count == 0) return;
 
-        // refs/heads/ や refs/tags/ を除去して短いブランチ名にする
+        // Strip refs/heads/ and refs/tags/ to get a short branch name.
         var shortRef = Event.Ref
             .Replace("refs/heads/", string.Empty)
             .Replace("refs/tags/", string.Empty);
 
-        // 先頭 5 件のみ表示する
+        // Show only the first 5 commits.
         const int CommitLimit = 5;
         var commits = allCommits.Take(CommitLimit).ToList();
         var description = GetDescription(commits, allCommits.Count);
@@ -60,15 +60,15 @@ public sealed class PushAction(
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 
-    /// <summary>コミット一覧の説明文を生成する</summary>
-    /// <param name="commits">表示するコミット一覧（最大 5 件）</param>
-    /// <param name="totalCount">全コミット数。5 を超える場合は末尾に省略メッセージを付加する</param>
+    /// <summary>Generates the description text for the commit list.</summary>
+    /// <param name="commits">The commits to display (up to 5).</param>
+    /// <param name="totalCount">The total number of commits. If it exceeds 5, an ellipsis message is appended at the end.</param>
     private static string GetDescription(List<OctokitCommit> commits, int totalCount)
     {
         var lines = commits.Select(c =>
         {
             var shortSha = c.Id.Length >= 7 ? c.Id[..7] : c.Id;
-            // 複数行メッセージは最初の行のみ使用する
+            // For multi-line messages, use only the first line.
             var firstLine = c.Message.Contains('\n')
                 ? c.Message.Split('\n', 2)[0]
                 : c.Message;
