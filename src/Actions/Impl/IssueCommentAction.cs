@@ -27,8 +27,12 @@ public sealed class IssueCommentAction(
     {
         Issue issue = Event.Issue;
         IssueComment comment = Event.Comment;
-        Repository repo = Event.Repository;
-        User sender = Event.Sender;
+
+        if (Event.Repository is not { } repo || Event.Sender is not { } sender)
+        {
+            Logger.LogWarning("issue_comment payload is missing repository or sender; skipping notification.");
+            return;
+        }
 
         // Issue に関連するのが PR かどうかで種別を変える（IssuePullRequest.HtmlUrl が空でなければ PR）
         var issueType = !string.IsNullOrEmpty(issue.PullRequest?.HtmlUrl) ? "PR" : "Issue";
@@ -56,15 +60,15 @@ public sealed class IssueCommentAction(
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
-            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: body,
-            url: Uri.TryCreate(comment.HtmlUrl, UriKind.Absolute, out var commentUrl) ? commentUrl : null,
+            url: Uri.TryCreate(comment.HtmlUrl, UriKind.Absolute, out Uri? commentUrl) ? commentUrl : null,
             author: author);
 
         var key = $"{repo.FullName}-issue-comment-{comment.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
