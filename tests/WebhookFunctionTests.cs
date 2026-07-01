@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -29,7 +30,7 @@ public class WebhookFunctionTests
     }
 
     /// <summary>テスト用 <see cref="HttpRequestData"/> を組み立てる。</summary>
-    private static HttpRequestData BuildRequest(
+    private static FakeHttpRequestData BuildRequest(
         string body,
         string secret,
         string eventName,
@@ -43,7 +44,7 @@ public class WebhookFunctionTests
         var context = new FakeFunctionContext();
 
         HttpHeadersCollection headers = [];
-        headers.Add("Content-Length", (contentLengthOverride ?? bodyBytes.LongLength).ToString());
+        headers.Add("Content-Length", (contentLengthOverride ?? bodyBytes.LongLength).ToString(CultureInfo.InvariantCulture));
 
         if (!omitSignature)
             headers.Add("X-Hub-Signature-256", ComputeSignature(bodyBytes, secret));
@@ -147,7 +148,7 @@ public class WebhookFunctionTests
         var body = Encoding.UTF8.GetBytes("{}");
         var context = new FakeFunctionContext();
         HttpHeadersCollection headers = [];
-        headers.Add("Content-Length", body.LongLength.ToString());
+        headers.Add("Content-Length", body.LongLength.ToString(CultureInfo.InvariantCulture));
         headers.Add("X-Hub-Signature-256", "sha256=deadbeef");
         headers.Add("X-GitHub-Event", "push");
         var req = new FakeHttpRequestData(context, new MemoryStream(body), headers, []);
