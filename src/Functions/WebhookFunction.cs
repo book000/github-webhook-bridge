@@ -214,7 +214,7 @@ public class WebhookFunction(
     private static string NormalizeEventName(string eventName)
         => eventName.ToLowerInvariant();
 
-    /// <summary>SSRF countermeasure: allow only discord.com webhook URL prefixes.</summary>
+    /// <summary>SSRF countermeasure: allow only discord.com / discordapp.com webhook URL prefixes.</summary>
     private static bool IsAllowedWebhookUrl(string url)
         => url.StartsWith("https://discord.com/api/webhooks/", StringComparison.OrdinalIgnoreCase)
         || url.StartsWith("https://discordapp.com/api/webhooks/", StringComparison.OrdinalIgnoreCase);

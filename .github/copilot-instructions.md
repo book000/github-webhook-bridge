@@ -71,7 +71,7 @@ func start
 ## Testing Policy
 
 - Test framework: xUnit
-- Test project: `tests/GitHubWebhookBridge.Tests/`
+- Test project: `tests/GitHubWebhookBridge.Tests.csproj` (the `tests/` directory is the project root)
 - Add tests when adding new features
 - Verify existing tests still pass
 
@@ -106,31 +106,31 @@ When any of the following need updating, make sure to update them:
 
 ```
 ./
-├── Program.cs                      # Azure Functions entry point
-├── GitHubWebhookBridge.csproj      # project file
-├── host.json                       # Azure Functions host configuration
-├── Functions/
-│   └── WebhookFunction.cs          # HTTP-triggered function
-├── Actions/
-│   ├── IAction.cs                  # Action interface
-│   ├── IActionFactory.cs           # Factory interface
-│   ├── BaseAction.cs               # abstract base class
-│   ├── ActionFactory.cs            # event → Action mapping
-│   ├── Impl/                       # 12 implemented Actions
-│   └── UnhandledAction.cs          # HTTP 406 fallback for unimplemented events
-├── Managers/
-│   ├── MuteManager.cs              # mute rule management
-│   └── GitHubUserMapManager.cs     # user mapping management
-├── Models/                         # GitHub webhook payload models
-├── Services/
-│   ├── DiscordClient.cs            # Discord webhook sending client
-│   └── MessageCacheService.cs      # Azure Table Storage message cache
-├── Utils/
-│   ├── SignatureValidator.cs        # HMAC-SHA256 signature verification
-│   ├── EmbedColors.cs              # Discord embed color constants
-│   └── EmbedHelper.cs              # embed builder helper
-└── tests/
-    └── GitHubWebhookBridge.Tests/  # xUnit test project
+├── src/
+│   ├── Program.cs                      # Azure Functions entry point
+│   ├── GitHubWebhookBridge.csproj      # project file
+│   ├── host.json                       # Azure Functions host configuration
+│   ├── Functions/
+│   │   └── WebhookFunction.cs          # HTTP-triggered function
+│   ├── Actions/
+│   │   ├── IAction.cs                  # Action interface
+│   │   ├── IActionFactory.cs           # Factory interface
+│   │   ├── BaseAction.cs               # abstract base class
+│   │   ├── ActionFactory.cs            # event → Action mapping
+│   │   ├── Impl/                       # 12 implemented Actions
+│   │   └── UnhandledAction.cs          # HTTP 406 fallback for unimplemented events
+│   ├── Managers/
+│   │   ├── MuteManager.cs              # mute rule management
+│   │   └── GitHubUserMapManager.cs     # user mapping management
+│   ├── Models/                         # GitHub webhook payload models
+│   ├── Services/
+│   │   ├── DiscordClient.cs            # Discord webhook sending client
+│   │   └── MessageCacheService.cs      # Azure Table Storage message cache
+│   └── Utils/
+│       ├── SignatureValidator.cs        # HMAC-SHA256 signature verification
+│       ├── EmbedColors.cs              # Discord embed color constants
+│       └── EmbedHelper.cs              # embed builder helper
+└── tests/                               # xUnit test project (GitHubWebhookBridge.Tests.csproj)
 ```
 
 **Design patterns**:
@@ -141,7 +141,7 @@ When any of the following need updating, make sure to update them:
 
 **Data flow**:
 
-1. Webhook received via `POST /GitHubWebhook`
+1. Webhook received via `POST /` (the root path; `host.json` sets `routePrefix` to `""` and the function binds an empty-match regex route)
 2. HMAC-SHA256 signature verification (`SignatureValidator`)
 3. Event type determined from the `x-github-event` header
 4. `ActionFactory` instantiates the appropriate Action
@@ -176,8 +176,8 @@ When any of the following need updating, make sure to update them:
 ### Project-Specific Constraints
 
 - **Use the dotnet CLI**: `dotnet restore`, `dotnet build`, `dotnet test`
-- **Azure Functions v4 Isolated**: `Functions/WebhookFunction.cs` is the HTTP trigger
-- **Endpoint**: `POST /GitHubWebhook`
+- **Azure Functions v4 Isolated**: `src/Functions/WebhookFunction.cs` is the HTTP trigger
+- **Endpoint**: `POST /` (root path, not `/GitHubWebhook`)
 - **GitHub webhook event types**: 12 implemented; unimplemented events get an HTTP 406 from `UnhandledAction`
 - **Renovate**: dependencies are updated automatically (base-public config)
 - **CI/CD**:
