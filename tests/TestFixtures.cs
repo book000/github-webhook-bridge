@@ -124,7 +124,6 @@ internal static class TestFixtures
 
     /// <summary>
     /// pull_request_review_thread イベントの Thread（node_id・comments）の最小 JSON。
-    /// Octokit には対応する強い型プロパティが無く、実装は AdditionalProperties 経由で読み取るため、
     /// 実際の GitHub ペイロード（"review" ではなく "thread"）と同じ形状で用意する
     /// </summary>
     public static string ThreadJson(string nodeId = "PRRT_1", string? commentJson = null) =>

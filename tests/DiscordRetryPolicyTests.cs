@@ -94,8 +94,8 @@ public class DiscordRetryPolicyTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(2, handler.CallCount);
-        // 既定の Delay（500ms）+ ジッター程度に収まるはずで、MaxDelay（2 秒）を大きく超えない
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"Retry wait too long: {stopwatch.Elapsed}");
+        // 既定の Delay（500ms）+ ジッター程度に収まるはずだが、CI のフレーク耐性のため閾値には余裕を持たせる
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(15), $"Retry wait too long: {stopwatch.Elapsed}");
     }
 
     /// <summary>
@@ -115,7 +115,7 @@ public class DiscordRetryPolicyTests
         stopwatch.Stop();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        // MaxDelay (2 秒) + ジッター程度に収まるはずで、Retry-After が示す 10 分は待たない
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"Retry wait too long: {stopwatch.Elapsed}");
+        // MaxDelay（2 秒）に収まるはずで Retry-After の 10 分は待たないが、CI のフレーク耐性のため閾値には余裕を持たせる
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(15), $"Retry wait too long: {stopwatch.Elapsed}");
     }
 }

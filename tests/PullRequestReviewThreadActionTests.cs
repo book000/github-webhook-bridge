@@ -34,10 +34,7 @@ public class PullRequestReviewThreadActionTests
 
     /// <summary>
     /// PullRequestReviewThreadEvent を JSON から生成する。
-    /// 実際の GitHub ペイロードには "review" フィールドは存在せず、"thread"（node_id・comments）が
-    /// スレッドを表す。Octokit にはこれに対応する強い型プロパティが無いため、
-    /// 実装は Event.AdditionalProperties 経由で thread.node_id を読み取る。
-    /// このテストはその実装が読み取る実データの形状（"thread"）を忠実に再現する
+    /// 実際の GitHub ペイロードの形状（"review" ではなく "thread"）を忠実に再現する
     /// </summary>
     private static PullRequestReviewThreadEvent MakeEvent(string action) =>
         JsonSerializer.Deserialize<PullRequestReviewThreadEvent>(
@@ -152,7 +149,7 @@ public class PullRequestReviewThreadActionTests
 
         await action.RunAsync();
 
-        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-pr-review-thread-RT_node_abc"), Times.Once);
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-pr-review-thread-12-RT_node_abc"), Times.Once);
     }
 
     /// <summary>
@@ -196,10 +193,8 @@ public class PullRequestReviewThreadActionTests
     }
 
     /// <summary>
-    /// thread.node_id が文字列以外の JSON 値（数値等）である想定外のペイロードでも例外を投げず、
-    /// "unknown" にフォールバックして通知を送信する
-    /// （JsonElement.GetString() は String/Null 以外の ValueKind で例外を投げるため、
-    /// ValueKind を確認せずに呼び出すと再度 NullReferenceException 相当の障害に戻ってしまう再発防止テスト）。
+    /// thread.node_id が文字列以外の JSON 値（数値等）でも例外を投げず、
+    /// "unknown" にフォールバックして通知を送信する（GetString() の ValueKind 未検証による例外の再発防止）。
     /// </summary>
     [Fact]
     public async Task RunAsyncFallsBackToUnknownWhenThreadNodeIdIsNotAString()

@@ -39,11 +39,8 @@ public static class DiscordRetryPolicy
             Delay = Delay,
             MaxDelay = MaxDelay,
             UseJitter = true,
-            // ShouldRetryAfterHeader = true（既定値）が内部で設定する DelayGenerator は
-            // Retry-After ヘッダーの値をそのまま採用し、MaxDelay で頭打ちにしない
-            // （Microsoft.Extensions.Http.Resilience 10.7.0 で確認済みの挙動）。
-            // 「長すぎるリトライを避ける」要件を満たすため、ここでは無効化し、
-            // 下記の DelayGenerator で Retry-After を解釈しつつ MaxDelay に丸める
+            // 既定の ShouldRetryAfterHeader = true は Retry-After の値をそのまま採用し MaxDelay で
+            // 頭打ちにしないため（v10.7.0 で確認済み）、無効化し下記 DelayGenerator で丸める
             ShouldRetryAfterHeader = false,
             DelayGenerator = args =>
             {

@@ -26,10 +26,8 @@ public sealed class PullRequestReviewThreadAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        // Octokit の PullRequestReviewThreadEvent が持つ Review プロパティは
-        // 実際の GitHub ペイロードに存在しない "review" フィールドにマッピングされており常に null になる
-        // （実データは "thread" フィールドにある）。そのため AdditionalProperties から
-        // thread.node_id を直接読み取り、スレッド識別子として使用する
+        // Event.Review は実ペイロードに存在しない "review" フィールドにマッピングされ常に null になるため、
+        // 実データを持つ AdditionalProperties["thread"].node_id をスレッド識別子として使用する
         var threadNodeId = GetThreadNodeId();
         SimplePullRequest pr = Event.PullRequest;
         Repository repo = Event.Repository;
@@ -71,7 +69,8 @@ public sealed class PullRequestReviewThreadAction(
             author: author,
             fields: fields);
 
-        var key = $"{repo.FullName}-pr-review-thread-{threadNodeId}";
+        // PR 番号を含め、threadNodeId が "unknown" にフォールバックした際のキー衝突を防ぐ
+        var key = $"{repo.FullName}-pr-review-thread-{pr.Number}-{threadNodeId}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 
