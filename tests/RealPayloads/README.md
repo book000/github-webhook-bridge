@@ -15,7 +15,7 @@ generated from, so they reflect the actual field names GitHub sends on the wire.
 fixture built from the same wrong assumption cannot catch the bug.
 
 `tests/RealPayloadIntegrationTests.cs` deserializes these vendored payloads — independent
-of Octokit's type shape — and runs each `Action.RunAsync()` against them, asserting that
+of Octokit's type shape — and runs each `IAction.RunAsync()` against them, asserting that
 values pulled from the real JSON (repository, sender) actually make it into the Discord
 message. This catches silent mapping drift that a hand-rolled fixture would miss.
 

@@ -11,7 +11,7 @@ namespace GitHubWebhookBridge.Tests;
 
 /// <summary>
 /// tests/RealPayloads/ に vendoring された実 GitHub Webhook ペイロードを用いて、
-/// <see cref="ActionFactory"/> によるデシリアライズから <c>Action.RunAsync()</c> までを実行する統合テスト。
+/// <see cref="ActionFactory"/> によるデシリアライズから <see cref="IAction.RunAsync"/> までを実行する統合テスト。
 /// <see cref="TestFixtures"/> の手作りフィクスチャは Octokit.Webhooks の型定義から逆算しているため、
 /// Octokit 側の <c>[JsonPropertyName]</c> マッピングが最初から実ペイロードと食い違っている場合は検出できない
 /// （<c>pull_request_review_thread</c> の <c>Review</c>/<c>Thread</c> 取り違えバグがこのパターン）。
