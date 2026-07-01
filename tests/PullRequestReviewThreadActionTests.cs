@@ -34,18 +34,17 @@ public class PullRequestReviewThreadActionTests
 
     /// <summary>
     /// PullRequestReviewThreadEvent を JSON から生成する。
-    /// Octokit の PullRequestReviewThreadEvent には Thread プロパティが存在しないため、
-    /// Review.NodeId をスレッド識別子として使用する。
+    /// 実際の GitHub ペイロードには "review" フィールドは存在せず、"thread"（node_id・comments）が
+    /// スレッドを表す。Octokit にはこれに対応する強い型プロパティが無いため、
+    /// 実装は Event.AdditionalProperties 経由で thread.node_id を読み取る。
+    /// このテストはその実装が読み取る実データの形状（"thread"）を忠実に再現する
     /// </summary>
     private static PullRequestReviewThreadEvent MakeEvent(string action) =>
         JsonSerializer.Deserialize<PullRequestReviewThreadEvent>(
             $$"""
             {
                 "action":"{{action}}",
-                "review":{{TestFixtures.ReviewJson(
-                    1, "approved",
-                    "https://github.com/test/repo/pull/12#pullrequestreview-1",
-                    nodeId: "RT_node_abc")}},
+                "thread":{{TestFixtures.ThreadJson(nodeId: "RT_node_abc")}},
                 "pull_request":{{TestFixtures.SimplePrJson(
                     12, "Feature branch",
                     "https://github.com/test/repo/pull/12",
@@ -154,6 +153,88 @@ public class PullRequestReviewThreadActionTests
         await action.RunAsync();
 
         cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-pr-review-thread-RT_node_abc"), Times.Once);
+    }
+
+    /// <summary>
+    /// thread フィールドが存在しない想定外のペイロードでも例外を投げず、
+    /// "unknown" にフォールバックして通知を送信する
+    /// （Octokit の Review プロパティが常に null になる旧実装の再発防止テスト）。
+    /// </summary>
+    [Fact]
+    public async Task RunAsyncFallsBackToUnknownWhenThreadFieldIsMissing()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        PullRequestReviewThreadEvent eventWithoutThread = JsonSerializer.Deserialize<PullRequestReviewThreadEvent>(
+            $$"""
+            {
+                "action":"resolved",
+                "pull_request":{{TestFixtures.SimplePrJson(
+                    12, "Feature branch",
+                    "https://github.com/test/repo/pull/12",
+                    "pr-author", 50)}},
+                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer",60)}}
+            }
+            """,
+            OctokitJsonOptions.Value)!;
+
+        PullRequestReviewThreadAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", eventWithoutThread);
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Fields != null &&
+                    m.Embeds![0].Fields!.Any(f => f.Value.Contains("unknown")))),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// thread.node_id が文字列以外の JSON 値（数値等）である想定外のペイロードでも例外を投げず、
+    /// "unknown" にフォールバックして通知を送信する
+    /// （JsonElement.GetString() は String/Null 以外の ValueKind で例外を投げるため、
+    /// ValueKind を確認せずに呼び出すと再度 NullReferenceException 相当の障害に戻ってしまう再発防止テスト）。
+    /// </summary>
+    [Fact]
+    public async Task RunAsyncFallsBackToUnknownWhenThreadNodeIdIsNotAString()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        PullRequestReviewThreadEvent eventWithNonStringNodeId = JsonSerializer.Deserialize<PullRequestReviewThreadEvent>(
+            $$"""
+            {
+                "action":"resolved",
+                "thread":{"node_id":12345,"comments":[{{TestFixtures.ReviewCommentJson()}}]},
+                "pull_request":{{TestFixtures.SimplePrJson(
+                    12, "Feature branch",
+                    "https://github.com/test/repo/pull/12",
+                    "pr-author", 50)}},
+                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer",60)}}
+            }
+            """,
+            OctokitJsonOptions.Value)!;
+
+        PullRequestReviewThreadAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", eventWithNonStringNodeId);
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Fields != null &&
+                    m.Embeds![0].Fields!.Any(f => f.Value.Contains("unknown")))),
+            Times.Once);
     }
 
     /// <summary>PR 作成者が Discord にマッピングされている場合はメンション付きで送信する。</summary>
