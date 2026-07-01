@@ -12,7 +12,7 @@ using OpenTelemetry;
 // Windows Consumption プランで「Timed out waiting for the function start call」という
 // 既知の未解決バグ（Azure/azure-functions-dotnet-worker#3348）を抱えているため使用しない。
 // 標準の ConfigureFunctionsWorkerDefaults（HttpRequestData/HttpResponseData ベース）を使用する
-IHostBuilder hostBuilder = new HostBuilder();
+HostBuilder hostBuilder = new();
 hostBuilder.ConfigureFunctionsWorkerDefaults();
 
 hostBuilder.ConfigureServices(services =>

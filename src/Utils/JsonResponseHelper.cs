@@ -9,7 +9,7 @@ public static class JsonResponseHelper
 {
     /// <summary>
     /// <c>{ "message": ... }</c> 形式の JSON レスポンスを生成する。
-    /// <see cref="HttpResponseData.WriteAsJsonAsync{T}(T, CancellationToken)"/> は
+    /// <c>HttpResponseData.WriteAsJsonAsync</c> は
     /// <c>WorkerOptions.Serializer</c> の DI 解決に依存するため、
     /// それを必要としない <c>WriteStringAsync</c> ベースで明示的にシリアライズする
     /// </summary>
