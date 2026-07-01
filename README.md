@@ -53,10 +53,11 @@ cd src && func start
 
 | 環境 | URL |
 |------|-----|
-| 本番 | `POST https://<functionapp>.azurewebsites.net/` |
-| ローカル | `POST http://localhost:7071/` |
+| 本番 | `https://<functionapp>.azurewebsites.net/` |
+| ローカル | `http://localhost:7071/` |
 
-`GET /` にアクセスすると、稼働確認用に `200 OK` と `{ "message": "book000/github-webhook-bridge is running" }` を返します。
+- `POST /`（Webhook 受信）: GitHub Webhook イベントを受信し、Discord に転送します。
+- `GET /`（稼働確認）: `200 OK` と `{ "message": "book000/github-webhook-bridge is running" }` を返します。
 
 ### クエリパラメータ
 
