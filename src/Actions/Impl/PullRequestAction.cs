@@ -137,11 +137,11 @@ public sealed class PullRequestAction(
         User? assignee,
         User? requestedReviewer)
     {
-        // Octokit の PullRequest では Additions/Deletions は long（常に存在）
         var fields = new List<DiscordEmbedField>
         {
             new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
             new("Branch", $"`{pr.Head.Ref}` → `{pr.Base.Ref}`", true),
+            // Octokit の PullRequest では Additions/Deletions は long（常に存在）
             new("Changes", $"+{pr.Additions} / -{pr.Deletions} ({pr.ChangedFiles} files)", true),
         };
 
