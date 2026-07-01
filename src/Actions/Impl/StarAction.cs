@@ -24,22 +24,28 @@ public sealed class StarAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
+        if (Event.Sender is not { } sender || Event.Repository is not { } repo)
+        {
+            Logger.LogWarning("star payload is missing sender or repository; skipping notification.");
+            return;
+        }
+
         var titlePrefix = Event.Action == "created" ? "Starred" : "Unstarred";
         var color = Event.Action == "created" ? EmbedColors.Star : EmbedColors.Unstar;
 
         var author = new DiscordEmbedAuthor(
-            Name: Event.Sender.Login,
-            Url: Uri.TryCreate(Event.Sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
-            IconUrl: Uri.TryCreate(Event.Sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
+            Name: sender.Login,
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
-            title: $"{titlePrefix} {Event.Repository.FullName} by {Event.Sender.Login}",
-            url: Uri.TryCreate(Event.Repository.HtmlUrl, UriKind.Absolute, out var repoUrl) ? repoUrl : null,
+            title: $"{titlePrefix} {repo.FullName} by {sender.Login}",
+            url: Uri.TryCreate(repo.HtmlUrl, UriKind.Absolute, out Uri? repoUrl) ? repoUrl : null,
             author: author);
 
-        var key = $"{Event.Repository.FullName}-star-{Event.Sender.Login}";
+        var key = $"{repo.FullName}-star-{sender.Login}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 }
