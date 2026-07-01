@@ -8,27 +8,27 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
 
-// Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore（ConfigureFunctionsWebApplication）は
-// Windows Consumption プランで「Timed out waiting for the function start call」という
-// 既知の未解決バグ（Azure/azure-functions-dotnet-worker#3348）を抱えているため使用しない。
-// 標準の ConfigureFunctionsWorkerDefaults（HttpRequestData/HttpResponseData ベース）を使用する
+// Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore (ConfigureFunctionsWebApplication) is not used
+// because it has a known, unresolved bug on the Windows Consumption plan
+// ("Timed out waiting for the function start call", Azure/azure-functions-dotnet-worker#3348).
+// The standard ConfigureFunctionsWorkerDefaults (based on HttpRequestData/HttpResponseData) is used instead.
 HostBuilder hostBuilder = new();
 hostBuilder.ConfigureFunctionsWorkerDefaults();
 
 hostBuilder.ConfigureServices(services =>
 {
-    // OpenTelemetry: Azure Functions 向けトレース収集 + Azure Monitor エクスポーター
-    // AspNetCoreInstrumentation を含まない低レイヤーエクスポーターを使用し、
-    // Functions ホストとの二重テレメトリを防ぐ（公式推奨構成）
-    // APPLICATIONINSIGHTS_CONNECTION_STRING 環境変数が設定されている場合に有効
+    // OpenTelemetry: trace collection for Azure Functions + Azure Monitor exporter.
+    // Uses a low-level exporter that does not include AspNetCoreInstrumentation to
+    // avoid duplicate telemetry with the Functions host (the officially recommended configuration).
+    // Enabled when the APPLICATIONINSIGHTS_CONNECTION_STRING environment variable is set.
     OpenTelemetryBuilder otelBuilder = services.AddOpenTelemetry();
     otelBuilder.UseFunctionsWorkerDefaults();
     otelBuilder.UseAzureMonitorExporter();
 
     services
-        // 汎用 HttpClient（IHttpClientFactory 経由で利用可能）
+        // General-purpose HttpClient (available via IHttpClientFactory)
         .AddHttpClient()
-        // GitHub API 用クライアント
+        // Client for the GitHub API
         .AddHttpClient("github", c =>
         {
             c.BaseAddress = new Uri("https://api.github.com");
@@ -36,34 +36,34 @@ hostBuilder.ConfigureServices(services =>
             c.Timeout = TimeSpan.FromSeconds(10);
         })
         .Services
-        // 設定ファイル取得用クライアント
+        // Client for fetching configuration files
         .AddHttpClient("config", c => c.Timeout = TimeSpan.FromSeconds(10))
         .Services
-        // Discord Webhook 用クライアント（15 秒タイムアウト）
-        // 再試行ポリシーの内容は DiscordRetryPolicy を参照（単体テストとも共有）
+        // Client for Discord webhooks (15-second timeout)
+        // See DiscordRetryPolicy for the retry policy details (also shared with unit tests).
         .AddHttpClient("discord", c => c.Timeout = TimeSpan.FromSeconds(15))
         .AddResilienceHandler(DiscordRetryPolicy.HandlerName, DiscordRetryPolicy.Configure)
         .Services
-        // Discord クライアント
+        // Discord client
         .AddSingleton<IDiscordClient, DiscordClient>()
-        // MessageCacheService をクラス直接・インターフェースの両方で登録
-        // （TableStorageInitializer がクラス直接で注入できるようにするため）
+        // Register MessageCacheService both as the concrete class and the interface
+        // (so TableStorageInitializer can be injected with the concrete class).
         .AddSingleton<MessageCacheService>()
         .AddSingleton<IMessageCacheService>(sp => sp.GetRequiredService<MessageCacheService>())
-        // ミュートマネージャー（起動時に一度だけロード）
+        // Mute manager (loaded once at startup)
         .AddSingleton<IMuteManager, MuteManager>()
-        // GitHub ユーザーマッピングマネージャー（起動時に一度だけロード）
+        // GitHub user mapping manager (loaded once at startup)
         .AddSingleton<IGitHubUserMapManager, GitHubUserMapManager>()
-        // CAPTIVE DEPENDENCY GUARD: ActionFactory が受け取る IServiceProvider は root SP。
-        // Action の依存はすべて Singleton であること。
-        // Scoped サービスを Action に追加した場合は IServiceScopeFactory を使う設計に変更すること。
-        // ActionFactory をクラス直接・インターフェースの両方で登録
-        // （ActionRegistryValidator が具象型 ActionFactory を直接注入できるようにするため）
+        // CAPTIVE DEPENDENCY GUARD: the IServiceProvider that ActionFactory receives is the root SP.
+        // All Action dependencies must be Singleton.
+        // If a Scoped service is added to an Action, change the design to use IServiceScopeFactory.
+        // Register ActionFactory both as the concrete class and the interface
+        // (so ActionRegistryValidator can be injected with the concrete ActionFactory type).
         .AddSingleton<ActionFactory>()
         .AddSingleton<IActionFactory>(sp => sp.GetRequiredService<ActionFactory>())
-        // 起動時にアクションレジストリの DI 解決を検証
+        // Validate DI resolution of the action registry at startup
         .AddHostedService<ActionRegistryValidator>()
-        // テーブルストレージの初期化をホスト起動時に非同期実行
+        // Initialize table storage asynchronously at host startup
         .AddHostedService<TableStorageInitializer>();
 });
 

@@ -10,7 +10,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>DiscussionAction の通知内容・本文切り詰め・キャッシュキーテスト。</summary>
+/// <summary>Tests for DiscussionAction notification content, body truncation, and cache keys.</summary>
 public class DiscussionActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
@@ -57,7 +57,7 @@ public class DiscussionActionTests
             """,
             OctokitJsonOptions.Value)!;
 
-    /// <summary>created イベントのタイトルに "created" と Discussion 番号が含まれる。</summary>
+    /// <summary>The title of a created event contains "created" and the discussion number.</summary>
     [Fact]
     public async Task RunAsyncCreatedTitleContainsCreatedAndNumber()
     {
@@ -79,7 +79,7 @@ public class DiscussionActionTests
             Times.Once);
     }
 
-    /// <summary>created は DiscussionCreated 色を使用する。</summary>
+    /// <summary>created uses the DiscussionCreated color.</summary>
     [Fact]
     public async Task RunAsyncCreatedUsesDiscussionCreatedColor()
     {
@@ -100,7 +100,7 @@ public class DiscussionActionTests
         Assert.Equal(EmbedColors.DiscussionCreated, capturedColor);
     }
 
-    /// <summary>answered イベントは discussion.Body ではなく answer.Body を description に使用する。</summary>
+    /// <summary>The answered event uses answer.Body, not discussion.Body, for the description.</summary>
     [Fact]
     public async Task RunAsyncAnsweredUsesAnswerBodyNotDiscussionBody()
     {
@@ -123,7 +123,7 @@ public class DiscussionActionTests
             Times.Once);
     }
 
-    /// <summary>キャッシュキーに Discussion 番号が含まれる。</summary>
+    /// <summary>The cache key contains the discussion number.</summary>
     [Fact]
     public async Task RunAsyncCacheKeyContainsDiscussionNumber()
     {
@@ -139,7 +139,7 @@ public class DiscussionActionTests
         cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-discussion-5"), Times.Once);
     }
 
-    /// <summary>category_changed イベントは変更前カテゴリ名をフィールドに含む（Changes.Category.From）。</summary>
+    /// <summary>The category_changed event includes the previous category name in a field (Changes.Category.From).</summary>
     [Fact]
     public async Task RunAsyncCategoryChangedIncludesNewCategoryField()
     {

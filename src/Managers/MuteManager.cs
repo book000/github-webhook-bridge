@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace GitHubWebhookBridge.Managers;
 
-/// <summary>ユーザーのミュート設定を管理するクラス</summary>
+/// <summary>Class that manages users' mute settings.</summary>
 public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFactory) : BaseManager<List<MuteRecord>>(config, httpClientFactory), IMuteManager
 {
     protected override string? FilePath { get; } = config["MUTES_FILE_PATH"];
@@ -18,7 +18,7 @@ public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFac
     protected override List<MuteRecord>? Deserialize(string json)
         => DeserializeJson<List<MuteRecord>>(json);
 
-    /// <summary>テスト専用: JSON を直接ロードする</summary>
+    /// <summary>Test-only: loads JSON directly.</summary>
     internal void LoadForTest(string json)
     {
         List<MuteRecord> data = Deserialize(json)
@@ -26,11 +26,11 @@ public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFac
         SetDataForTest(data);
     }
 
-    /// <summary>ユーザーが指定イベントでミュートされているかどうかを返す</summary>
-    /// <param name="userId">判定対象の GitHub ユーザー ID</param>
-    /// <param name="eventName">GitHub Webhook イベント名</param>
-    /// <param name="action">イベントのアクション種別（省略可）</param>
-    /// <returns>ミュート対象の場合は <see langword="true"/>、それ以外は <see langword="false"/></returns>
+    /// <summary>Returns whether the user is muted for the specified event.</summary>
+    /// <param name="userId">The GitHub user ID to evaluate.</param>
+    /// <param name="eventName">The GitHub webhook event name.</param>
+    /// <param name="action">The event's action type (optional).</param>
+    /// <returns><see langword="true"/> if muted; otherwise <see langword="false"/>.</returns>
     public bool IsMuted(long userId, string eventName, string? action)
     {
         if (Data is null)
@@ -45,15 +45,15 @@ public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFac
 
         if (record.Type == MuteType.Include)
         {
-            // 指定イベント・アクションがリストにある場合にミュート
+            // Mute when the specified event/action is present in the list.
             return record.Events.Any(muteEvent =>
                 muteEvent.EventName == eventName
                 && (muteEvent.Actions is null
                     || (action != null && muteEvent.Actions.Contains(action))));
         }
 
-        // Exclude モード: リストにないイベントをミュートする
-        // Actions == null のエントリは免除条件にならない
+        // Exclude mode: mute events that are not in the list.
+        // Entries with Actions == null do not count as an exemption condition.
         return !record.Events.Any(muteEvent =>
             muteEvent.EventName == eventName
             && muteEvent.Actions != null
@@ -61,30 +61,30 @@ public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFac
     }
 }
 
-/// <summary>ユーザーごとのミュート設定を表すレコード</summary>
+/// <summary>Record representing the per-user mute settings.</summary>
 public record MuteRecord(
     [property: JsonPropertyName("userId")] long UserId,
     [property: JsonPropertyName("type")] MuteType Type,
     [property: JsonPropertyName("events")] IList<MuteEvent> Events);
 
-/// <summary>ミュート対象のイベント設定を表すレコード</summary>
+/// <summary>Record representing the configuration of an event to mute.</summary>
 public record MuteEvent(
     [property: JsonPropertyName("eventName")] string EventName,
     [property: JsonPropertyName("actions")] IList<string>? Actions);
 
-/// <summary>ミュート方式を表す列挙型</summary>
+/// <summary>Enumeration representing the mute mode.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<MuteType>))]
 public enum MuteType
 {
-    /// <summary>指定したイベント・アクションのみミュートする</summary>
+    /// <summary>Mute only the specified events/actions.</summary>
     [JsonStringEnumMemberName("include")]
     Include,
 
-    /// <summary>指定したイベント・アクション以外をミュートする</summary>
+    /// <summary>Mute everything except the specified events/actions.</summary>
     [JsonStringEnumMemberName("exclude")]
     Exclude,
 
-    /// <summary>全イベントをミュートする</summary>
+    /// <summary>Mute all events.</summary>
     [JsonStringEnumMemberName("all")]
     All,
 }

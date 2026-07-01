@@ -7,31 +7,31 @@ using Microsoft.Extensions.Configuration;
 namespace GitHubWebhookBridge.Managers;
 
 /// <summary>
-/// 設定ファイルを Blob / HTTPS URL / ローカルファイルから読み込む抽象基底クラス。
-/// 優先順位: Blob > HTTPS URL > ローカルファイル
+/// Abstract base class that loads a configuration file from a Blob / HTTPS URL / local file.
+/// Priority: Blob > HTTPS URL > local file.
 /// </summary>
-/// <typeparam name="TData">デシリアライズ対象のデータ型</typeparam>
+/// <typeparam name="TData">The data type to deserialize into.</typeparam>
 public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFactory httpClientFactory) : IDisposable
 {
-    /// <summary>環境変数から設定されるローカルファイルパスを取得する</summary>
+    /// <summary>Gets the local file path configured from an environment variable.</summary>
     protected abstract string? FilePath { get; }
 
-    /// <summary>設定ファイルの HTTPS URL を取得する（HTTPS のみ許可）</summary>
+    /// <summary>Gets the HTTPS URL of the configuration file (HTTPS only).</summary>
     protected abstract Uri? FileUrl { get; }
 
     /// <summary>
-    /// Blob のパスを取得する。形式: "container/path/to/file.json"
-    /// 最初の '/' より前がコンテナ名、後がブロブ名
+    /// Gets the Blob path. Format: "container/path/to/file.json".
+    /// The part before the first '/' is the container name; the part after is the blob name.
     /// </summary>
     protected abstract string? BlobPath { get; }
 
-    /// <summary>ロード済みのデータを取得する。<see cref="EnsureLoadedAsync"/> 呼び出し後に有効になる</summary>
+    /// <summary>Gets the loaded data. Valid after <see cref="EnsureLoadedAsync"/> has been called.</summary>
     protected TData Data { get; private set; } = default!;
 
     private volatile bool _loaded;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
-    // JSONC（コメント・末尾カンマ付き JSON）をサポートするオプション
+    // Options that support JSONC (JSON with comments and trailing commas).
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         ReadCommentHandling = JsonCommentHandling.Skip,
@@ -42,7 +42,7 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
     private readonly IConfiguration _config = config;
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
-    /// <summary>初回呼び出し時のみデータをロードする（二重初期化防止）</summary>
+    /// <summary>Loads the data only on the first call (prevents double initialization).</summary>
     public async Task EnsureLoadedAsync()
     {
         if (_loaded) return;
@@ -61,12 +61,12 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
         }
     }
 
-    /// <summary>JSON 文字列をデシリアライズする。各サブクラスで実装する</summary>
-    /// <param name="json">デシリアライズ対象の JSON 文字列</param>
-    /// <returns>デシリアライズされたデータ。失敗時は <see langword="null"/></returns>
+    /// <summary>Deserializes a JSON string. Implemented by each subclass.</summary>
+    /// <param name="json">The JSON string to deserialize.</param>
+    /// <returns>The deserialized data, or <see langword="null"/> on failure.</returns>
     protected abstract TData? Deserialize(string json);
 
-    /// <summary>ソース未指定時のデフォルトファイルパスを返す。各サブクラスで実装する</summary>
+    /// <summary>Returns the default file path used when no source is specified. Implemented by each subclass.</summary>
     protected abstract string GetDefaultFilePath();
 
     private Task<string> LoadJsonAsync()
@@ -78,7 +78,7 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
 
     private async Task<string> LoadFromBlobAsync(string blobPath)
     {
-        // "container/path/to/file.json" 形式をパース
+        // Parse the "container/path/to/file.json" format.
         var slashIndex = blobPath.IndexOf('/');
         if (slashIndex < 0)
         {
@@ -99,7 +99,7 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
 
     private async Task<string> LoadFromHttpAsync(Uri url)
     {
-        // 設定ファイルは HTTPS 経由のみ許可（平文 HTTP は中間者攻撃のリスク）
+        // Allow the configuration file only over HTTPS (plain HTTP carries a man-in-the-middle risk).
         if (!string.Equals(url.Scheme, "https", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Config URL must use HTTPS: {url}");
 
@@ -120,24 +120,24 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
         return await File.ReadAllTextAsync(path);
     }
 
-    /// <summary>ファイルが存在しない場合に書き込むデフォルトの JSON 内容を返す</summary>
+    /// <summary>Returns the default JSON content to write when the file does not exist.</summary>
     protected virtual string GetDefaultContent() => "[]";
 
-    /// <summary>型パラメータ T を用いて汎用的に JSON をデシリアライズする</summary>
-    /// <typeparam name="T">デシリアライズ対象の型</typeparam>
-    /// <param name="json">デシリアライズ対象の JSON 文字列</param>
-    /// <returns>デシリアライズされたインスタンス。失敗時は <see langword="null"/></returns>
+    /// <summary>Generically deserializes JSON using the type parameter T.</summary>
+    /// <typeparam name="T">The type to deserialize into.</typeparam>
+    /// <param name="json">The JSON string to deserialize.</param>
+    /// <returns>The deserialized instance, or <see langword="null"/> on failure.</returns>
     protected T? DeserializeJson<T>(string json)
         => JsonSerializer.Deserialize<T>(json, _jsonOptions);
 
-    /// <summary>テスト用: サブクラスがデータを直接設定できるようにする</summary>
+    /// <summary>For testing: allows a subclass to set the data directly.</summary>
     internal void SetDataForTest(TData data)
     {
         Data = data;
         _loaded = true;
     }
 
-    /// <summary>マネージドリソースを解放する</summary>
+    /// <summary>Releases managed resources.</summary>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)

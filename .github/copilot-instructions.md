@@ -1,159 +1,158 @@
 # GitHub Copilot Instructions
 
-## プロジェクト概要
+## Project Overview
 
-- 目的: GitHub の Webhook を受信し、Discord に通知メッセージを送信する
-- 主な機能:
-  - 12 種類の GitHub Webhook イベントタイプを実装済み（その他のイベントは `UnhandledAction` が HTTP 406 を返す）
-  - Discord Embed メッセージのフォーマット
-  - ユーザーミュート機能（include/exclude/all モード）
-  - GitHub から Discord へのユーザーマッピング
-  - イベントフィルタリング・無効化機能
-  - メッセージキャッシュと編集機能（5 分間、Azure Table Storage 使用）
-  - HMAC-SHA256 による Webhook 署名検証
-- 対象ユーザー: 開発者、GitHub と Discord を連携させたいユーザー
+- Purpose: receive GitHub webhooks and send notification messages to Discord
+- Key features:
+  - 12 GitHub webhook event types implemented (other events get an HTTP 406 from `UnhandledAction`)
+  - Discord embed message formatting
+  - User mute feature (include/exclude/all modes)
+  - GitHub-to-Discord user mapping
+  - Event filtering / disabling
+  - Message caching and editing (5-minute window, backed by Azure Table Storage)
+  - HMAC-SHA256 webhook signature verification
+- Target audience: developers who want to connect GitHub and Discord
 
-## 共通ルール
+## General Rules
 
-- 会話は日本語で行う。
-- コミットメッセージは [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) に従う。
-  - 形式: `<type>(<scope>): <description>`
-  - `<description>` は日本語で記載
-  - 例: `feat: Discord メッセージ送信機能を追加`
-- ブランチ命名は [Conventional Branch](https://conventional-branch.github.io) に従う。
-  - 形式: `<type>/<description>`
-  - `<type>` は短縮形（feat, fix）を使用
-  - 例: `feat/add-discord-notification`
-- 日本語と英数字の間には半角スペースを入れる。
+- English is mandatory for all project artifacts: code, comments, commit messages, PR titles/bodies, and documentation. Japanese is permitted only where quoting real-world Japanese data verbatim is unavoidable.
+- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+  - Format: `<type>(<scope>): <description>`
+  - `<description>` is written in English
+  - Example: `feat: add Discord message sending feature`
+- Branch names follow [Conventional Branch](https://conventional-branch.github.io).
+  - Format: `<type>/<description>`
+  - Use the short form for `<type>` (feat, fix)
+  - Example: `feat/add-discord-notification`
 
-## 技術スタック
+## Tech Stack
 
-- 言語: C# 14
-- ランタイム: .NET 10
-- フレームワーク: Azure Functions v4 Isolated Worker
-- デプロイ先: Azure Functions
-- パッケージマネージャー: dotnet CLI（NuGet）
-- テストフレームワーク: xUnit
+- Language: C# 14
+- Runtime: .NET 10
+- Framework: Azure Functions v4 Isolated Worker
+- Deployment target: Azure Functions
+- Package manager: dotnet CLI (NuGet)
+- Test framework: xUnit
 
-## コーディング規約
+## Coding Conventions
 
-### C# 設定
+### C# settings
 
-- Nullable 参照型を有効化（`<Nullable>enable</Nullable>`）
-- 暗黙的 using を有効化（`<ImplicitUsings>enable</ImplicitUsings>`）
-- editorconfig で定義されたコードスタイルに従う（`EnforceCodeStyleInBuild=true`）
-- クラス・公開メソッドに XML ドキュメントコメント（`///`）を日本語で記載・更新
-- コメントは日本語で記載
-- エラーメッセージは英語で記載
-- HttpClient は DI 経由で `IHttpClientFactory` を使用（直接インスタンス化禁止）
+- Nullable reference types enabled (`<Nullable>enable</Nullable>`)
+- Implicit usings enabled (`<ImplicitUsings>enable</ImplicitUsings>`)
+- Follow the code style defined in `.editorconfig` (`EnforceCodeStyleInBuild=true`)
+- Write/update XML doc comments (`///`) on classes and public methods, in English
+- Comments are written in English
+- Error messages are written in English
+- Use `IHttpClientFactory` via DI for `HttpClient` (direct instantiation is prohibited)
 
-### 命名規則
+### Naming conventions
 
-- クラス・メソッド・プロパティ: PascalCase
-- ローカル変数・パラメータ: camelCase
-- プライベートフィールド: `_` プレフィックス + camelCase
+- Classes, methods, properties: PascalCase
+- Local variables, parameters: camelCase
+- Private fields: `_` prefix + camelCase
 
-## 開発コマンド
+## Development Commands
 
 ```bash
-# 依存パッケージを復元
+# Restore dependencies
 dotnet restore
 
-# ビルド
+# Build
 dotnet build
 
-# テスト
+# Test
 dotnet test
 
-# Azure Functions ローカル起動
+# Start Azure Functions locally
 func start
 ```
 
-## テスト方針
+## Testing Policy
 
-- テストフレームワーク: xUnit
-- テストプロジェクト: `tests/GitHubWebhookBridge.Tests/`
-- 新機能追加時はテストを追加する
-- 既存テストが失敗しないことを確認する
+- Test framework: xUnit
+- Test project: `tests/GitHubWebhookBridge.Tests.csproj` (the `tests/` directory is the project root)
+- Add tests when adding new features
+- Verify existing tests still pass
 
-## セキュリティ / 機密情報
+## Security / Sensitive Information
 
-- **Webhook 検証**: HMAC-SHA256 署名を必須検証
-  - ヘッダー: `x-hub-signature-256`
-  - シークレット: `GITHUB_WEBHOOK_SECRET` 環境変数
-  - タイミングセーフ比較を使用（`Utils/SignatureValidator.cs`）
-- **環境変数**: 認証情報は環境変数で管理
-  - 必須: `GITHUB_WEBHOOK_SECRET`、`AzureWebJobsStorage`
-  - オプション: `DISCORD_WEBHOOK_URL`、`GITHUB_USER_MAP_FILE_PATH`、`MUTES_FILE_PATH` など
-- **コミット禁止**: API キーや認証情報を Git にコミットしない
-- **ログ禁止**: 個人情報や認証情報をログに出力しない
-- **Discord 連携**:
-  - レート制限を考慮した実装
-  - 埋め込みメッセージの文字数制限に注意
-  - エラー時の適切なフォールバック
+- **Webhook verification**: HMAC-SHA256 signature verification is mandatory
+  - Header: `x-hub-signature-256`
+  - Secret: `GITHUB_WEBHOOK_SECRET` environment variable
+  - Uses a timing-safe comparison (`Utils/SignatureValidator.cs`)
+- **Environment variables**: credentials are managed via environment variables
+  - Required: `GITHUB_WEBHOOK_SECRET`, `AzureWebJobsStorage`
+  - Optional: `DISCORD_WEBHOOK_URL`, `GITHUB_USER_MAP_FILE_PATH`, `MUTES_FILE_PATH`, etc.
+- **No committing secrets**: never commit API keys or credentials to Git
+- **No logging secrets**: never log personal information or credentials
+- **Discord integration**:
+  - Implementation accounts for rate limits
+  - Be mindful of embed message character limits
+  - Provide appropriate fallback behavior on errors
 
-## ドキュメント更新
+## Documentation Updates
 
-以下のファイルを更新する必要がある場合は、必ず更新すること：
+When any of the following need updating, make sure to update them:
 
-- `README.md`: プロジェクト概要、使用方法、環境変数
-- XML ドキュメントコメント: クラスや公開メソッドの docstring
+- `README.md`: project overview, usage, environment variables
+- XML doc comments: docstrings on classes and public methods
 
-## リポジトリ固有
+## Repository-Specific Notes
 
-### アーキテクチャ
+### Architecture
 
-**ディレクトリ構成**:
+**Directory layout**:
 
 ```
 ./
-├── Program.cs                      # Azure Functions エントリーポイント
-├── GitHubWebhookBridge.csproj      # プロジェクトファイル
-├── host.json                       # Azure Functions ホスト設定
-├── Functions/
-│   └── WebhookFunction.cs          # HTTP トリガー関数
-├── Actions/
-│   ├── IAction.cs                  # Action インターフェース
-│   ├── IActionFactory.cs           # Factory インターフェース
-│   ├── BaseAction.cs               # 抽象基底クラス
-│   ├── ActionFactory.cs            # イベント→Action マッピング
-│   ├── Impl/                       # 実装済み 12 Action
-│   └── UnhandledAction.cs          # 未実装イベントへの HTTP 406 フォールバック
-├── Managers/
-│   ├── MuteManager.cs              # ミュートルール管理
-│   └── GitHubUserMapManager.cs     # ユーザーマッピング管理
-├── Models/                         # GitHub Webhook ペイロードモデル
-├── Services/
-│   ├── DiscordClient.cs            # Discord Webhook 送信クライアント
-│   └── MessageCacheService.cs      # Azure Table Storage メッセージキャッシュ
-├── Utils/
-│   ├── SignatureValidator.cs        # HMAC-SHA256 署名検証
-│   ├── EmbedColors.cs              # Discord Embed カラー定数
-│   └── EmbedHelper.cs              # Embed ビルダーヘルパー
-└── tests/
-    └── GitHubWebhookBridge.Tests/  # xUnit テストプロジェクト
+├── src/
+│   ├── Program.cs                      # Azure Functions entry point
+│   ├── GitHubWebhookBridge.csproj      # project file
+│   ├── host.json                       # Azure Functions host configuration
+│   ├── Functions/
+│   │   └── WebhookFunction.cs          # HTTP-triggered function
+│   ├── Actions/
+│   │   ├── IAction.cs                  # Action interface
+│   │   ├── IActionFactory.cs           # Factory interface
+│   │   ├── BaseAction.cs               # abstract base class
+│   │   ├── ActionFactory.cs            # event → Action mapping
+│   │   ├── Impl/                       # 12 implemented Actions
+│   │   └── UnhandledAction.cs          # HTTP 406 fallback for unimplemented events
+│   ├── Managers/
+│   │   ├── MuteManager.cs              # mute rule management
+│   │   └── GitHubUserMapManager.cs     # user mapping management
+│   ├── Models/                         # GitHub webhook payload models
+│   ├── Services/
+│   │   ├── DiscordClient.cs            # Discord webhook sending client
+│   │   └── MessageCacheService.cs      # Azure Table Storage message cache
+│   └── Utils/
+│       ├── SignatureValidator.cs        # HMAC-SHA256 signature verification
+│       ├── EmbedColors.cs              # Discord embed color constants
+│       └── EmbedHelper.cs              # embed builder helper
+└── tests/                               # xUnit test project (GitHubWebhookBridge.Tests.csproj)
 ```
 
-**デザインパターン**:
+**Design patterns**:
 
-- **Factory パターン**: `ActionFactory` が Webhook イベントを Action クラスにマップ
-- **Abstract Base Class パターン**: `BaseAction` が全 Action の共通機能を提供
-- **Manager パターン**: `MuteManager`、`GitHubUserMapManager` でデータ管理
+- **Factory pattern**: `ActionFactory` maps webhook events to Action classes
+- **Abstract base class pattern**: `BaseAction` provides common functionality for all Actions
+- **Manager pattern**: `MuteManager`, `GitHubUserMapManager` manage data
 
-**データフロー**:
+**Data flow**:
 
-1. Webhook を `POST /GitHubWebhook` で受信
-2. HMAC-SHA256 署名検証（`SignatureValidator`）
-3. `x-github-event` ヘッダーでイベントタイプを判定
-4. `ActionFactory` で適切な Action インスタンスを生成
-5. `MuteManager` でミュートチェック後、Discord Embed メッセージを送信
+1. Webhook received via `POST /` (the root path; `host.json` sets `routePrefix` to `""` and the function binds an empty-match regex route)
+2. HMAC-SHA256 signature verification (`SignatureValidator`)
+3. Event type determined from the `x-github-event` header
+4. `ActionFactory` instantiates the appropriate Action
+5. After a mute check by `MuteManager`, a Discord embed message is sent
 
-### GitHub Webhook ハンドラーの作成
+### Creating a GitHub Webhook Handler
 
-1. **新しい Action の追加**:
+1. **Adding a new Action**:
 
    ```csharp
-   // Actions/Impl/PushAction.cs （既存実装の例）
+   // Actions/Impl/PushAction.cs (example of an existing implementation)
    namespace GitHubWebhookBridge.Actions.Impl;
 
    [GitHubEvent(WebhookEventType.Push)]
@@ -166,28 +165,28 @@ func start
    }
    ```
 
-2. **`[GitHubEvent]` 属性を付与するだけで `ActionFactory` が起動時にリフレクションで自動登録する**（switch 文への手動追加は不要）
+2. **Simply adding the `[GitHubEvent]` attribute is enough for `ActionFactory` to auto-register it via reflection at startup** (no manual addition to a switch statement needed)
 
-### Discord 連携パターン
+### Discord Integration Patterns
 
-- **埋め込みメッセージ**: `EmbedHelper` で構造化された情報表示
-- **色分け**: `EmbedColors` で通知タイプごとに定義
-- **フィールド構造**: タイトル、説明、フィールド、フッターを適切に使用
+- **Embed messages**: `EmbedHelper` produces structured information display
+- **Color coding**: `EmbedColors` defines colors per notification type
+- **Field structure**: title, description, fields, and footer are used appropriately
 
-### プロジェクト固有の制約
+### Project-Specific Constraints
 
-- **dotnet CLI を使用**: `dotnet restore`、`dotnet build`、`dotnet test`
-- **Azure Functions v4 Isolated**: `Functions/WebhookFunction.cs` が HTTP トリガー
-- **エンドポイント**: `POST /GitHubWebhook`
-- **GitHub Webhook イベントタイプ**: 12 種実装済み、未実装イベントは `UnhandledAction` が HTTP 406 を返す
-- **Renovate**: 依存関係を自動更新（base-public config）
+- **Use the dotnet CLI**: `dotnet restore`, `dotnet build`, `dotnet test`
+- **Azure Functions v4 Isolated**: `src/Functions/WebhookFunction.cs` is the HTTP trigger
+- **Endpoint**: `POST /` (root path, not `/GitHubWebhook`)
+- **GitHub webhook event types**: 12 implemented; unimplemented events get an HTTP 406 from `UnhandledAction`
+- **Renovate**: dependencies are updated automatically (base-public config)
 - **CI/CD**:
-  - `dotnet-ci.yml`: メイン CI（ビルド・テスト）
-  - `azure-functions-deploy.yml`: Azure Functions デプロイ（OIDC）
-- **ブランチ保護**: main/master ブランチは保護される
-- **URL 検証**: `?url=` パラメータは `https://discord.com/api/webhooks/` または `https://discordapp.com/api/webhooks/` プレフィックスのみ許可
+  - `dotnet-ci.yml`: main CI (build & test)
+  - `azure-functions-deploy.yml`: Azure Functions deployment (OIDC)
+- **Branch protection**: the main/master branch is protected
+- **URL validation**: the `?url=` parameter only allows the `https://discord.com/api/webhooks/` or `https://discordapp.com/api/webhooks/` prefixes
 
-## 参考リソース
+## Reference Resources
 
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Conventional Branch](https://conventional-branch.github.io)

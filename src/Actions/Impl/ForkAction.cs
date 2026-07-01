@@ -8,7 +8,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub fork イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub fork events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.Fork)]
 public sealed class ForkAction(

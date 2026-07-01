@@ -20,13 +20,13 @@ public class PingActionTests
         Mock<IMessageCacheService> cache = new();
         Mock<IGitHubUserMapManager> userMap = new();
 
-        // キャッシュはデフォルトで null（新規送信）を返す
+        // Cache returns null by default (new message send)
         cache.Setup(c => c.GetAsync(It.IsAny<Uri>(), It.IsAny<string>()))
              .ReturnsAsync((CachedMessage?)null);
         cache.Setup(c => c.SetAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<string>()))
              .Returns(Task.CompletedTask);
 
-        // Discord 送信は常にダミーのメッセージ ID を返す
+        // Discord send always returns a dummy message ID
         discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .ReturnsAsync("test-message-id");
 
@@ -35,7 +35,7 @@ public class PingActionTests
         return (discord, cache, userMap);
     }
 
-    /// <summary>PingEvent の最小 JSON からデシリアライズして PingEvent を作成するヘルパー。</summary>
+    /// <summary>Helper that creates a PingEvent by deserializing a minimal PingEvent JSON.</summary>
     private static PingEvent MakePingEvent(
         string zen = "Non-blocking is better than blocking.",
         long hookId = 12345,
@@ -49,7 +49,7 @@ public class PingActionTests
         var senderPart = senderLogin is not null
             ? $",\"sender\":{TestFixtures.UserJson(senderLogin, 1)}"
             : string.Empty;
-        // Hook.Type は required のためデフォルト "Repository" を使用する
+        // Hook.Type is required, so use the default "Repository"
         var hookTypeStr = hookType ?? "Repository";
         var hookJson = "{\"id\":1,\"type\":\"" + hookTypeStr + "\",\"name\":\"web\",\"active\":true,\"events\":[\"push\"],\"config\":{\"url\":\"https://example.com\",\"content_type\":\"json\",\"insecure_ssl\":\"0\"},\"updated_at\":\"2024-01-01T00:00:00Z\",\"created_at\":\"2024-01-01T00:00:00Z\",\"url\":\"https://api.github.com/repos/owner/repo/hooks/1\",\"test_url\":\"https://api.github.com/repos/owner/repo/hooks/1/test\",\"ping_url\":\"https://api.github.com/repos/owner/repo/hooks/1/pings\",\"deliveries_url\":\"https://api.github.com/repos/owner/repo/hooks/1/deliveries\"}";
         return JsonSerializer.Deserialize<PingEvent>(
@@ -69,7 +69,7 @@ public class PingActionTests
 
         await action.RunAsync();
 
-        // Discord にメッセージが送信されたことを確認する
+        // Verify a message was sent to Discord
         discord.Verify(
             d => d.SendMessageAsync(
                 _webhookUri,
@@ -94,7 +94,7 @@ public class PingActionTests
 
         await action.RunAsync();
 
-        // キャッシュキーがリポジトリ・送信者・フックタイプの複合キーであることを確認する
+        // Verify the cache key is a composite of repository, sender, and hook type
         cache.Verify(
             c => c.GetAsync(_webhookUri, "ping:owner/repo:user1:N/A:Repository"),
             Times.Once);
@@ -105,7 +105,7 @@ public class PingActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        // キャッシュにメッセージが存在する場合
+        // When a message already exists in the cache
         cache.Setup(c => c.GetAsync(It.IsAny<Uri>(), It.IsAny<string>()))
              .ReturnsAsync(new CachedMessage("existing-message-id"));
 
@@ -116,7 +116,7 @@ public class PingActionTests
 
         await action.RunAsync();
 
-        // 新規送信ではなく編集が呼ばれることを確認する
+        // Verify edit is called instead of a new send
         discord.Verify(
             d => d.EditMessageAsync(
                 _webhookUri,

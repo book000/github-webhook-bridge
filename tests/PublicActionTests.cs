@@ -10,7 +10,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>PublicAction の通知内容・キャッシュキーテスト。</summary>
+/// <summary>Tests for PublicAction's notification content and cache key.</summary>
 public class PublicActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
@@ -36,7 +36,7 @@ public class PublicActionTests
         $$"""{"repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("publisher",1)}}}""",
         OctokitJsonOptions.Value)!;
 
-    /// <summary>タイトルに "Published"・リポジトリ名・送信者 login が含まれる。</summary>
+    /// <summary>The title contains "Published", the repository name, and the sender login.</summary>
     [Fact]
     public async Task RunAsyncTitleContainsPublishedAndRepoAndSender()
     {
@@ -59,7 +59,7 @@ public class PublicActionTests
             Times.Once);
     }
 
-    /// <summary>キャッシュキーに sender login が含まれる。</summary>
+    /// <summary>The cache key contains the sender login.</summary>
     [Fact]
     public async Task RunAsyncCacheKeyContainsSenderLogin()
     {

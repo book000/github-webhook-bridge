@@ -10,14 +10,15 @@ using Moq;
 namespace GitHubWebhookBridge.Tests;
 
 /// <summary>
-/// tests/RealPayloads/ に vendoring された実 GitHub Webhook ペイロードを用いて、
-/// <see cref="ActionFactory"/> によるデシリアライズから <see cref="IAction.RunAsync"/> までを実行する統合テスト。
-/// <see cref="TestFixtures"/> の手作りフィクスチャは Octokit.Webhooks の型定義から逆算しているため、
-/// Octokit 側の <c>[JsonPropertyName]</c> マッピングが最初から実ペイロードと食い違っている場合は検出できない
-/// （<c>pull_request_review_thread</c> の <c>Review</c>/<c>Thread</c> 取り違えバグがこのパターン）。
-/// このテストは実ペイロードを唯一の正としてデシリアライズし、実ペイロードの値
-/// （repository・sender）が Discord メッセージに実際に反映されることを検証することで、
-/// 同種のマッピングミスを継続的に検出する（#2651）。
+/// Integration test that uses the real GitHub Webhook payloads vendored under tests/RealPayloads/
+/// to run everything from deserialization via <see cref="ActionFactory"/> through <see cref="IAction.RunAsync"/>.
+/// Because the hand-written fixtures in <see cref="TestFixtures"/> are reverse-engineered from the
+/// Octokit.Webhooks type definitions, they cannot detect cases where Octokit's <c>[JsonPropertyName]</c>
+/// mapping diverges from the real payload from the start
+/// (the <c>Review</c>/<c>Thread</c> mix-up bug in <c>pull_request_review_thread</c> is one such case).
+/// This test deserializes the real payloads as the single source of truth and verifies that the
+/// real payload values (repository, sender) are actually reflected in the Discord message,
+/// continuously detecting the same class of mapping mistakes (#2651).
 /// </summary>
 public class RealPayloadIntegrationTests
 {
@@ -27,7 +28,7 @@ public class RealPayloadIntegrationTests
         Path.GetDirectoryName(typeof(RealPayloadIntegrationTests).Assembly.Location)!,
         "RealPayloads");
 
-    /// <summary>X-GitHub-Event 名と対応する実ペイロードファイル名（実装済み 12 イベント分）。</summary>
+    /// <summary>X-GitHub-Event names and their corresponding real payload file names (for the 12 implemented events).</summary>
     public static TheoryData<string, string> Fixtures => new()
     {
         { "discussion", "discussion.created.json" },
@@ -45,8 +46,8 @@ public class RealPayloadIntegrationTests
     };
 
     /// <summary>
-    /// 実ペイロードを RunAsync() まで通し、例外を投げないこと、
-    /// かつ実ペイロード中の repository・sender の値が Discord メッセージに実際に反映されることを検証する。
+    /// Runs the real payload through RunAsync(), verifying that it does not throw and
+    /// that the repository and sender values in the real payload are actually reflected in the Discord message.
     /// </summary>
     [Theory]
     [MemberData(nameof(Fixtures))]
@@ -88,14 +89,14 @@ public class RealPayloadIntegrationTests
 
         Assert.NotNull(captured);
 
-        // sender.login はどの Action でもタイトルまたは Embed の Author 名として必ず出力される
-        // （repository.full_name は Action によって Embed に含めない場合があるため、
-        // 全 Action 共通で検証できる値として sender.login を使用する）。
+        // sender.login is always emitted by every Action, either in the title or as the Embed Author name
+        // (repository.full_name may not be included in the Embed depending on the Action, so
+        // sender.login is used as a value that can be verified across all Actions).
         var dump = Dump(captured!);
         Assert.Contains(expectedSender, dump, StringComparison.Ordinal);
     }
 
-    /// <summary>DiscordMessage の全テキスト要素を検証用に 1 文字列へ連結する。</summary>
+    /// <summary>Concatenates all text elements of the DiscordMessage into a single string for verification.</summary>
     private static string Dump(DiscordMessage message)
     {
         List<string?> parts = [message.Content];

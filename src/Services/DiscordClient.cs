@@ -4,10 +4,10 @@ using GitHubWebhookBridge.Models.Discord;
 namespace GitHubWebhookBridge.Services;
 
 /// <summary>
-/// Discord Webhook API クライアントを実装するクラス。
-/// 429 (レート制限) に対する再試行は "discord" 名前付き HttpClient に構成した
-/// Microsoft.Extensions.Http.Resilience のリトライハンドラーが担う
-/// （<see cref="Program"/>、<see cref="Utils.DiscordRetryPolicy"/> 参照）
+/// Class implementing the Discord Webhook API client.
+/// Retries for 429 (rate limit) are handled by the Microsoft.Extensions.Http.Resilience
+/// retry handler configured on the "discord" named HttpClient
+/// (see <see cref="Program"/> and <see cref="Utils.DiscordRetryPolicy"/>)
 /// </summary>
 public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClient
 {
@@ -18,7 +18,7 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
     {
         ArgumentNullException.ThrowIfNull(webhookUrl);
         HttpClient http = _httpClientFactory.CreateClient("discord");
-        // ?wait=true で Discord がメッセージオブジェクト (id 含む) を返す
+        // With ?wait=true, Discord returns the message object (including id)
         HttpResponseMessage response = await http.PostAsJsonAsync(BuildSendUrl(webhookUrl), message);
         EnsureSuccess(response);
         DiscordMessageResponse result = await response.Content.ReadFromJsonAsync<DiscordMessageResponse>()
@@ -37,26 +37,26 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
     }
 
     /// <summary>
-    /// <paramref name="webhookUrl"/> に ?wait=true を安全に付加する。
-    /// 既にクエリパラメータが存在する場合は &amp; で連結する
+    /// Safely appends ?wait=true to <paramref name="webhookUrl"/>.
+    /// If query parameters already exist, joins with &amp;
     /// </summary>
     private static Uri BuildSendUrl(Uri webhookUrl)
     {
-        var query = webhookUrl.Query; // "" または "?key=val"
+        var query = webhookUrl.Query; // "" or "?key=val"
         var suffix = query.Length == 0 ? "?wait=true" : "&wait=true";
         return new Uri($"{webhookUrl.GetLeftPart(UriPartial.Path)}{query}{suffix}");
     }
 
     /// <summary>
-    /// <paramref name="webhookUrl"/> のパス部分に /messages/{messageId} を付加し、クエリを保持する。
-    /// クエリがある URL（例: ?thread_id=...）に対しても正しい URL を生成する
+    /// Appends /messages/{messageId} to the path portion of <paramref name="webhookUrl"/> while preserving the query.
+    /// Produces a correct URL even for URLs that have a query (e.g. ?thread_id=...)
     /// </summary>
     private static Uri BuildEditUrl(Uri webhookUrl, string messageId)
         => new($"{webhookUrl.GetLeftPart(UriPartial.Path)}/messages/{messageId}{webhookUrl.Query}");
 
     /// <summary>
-    /// Discord Webhook トークンが Application Insights テレメトリに漏洩しないよう、
-    /// EnsureSuccessStatusCode() の代わりに独自エラー処理を行う
+    /// Performs custom error handling instead of EnsureSuccessStatusCode()
+    /// to prevent the Discord Webhook token from leaking into Application Insights telemetry
     /// </summary>
     private static void EnsureSuccess(HttpResponseMessage response)
     {

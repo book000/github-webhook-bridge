@@ -10,7 +10,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>IssuesAction の通知内容・キャッシュキー・本文切り詰めテスト。</summary>
+/// <summary>Tests for IssuesAction notification content, cache keys, and body truncation.</summary>
 public class IssuesActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
@@ -41,7 +41,7 @@ public class IssuesActionTests
         $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7,"Fix bug",action=="closed"?"closed":"open",body:issueBody.Length>0?issueBody:null,userLogin:"opener",userId:1)}},"repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender",2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin,3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}}""",
         OctokitJsonOptions.Value)!;
 
-    /// <summary>opened イベントはタイトルに "opened" と Issue 番号を含む。</summary>
+    /// <summary>The opened event contains "opened" and the Issue number in the title.</summary>
     [Fact]
     public async Task RunAsyncOpenedTitleContainsOpenedAndNumber()
     {
@@ -63,7 +63,7 @@ public class IssuesActionTests
             Times.Once);
     }
 
-    /// <summary>opened イベントは IssueOpened 色を使用する。</summary>
+    /// <summary>The opened event uses the IssueOpened color.</summary>
     [Fact]
     public async Task RunAsyncOpenedUsesIssueOpenedColor()
     {
@@ -84,7 +84,7 @@ public class IssuesActionTests
         Assert.Equal(EmbedColors.IssueOpened, capturedColor);
     }
 
-    /// <summary>closed イベントは IssueClosed 色を使用する。</summary>
+    /// <summary>The closed event uses the IssueClosed color.</summary>
     [Fact]
     public async Task RunAsyncClosedUsesIssueClosedColor()
     {
@@ -105,7 +105,7 @@ public class IssuesActionTests
         Assert.Equal(EmbedColors.IssueClosed, capturedColor);
     }
 
-    /// <summary>labeled イベントは Embed フィールドにラベル名を含む。</summary>
+    /// <summary>The labeled event includes the label name in an embed field.</summary>
     [Fact]
     public async Task RunAsyncLabeledIncludesLabelField()
     {
@@ -127,7 +127,7 @@ public class IssuesActionTests
             Times.Once);
     }
 
-    /// <summary>labeled と unlabeled は共通キーサフィックス "label" を使用する。</summary>
+    /// <summary>labeled and unlabeled share the common cache key suffix "label".</summary>
     [Fact]
     public async Task RunAsyncLabeledAndUnlabeledShareCacheKeySuffix()
     {
@@ -144,7 +144,7 @@ public class IssuesActionTests
         cache2.Verify(c => c.GetAsync(_webhookUri, "test/repo#7-label"), Times.Once);
     }
 
-    /// <summary>opened イベントのキャッシュキーに Issue 番号が含まれる。</summary>
+    /// <summary>The cache key for the opened event contains the Issue number.</summary>
     [Fact]
     public async Task RunAsyncCacheKeyContainsIssueNumber()
     {
@@ -160,7 +160,7 @@ public class IssuesActionTests
         cache.Verify(c => c.GetAsync(_webhookUri, "test/repo#7-opened"), Times.Once);
     }
 
-    /// <summary>500 文字超の本文は切り詰められて "..." が追加される。</summary>
+    /// <summary>A body exceeding 500 characters is truncated and "..." is appended.</summary>
     [Fact]
     public async Task RunAsyncBodyTruncatedAt500Chars()
     {
@@ -180,7 +180,7 @@ public class IssuesActionTests
             Times.Once);
     }
 
-    /// <summary>milestoned イベントは Embed フィールドにマイルストーンタイトルを含む。</summary>
+    /// <summary>The milestoned event includes the milestone title in an embed field.</summary>
     [Fact]
     public async Task RunAsyncMilestonedIncludesMilestoneField()
     {

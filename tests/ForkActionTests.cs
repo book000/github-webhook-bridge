@@ -10,7 +10,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>ForkAction の通知内容・キャッシュキーテスト。</summary>
+/// <summary>Tests for ForkAction notification content and cache keys.</summary>
 public class ForkActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
@@ -36,7 +36,7 @@ public class ForkActionTests
         $$"""{"repository":{{TestFixtures.RepoJson("original/repo","https://github.com/original/repo")}},"forkee":{{TestFixtures.RepoJson("forker/repo","https://github.com/forker/repo")}},"sender":{{TestFixtures.UserJson("forker",1)}}}""",
         OctokitJsonOptions.Value)!;
 
-    /// <summary>タイトルにフォーク元・フォーク先リポジトリ名と送信者 login が含まれる。</summary>
+    /// <summary>The title contains the source and forkee repository names and the sender login.</summary>
     [Fact]
     public async Task RunAsyncTitleContainsSourceForkeeAndSender()
     {
@@ -59,7 +59,7 @@ public class ForkActionTests
             Times.Once);
     }
 
-    /// <summary>キャッシュキーに sender login が含まれる。</summary>
+    /// <summary>The cache key contains the sender login.</summary>
     [Fact]
     public async Task RunAsyncCacheKeyContainsSenderLogin()
     {

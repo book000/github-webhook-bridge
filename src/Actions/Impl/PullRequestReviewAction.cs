@@ -11,7 +11,7 @@ using OctokitReview = Octokit.Webhooks.Models.PullRequestReviewEvent.Review;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub pull_request_review イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub pull_request_review events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.PullRequestReview)]
 public sealed class PullRequestReviewAction(
@@ -36,7 +36,7 @@ public sealed class PullRequestReviewAction(
             return;
         }
 
-        // レビュー状態とアクションを組み合わせて色とタイトルを決定する
+        // Determine the color and title from the combination of review state and action.
         (var titleVerb, var color) = (Event.Action, review.State?.StringValue?.ToUpperInvariant() ?? string.Empty) switch
         {
             ("submitted", "APPROVED") => ("approved", EmbedColors.PullRequestReviewApproved),
@@ -53,7 +53,7 @@ public sealed class PullRequestReviewAction(
             ? (review.Body.Length > 500 ? $"{review.Body[..500]}..." : review.Body)
             : null;
 
-        // PR 作成者への @mention（送信者が自分のレビューをしている場合は除外）
+        // @mention the PR author (excluded when the sender is reviewing their own PR).
         var mentions = await GetUsersMentionsAsync(
             sender.Id,
             [(pr.User.Id, pr.User.Login)]);

@@ -10,7 +10,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>StarAction の通知内容・色・キャッシュキーテスト。</summary>
+/// <summary>Tests for StarAction's notification content, color, and cache key.</summary>
 public class StarActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
@@ -36,7 +36,7 @@ public class StarActionTests
         $$"""{"action":"{{action}}","repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("stargazer",1)}}}""",
         OctokitJsonOptions.Value)!;
 
-    /// <summary>created → "Starred" というタイトルになる。</summary>
+    /// <summary>created produces a title of "Starred".</summary>
     [Fact]
     public async Task RunAsyncCreatedTitleContainsStarred()
     {
@@ -56,7 +56,7 @@ public class StarActionTests
             Times.Once);
     }
 
-    /// <summary>deleted → "Unstarred" というタイトルになる。</summary>
+    /// <summary>deleted produces a title of "Unstarred".</summary>
     [Fact]
     public async Task RunAsyncDeletedTitleContainsUnstarred()
     {
@@ -76,7 +76,7 @@ public class StarActionTests
             Times.Once);
     }
 
-    /// <summary>created → Star 色を使用する。</summary>
+    /// <summary>created uses the Star color.</summary>
     [Fact]
     public async Task RunAsyncCreatedUsesStarColor()
     {
@@ -97,7 +97,7 @@ public class StarActionTests
         Assert.Equal(EmbedColors.Star, capturedColor);
     }
 
-    /// <summary>deleted → Unstar 色を使用する。</summary>
+    /// <summary>deleted uses the Unstar color.</summary>
     [Fact]
     public async Task RunAsyncDeletedUsesUnstarColor()
     {
@@ -118,7 +118,7 @@ public class StarActionTests
         Assert.Equal(EmbedColors.Unstar, capturedColor);
     }
 
-    /// <summary>キャッシュキーに sender login が含まれる。</summary>
+    /// <summary>The cache key contains the sender login.</summary>
     [Fact]
     public async Task RunAsyncCacheKeyContainsSenderLogin()
     {

@@ -6,15 +6,15 @@ using Microsoft.Azure.Functions.Worker.Http;
 namespace GitHubWebhookBridge.Functions;
 
 /// <summary>
-/// ルートパスへの GET リクエストに応答する Azure Functions のクラス。
-/// <see cref="WebhookFunction"/>（POST 専用）にマッチしない GET リクエストが
-/// Azure Functions の既定プレースホルダーページに落ちるのを防ぐ
+/// Azure Functions class that responds to GET requests on the root path.
+/// Prevents GET requests that do not match <see cref="WebhookFunction"/> (POST only)
+/// from falling through to the default Azure Functions placeholder page.
 /// </summary>
 public static class RootFunction
 {
-    /// <summary>ルートパスへの GET リクエストを受け取り、稼働確認用のレスポンスを返す</summary>
-    /// <param name="req">Azure Functions が受け取った HTTP リクエスト</param>
-    /// <returns>稼働確認用のレスポンスを表す <see cref="HttpResponseData"/></returns>
+    /// <summary>Receives a GET request on the root path and returns a health-check response.</summary>
+    /// <param name="req">The HTTP request received by Azure Functions.</param>
+    /// <returns>An <see cref="HttpResponseData"/> representing the health-check response.</returns>
     [Function("Root")]
     public static async Task<HttpResponseData> RunAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "{x:regex(^$)?}")] HttpRequestData req)

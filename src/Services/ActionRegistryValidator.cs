@@ -7,11 +7,11 @@ using Microsoft.Extensions.Hosting;
 namespace GitHubWebhookBridge.Services;
 
 /// <summary>
-/// 起動時にアクションレジストリの全エントリーをドライラン検証する <see cref="IHostedService"/> 実装クラス
+/// <see cref="IHostedService"/> implementation that dry-run validates every entry in the action registry at startup
 /// </summary>
 public sealed class ActionRegistryValidator(ActionFactory factory, IServiceProvider sp) : IHostedService
 {
-    /// <summary>全登録アクションをドライラン検証する。テストから直接呼び出し可能</summary>
+    /// <summary>Dry-run validates all registered actions. Can be called directly from tests</summary>
     internal void ValidateAll()
     {
         var dummyUri = new Uri("https://example.invalid");
@@ -23,8 +23,8 @@ public sealed class ActionRegistryValidator(ActionFactory factory, IServiceProvi
             Type actionType = item.Value.Action;
             Type payloadType = item.Value.Payload;
 
-            // `{}` で初期化できない型（required メンバーを持つ Octokit 型）に備え、
-            // デシリアライズ失敗を捕捉してスキップする（ペイロード生成の失敗はアクション実装の問題ではない）。
+            // For types that cannot be initialized from `{}` (Octokit types with required members),
+            // catch the deserialization failure and skip (payload generation failure is not an action implementation issue).
             object dummy;
             try
             {
@@ -34,8 +34,8 @@ public sealed class ActionRegistryValidator(ActionFactory factory, IServiceProvi
             }
             catch (Exception)
             {
-                // Octokit 型は required メンバーを持つため `{}` からのデシリアライズが失敗する場合がある。
-                // ペイロード生成の失敗はアクション実装ではなく型スキーマの問題なのでスキップする。
+                // Octokit types have required members, so deserialization from `{}` may fail.
+                // Payload generation failure is a type-schema issue, not an action implementation issue, so skip it.
                 continue;
             }
 

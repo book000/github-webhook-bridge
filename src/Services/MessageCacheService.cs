@@ -9,27 +9,27 @@ using Microsoft.Extensions.Logging;
 
 namespace GitHubWebhookBridge.Services;
 
-/// <summary>Azure Table Storage のキャッシュエントリを表すクラス</summary>
+/// <summary>Class representing a cache entry in Azure Table Storage</summary>
 public class MessageCacheEntity : ITableEntity
 {
-    /// <summary>webhookUrl の SHA-256 ハッシュ（32 文字小文字 hex）を取得または設定する</summary>
+    /// <summary>Gets or sets the SHA-256 hash of webhookUrl (32-character lowercase hex)</summary>
     public string PartitionKey { get; set; } = string.Empty;
 
-    /// <summary>サニタイズ済みメッセージキーを取得または設定する</summary>
+    /// <summary>Gets or sets the sanitized message key</summary>
     public string RowKey { get; set; } = string.Empty;
 
-    /// <summary>キャッシュされた Discord メッセージ ID を取得または設定する</summary>
+    /// <summary>Gets or sets the cached Discord message ID</summary>
     public string MessageId { get; set; } = string.Empty;
 
-    /// <summary>サーバー管理プロパティ（書き込み不可）を取得または設定する。TTL チェックに使用する</summary>
+    /// <summary>Gets or sets the server-managed property (not writable). Used for the TTL check</summary>
     public DateTimeOffset? Timestamp { get; set; }
 
-    /// <summary>楽観的同時実行制御用 ETag を取得または設定する</summary>
+    /// <summary>Gets or sets the ETag for optimistic concurrency control</summary>
     public ETag ETag { get; set; }
 }
 
 /// <summary>
-/// Azure Table Storage を使用して Discord メッセージ ID を 5 分間キャッシュするクラス
+/// Class that caches Discord message IDs for 5 minutes using Azure Table Storage
 /// </summary>
 public class MessageCacheService : IMessageCacheService, IDisposable
 {
@@ -52,11 +52,11 @@ public class MessageCacheService : IMessageCacheService, IDisposable
     }
 
     /// <summary>
-    /// テーブルを非同期で作成する。
-    /// TableStorageInitializer (IHostedService) から呼ばれる
+    /// Creates the table asynchronously.
+    /// Called from TableStorageInitializer (IHostedService)
     /// </summary>
-    /// <param name="cancellationToken">キャンセルトークン</param>
-    /// <returns>処理完了を表す <see cref="Task"/></returns>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A <see cref="Task"/> representing completion of the operation</returns>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (_initialized) return;
@@ -84,7 +84,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         if (!response.HasValue || response.Value is null)
             return null;
 
-        // TTL チェック — 期限切れはテーブルから削除（404 は並行削除などで無視）
+        // TTL check — delete expired entries from the table (ignore 404 due to concurrent deletion, etc.)
         if (response.Value.Timestamp.HasValue
             && DateTimeOffset.UtcNow - response.Value.Timestamp.Value > _cacheTtl)
         {
@@ -94,7 +94,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
             }
             catch (RequestFailedException ex) when (ex.Status == 404)
             {
-                // 並行削除などでエントリが既に存在しない場合は無視
+                // Ignore if the entry no longer exists due to concurrent deletion, etc.
             }
 
             return null;
@@ -107,7 +107,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
     public async Task SetAsync(Uri webhookUrl, string key, string messageId)
     {
         ArgumentNullException.ThrowIfNull(webhookUrl);
-        // Timestamp は Azure Table Storage がサーバー側で管理するため設定しない
+        // Do not set Timestamp because Azure Table Storage manages it on the server side
         var entity = new MessageCacheEntity
         {
             PartitionKey = HashWebhookUrl(webhookUrl),
@@ -120,8 +120,8 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         }
         catch (RequestFailedException ex)
         {
-            // キャッシュ書き込み失敗は警告に留め、処理を継続する
-            // （書き込み失敗でも Discord への通知は完了しているため）
+            // Log a cache write failure as a warning only and continue processing
+            // (even on write failure, the Discord notification has already completed)
             _logger.LogWarning(ex, "Failed to write message cache for key {Key}", key);
         }
     }
@@ -138,14 +138,14 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            // エントリが既に存在しない場合は無視
+            // Ignore if the entry no longer exists
         }
     }
 
     /// <summary>
-    /// Azure Table Storage の RowKey に使用できない文字をエスケープする。
-    /// 使用禁止文字: /, \, #, ? および制御文字。
-    /// 512 文字で切断する際は %XX エンコード三文字組を分断しないよう調整する
+    /// Escapes characters that cannot be used in an Azure Table Storage RowKey.
+    /// Forbidden characters: /, \, #, ? and control characters.
+    /// When truncating at 512 characters, adjusts so as not to split a %XX encoded triplet
     /// </summary>
     private static string SanitizeRowKey(string key)
     {
@@ -158,7 +158,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         return escaped[..cut];
     }
 
-    [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "Azure Table Storage のパーティションキーは小文字 hex で統一する")]
+    [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "Azure Table Storage partition keys are standardized to lowercase hex")]
     private static string HashWebhookUrl(Uri webhookUrl)
     {
         var hash = SHA256.HashData(
@@ -166,7 +166,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         return Convert.ToHexString(hash)[..32].ToLowerInvariant();
     }
 
-    /// <summary>マネージドリソースを解放する</summary>
+    /// <summary>Releases managed resources</summary>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)
@@ -182,8 +182,8 @@ public class MessageCacheService : IMessageCacheService, IDisposable
 }
 
 /// <summary>
-/// ホスト起動時に Table Storage を非同期で初期化する IHostedService 実装クラス。
-/// MessageCacheService をクラス直接で注入してコンストラクタでのブロッキング I/O を回避する
+/// IHostedService implementation that asynchronously initializes Table Storage at host startup.
+/// Injects MessageCacheService as the concrete class to avoid blocking I/O in the constructor
 /// </summary>
 public class TableStorageInitializer(MessageCacheService service) : IHostedService
 {

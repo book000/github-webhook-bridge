@@ -4,17 +4,17 @@ using GitHubWebhookBridge.Utils;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>SignatureValidator.Validate() の署名検証テスト。</summary>
+/// <summary>Signature validation tests for SignatureValidator.Validate().</summary>
 public class SignatureValidatorTests
 {
-    /// <summary>HMAC-SHA256 署名を計算する。</summary>
+    /// <summary>Computes the HMAC-SHA256 signature.</summary>
     private static string ComputeSignature(byte[] body, string secret)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         return "sha256=" + Convert.ToHexString(hmac.ComputeHash(body)).ToLowerInvariant();
     }
 
-    /// <summary>正しい署名は true を返す。</summary>
+    /// <summary>A valid signature returns true.</summary>
     [Fact]
     public void ValidateValidSignatureReturnsTrue()
     {
@@ -24,7 +24,7 @@ public class SignatureValidatorTests
         Assert.True(SignatureValidator.Validate(body, sig, secret));
     }
 
-    /// <summary>不正な署名は false を返す。</summary>
+    /// <summary>An invalid signature returns false.</summary>
     [Fact]
     public void ValidateInvalidSignatureReturnsFalse()
     {
@@ -32,14 +32,14 @@ public class SignatureValidatorTests
         Assert.False(SignatureValidator.Validate(body, "sha256=000000", "mysecret"));
     }
 
-    /// <summary>署名ヘッダーが未設定（null）の場合は false を返す。</summary>
+    /// <summary>Returns false when the signature header is not set (null).</summary>
     [Fact]
     public void ValidateMissingHeaderReturnsFalse()
     {
         Assert.False(SignatureValidator.Validate([], null, "secret"));
     }
 
-    /// <summary>大文字 HEX の署名でもクライアント実装差を吸収して検証に成功する。</summary>
+    /// <summary>Validation succeeds even with an uppercase HEX signature, absorbing client implementation differences.</summary>
     [Fact]
     public void ValidateUppercaseHexSignatureReturnsTrue()
     {

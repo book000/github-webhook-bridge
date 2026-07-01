@@ -1,8 +1,8 @@
 namespace GitHubWebhookBridge.Models.Discord;
 
-/// <summary>Discord メッセージフラグの定数を定義するクラス</summary>
+/// <summary>Class defining Discord message flag constants</summary>
 public static class DiscordMessageFlags
 {
-    /// <summary>通知を抑制するフラグ（4096）を示す</summary>
+    /// <summary>Represents the suppress-notifications flag (4096)</summary>
     public const int SuppressNotifications = 1 << 12;
 }

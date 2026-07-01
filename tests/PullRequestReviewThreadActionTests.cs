@@ -10,7 +10,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>PullRequestReviewThreadAction の通知内容・色・キャッシュキーテスト。</summary>
+/// <summary>Tests for PullRequestReviewThreadAction's notification content, color, and cache key.</summary>
 public class PullRequestReviewThreadActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
@@ -33,8 +33,8 @@ public class PullRequestReviewThreadActionTests
     }
 
     /// <summary>
-    /// PullRequestReviewThreadEvent を JSON から生成する。
-    /// 実際の GitHub ペイロードの形状（"review" ではなく "thread"）を忠実に再現する
+    /// Creates a PullRequestReviewThreadEvent from JSON.
+    /// Faithfully reproduces the shape of the real GitHub payload ("thread", not "review").
     /// </summary>
     private static PullRequestReviewThreadEvent MakeEvent(string action) =>
         JsonSerializer.Deserialize<PullRequestReviewThreadEvent>(
@@ -52,7 +52,7 @@ public class PullRequestReviewThreadActionTests
             """,
             OctokitJsonOptions.Value)!;
 
-    /// <summary>resolved イベントのタイトルに "resolved" が含まれる。</summary>
+    /// <summary>The title of the resolved event contains "resolved".</summary>
     [Fact]
     public async Task RunAsyncResolvedTitleContainsResolved()
     {
@@ -72,7 +72,7 @@ public class PullRequestReviewThreadActionTests
             Times.Once);
     }
 
-    /// <summary>resolved は PullRequestReviewThreadResolved 色を使用する。</summary>
+    /// <summary>resolved uses the PullRequestReviewThreadResolved color.</summary>
     [Fact]
     public async Task RunAsyncResolvedUsesPrReviewThreadResolvedColor()
     {
@@ -93,7 +93,7 @@ public class PullRequestReviewThreadActionTests
         Assert.Equal(EmbedColors.PullRequestReviewThreadResolved, capturedColor);
     }
 
-    /// <summary>unresolved は PullRequestReviewThreadUnresolved 色を使用する。</summary>
+    /// <summary>unresolved uses the PullRequestReviewThreadUnresolved color.</summary>
     [Fact]
     public async Task RunAsyncUnresolvedUsesPrReviewThreadUnresolvedColor()
     {
@@ -114,7 +114,7 @@ public class PullRequestReviewThreadActionTests
         Assert.Equal(EmbedColors.PullRequestReviewThreadUnresolved, capturedColor);
     }
 
-    /// <summary>Embed フィールドにスレッドの NodeId "RT_node_abc" が含まれる。</summary>
+    /// <summary>The Embed field contains the thread's NodeId "RT_node_abc".</summary>
     [Fact]
     public async Task RunAsyncEmbedFieldContainsThreadNodeId()
     {
@@ -136,7 +136,7 @@ public class PullRequestReviewThreadActionTests
             Times.Once);
     }
 
-    /// <summary>キャッシュキーにスレッドの NodeId が含まれる。</summary>
+    /// <summary>The cache key contains the thread's NodeId.</summary>
     [Fact]
     public async Task RunAsyncCacheKeyContainsThreadNodeId()
     {
@@ -153,9 +153,9 @@ public class PullRequestReviewThreadActionTests
     }
 
     /// <summary>
-    /// thread フィールドが存在しない想定外のペイロードでも例外を投げず、
-    /// "unknown" にフォールバックして通知を送信する
-    /// （Octokit の Review プロパティが常に null になる旧実装の再発防止テスト）。
+    /// Even for an unexpected payload with no thread field, it does not throw and
+    /// falls back to "unknown" to send the notification
+    /// (regression test for the old implementation where Octokit's Review property was always null).
     /// </summary>
     [Fact]
     public async Task RunAsyncFallsBackToUnknownWhenThreadFieldIsMissing()
@@ -193,8 +193,9 @@ public class PullRequestReviewThreadActionTests
     }
 
     /// <summary>
-    /// thread.node_id が文字列以外の JSON 値（数値等）でも例外を投げず、
-    /// "unknown" にフォールバックして通知を送信する（GetString() の ValueKind 未検証による例外の再発防止）。
+    /// Even when thread.node_id is a non-string JSON value (e.g. a number), it does not throw and
+    /// falls back to "unknown" to send the notification (regression test for the exception caused by
+    /// calling GetString() without checking ValueKind).
     /// </summary>
     [Fact]
     public async Task RunAsyncFallsBackToUnknownWhenThreadNodeIdIsNotAString()
@@ -232,7 +233,7 @@ public class PullRequestReviewThreadActionTests
             Times.Once);
     }
 
-    /// <summary>PR 作成者が Discord にマッピングされている場合はメンション付きで送信する。</summary>
+    /// <summary>When the PR author is mapped to Discord, the message is sent with a mention.</summary>
     [Fact]
     public async Task RunAsyncMentionsPrAuthorWhenMapped()
     {

@@ -7,8 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace GitHubWebhookBridge.Actions;
 
 /// <summary>
-/// リフレクションによりアセンブリをスキャンし、
-/// <see cref="GitHubEventAttribute"/> 付きのアクションハンドラーを自動登録するクラス
+/// Scans the assembly via reflection and automatically registers
+/// action handlers annotated with <see cref="GitHubEventAttribute"/>.
 /// </summary>
 public class ActionFactory(IServiceProvider sp) : IActionFactory
 {
@@ -28,7 +28,7 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
                 return KeyValuePair.Create(eventName, (t, payloadType));
             });
 
-        // キーはすべて小文字スネークケース（GitHub のイベント名仕様）。大文字小文字を混在させないこと。
+        // Keys are all lowercase snake_case (GitHub's event name convention). Never mix casing.
         return entries.ToFrozenDictionary(StringComparer.Ordinal);
     }
 
@@ -71,6 +71,6 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
         return (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, webhookUrl, eventName, payload);
     }
 
-    /// <summary>レジストリを取得する（テスト・ActionRegistryValidator 用）</summary>
+    /// <summary>Gets the registry (for tests and ActionRegistryValidator).</summary>
     internal IReadOnlyDictionary<string, (Type Action, Type Payload)> Registry => _registry;
 }

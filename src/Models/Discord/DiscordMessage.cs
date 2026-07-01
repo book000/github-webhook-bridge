@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace GitHubWebhookBridge.Models.Discord;
 
-/// <summary>Discord Webhook に送信するメッセージを表すレコード</summary>
+/// <summary>Record representing a message sent to a Discord Webhook</summary>
 public record DiscordMessage(
     [property: JsonPropertyName("content")] string? Content = null,
     [property: JsonPropertyName("embeds")] IList<DiscordEmbed>? Embeds = null,

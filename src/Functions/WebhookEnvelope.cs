@@ -3,13 +3,13 @@ using System.Text.Json.Serialization;
 namespace GitHubWebhookBridge.Functions;
 
 /// <summary>
-/// ミュートチェック用の最小ペイロードを表すレコード。送信者 ID と action フィールドのみ抽出する
+/// Record representing the minimal payload used for mute checks. Extracts only the sender ID and action fields.
 /// </summary>
 internal sealed record WebhookEnvelope(
     [property: JsonPropertyName("sender")] WebhookSender? Sender,
     [property: JsonPropertyName("action")] string? Action);
 
-/// <summary>送信者情報を表す最小のレコード</summary>
+/// <summary>Minimal record representing sender information.</summary>
 internal sealed record WebhookSender(
-    // GitHub API の sender.id は数値が大きいため long? を使用する
+    // GitHub API's sender.id can be a large number, so long? is used.
     [property: JsonPropertyName("id")] long? Id);

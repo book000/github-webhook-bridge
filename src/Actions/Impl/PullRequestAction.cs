@@ -13,7 +13,7 @@ using PullRequestEditedEventChanges = Octokit.Webhooks.Models.PullRequestEvent.P
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub pull_request イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub pull_request events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.PullRequest)]
 public sealed class PullRequestAction(
@@ -26,7 +26,7 @@ public sealed class PullRequestAction(
     PullRequestEvent pullRequestEvent)
     : BaseAction<PullRequestEvent>(discord, webhookUrl, eventName, pullRequestEvent, cache, userMapManager, logger)
 {
-    /// <summary>アクションに対応するキャッシュキーのサフィックスを取得する</summary>
+    /// <summary>Gets the cache key suffix corresponding to the action.</summary>
     private static string GetCacheKeySuffix(string action) => action switch
     {
         "assigned" or "unassigned" => "assigned",
@@ -39,21 +39,21 @@ public sealed class PullRequestAction(
         _ => action,
     };
 
-    /// <summary>PR とアクションに対応するキャッシュキーを取得する</summary>
+    /// <summary>Gets the cache key corresponding to the PR and action.</summary>
     private static string GetCacheKey(Repository repo, OctokitPR pr, string action) =>
         $"{repo.FullName}#{pr.Number}-{GetCacheKeySuffix(action)}";
 
-    /// <summary>タイトルが WIP（作業中）かどうかを判定する</summary>
+    /// <summary>Determines whether the title indicates WIP (work in progress).</summary>
     private static bool IsWipTitle(string title) =>
         Regex.IsMatch(title, @"\bwip\b", RegexOptions.IgnoreCase) ||
         title.Contains("[WIP]", StringComparison.OrdinalIgnoreCase) ||
         title.StartsWith("WIP:", StringComparison.OrdinalIgnoreCase) ||
         title.StartsWith("wip ", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>PR アクション名をタイトル動詞と Embed カラーにマッピングする</summary>
-    /// <param name="action">GitHub Webhook の pull_request.action 値</param>
-    /// <param name="merged">PR がマージ済みかどうか（"closed" アクション時に参照）</param>
-    /// <returns>タイトル動詞と Discord Embed カラーのタプル</returns>
+    /// <summary>Maps a PR action name to a title verb and an embed color.</summary>
+    /// <param name="action">The GitHub Webhook pull_request.action value.</param>
+    /// <param name="merged">Whether the PR is merged (referenced on the "closed" action).</param>
+    /// <returns>A tuple of the title verb and the Discord embed color.</returns>
     private static (string TitleVerb, int Color) GetTitleVerbAndColor(string action, bool merged)
         => action switch
         {
@@ -84,7 +84,7 @@ public sealed class PullRequestAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        // synchronize はコミット追加時に発生するが通知不要なためスキップ
+        // synchronize fires when commits are added, but no notification is needed, so skip it.
         if (Event.Action == "synchronize") return;
 
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
@@ -94,10 +94,10 @@ public sealed class PullRequestAction(
         }
 
         OctokitPR pr = Event.PullRequest;
-        // 通知タイトルとキャッシュキーの一意性を保つため、欠損時は空文字ではなく明示的な既定値を使う
+        // Use an explicit default rather than an empty string when missing, to keep the notification title and cache key unique.
         var action = Event.Action ?? "unknown";
 
-        // サブタイプ固有プロパティをパターンマッチで取得する
+        // Retrieve subtype-specific properties via pattern matching.
         Label? label = (Event as PullRequestLabeledEvent)?.Label
                        ?? (Event as PullRequestUnlabeledEvent)?.Label;
         User? assignee = (Event as PullRequestAssignedEvent)?.Assignee
@@ -131,7 +131,7 @@ public sealed class PullRequestAction(
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 
-    /// <summary>PR の各種情報を Embed フィールドのリストとして構築する</summary>
+    /// <summary>Builds the various PR details into a list of embed fields.</summary>
     private static List<DiscordEmbedField> BuildFields(
         OctokitPR pr,
         Repository repo,
@@ -143,7 +143,7 @@ public sealed class PullRequestAction(
         {
             new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
             new("Branch", $"`{pr.Head.Ref}` → `{pr.Base.Ref}`", true),
-            // Octokit の PullRequest では Additions/Deletions は long（常に存在）
+            // In Octokit's PullRequest, Additions/Deletions are long (always present).
             new("Changes", $"+{pr.Additions} / -{pr.Deletions} ({pr.ChangedFiles} files)", true),
         };
 
@@ -163,8 +163,8 @@ public sealed class PullRequestAction(
     }
 
     /// <summary>
-    /// アクションに応じてメンション文字列を構築する。
-    /// Draft PR および WIP タイトル解除前はメンションを抑制する
+    /// Builds the mention string based on the action.
+    /// Mentions are suppressed for draft PRs and before the WIP title is cleared.
     /// </summary>
     private async Task<string?> BuildContentAsync(
         OctokitPR pr,
@@ -175,8 +175,8 @@ public sealed class PullRequestAction(
     {
         string? content = null;
 
-        // review_requested / assigned 時にレビュアー・アサイニーへメンション
-        // Draft PR はまだレビュー準備ができていないためメンションを抑制する
+        // On review_requested / assigned, mention the reviewer and assignee.
+        // Suppress mentions for draft PRs since they are not yet ready for review.
         if ((Event.Action is "review_requested" or "assigned") && !pr.Draft)
         {
             var targets = new List<(long, string)>();
@@ -191,8 +191,8 @@ public sealed class PullRequestAction(
             if (mentions.Length > 0) content = mentions;
         }
 
-        // edited の場合、WIP タイトルが解除されたらレビュアーへメンション
-        // Draft PR はまだレビュー準備ができていないためメンションを抑制する
+        // On edited, mention reviewers once the WIP title is cleared.
+        // Suppress mentions for draft PRs since they are not yet ready for review.
         if (Event.Action == "edited" && changes?.Title?.From is not null && !pr.Draft)
         {
             var previousTitle = changes.Title.From;
@@ -214,8 +214,8 @@ public sealed class PullRequestAction(
     }
 
     /// <summary>
-    /// opened / edited アクション時に Embed の説明文を構築する。
-    /// edited かつタイトル変更がある場合は diff 形式で表示する
+    /// Builds the embed description on the opened / edited actions.
+    /// If edited and the title changed, it is shown in diff format.
     /// </summary>
     private string? BuildDescription(
         OctokitPR pr,
@@ -224,7 +224,7 @@ public sealed class PullRequestAction(
         if (Event.Action is not ("opened" or "edited"))
             return null;
 
-        // edited の場合、タイトル変更の diff を優先して表示する
+        // On edited, prefer showing the title-change diff.
         if (Event.Action == "edited" && changes?.Title?.From is not null)
         {
             var oldTitle = changes.Title.From;
@@ -232,7 +232,7 @@ public sealed class PullRequestAction(
             return $"```diff\n{patch}```";
         }
 
-        // PR 本文（長い場合は切り詰める）
+        // PR body (truncated if long).
         if (!string.IsNullOrEmpty(pr.Body))
             return pr.Body.Length > 500 ? $"{pr.Body[..500]}..." : pr.Body;
 

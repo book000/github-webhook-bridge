@@ -6,17 +6,17 @@ using Microsoft.Azure.Functions.Worker.Http;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>RootFunction.RunAsync() のテスト。</summary>
+/// <summary>Tests for RootFunction.RunAsync().</summary>
 public class RootFunctionTests
 {
-    /// <summary>レスポンスボディを UTF-8 文字列として読み出す。</summary>
+    /// <summary>Reads the response body as a UTF-8 string.</summary>
     private static string ReadBody(HttpResponseData response)
     {
         var stream = (MemoryStream)response.Body;
         return Encoding.UTF8.GetString(stream.ToArray());
     }
 
-    /// <summary>GET リクエストは 200 OK と稼働確認メッセージを返す。</summary>
+    /// <summary>A GET request returns 200 OK with a health-check message.</summary>
     [Fact]
     public async Task RunGetRequestReturns200WithMessage()
     {

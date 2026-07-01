@@ -10,7 +10,7 @@ using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub pull_request_review_comment イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub pull_request_review_comment events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.PullRequestReviewComment)]
 public sealed class PullRequestReviewCommentAction(
@@ -45,7 +45,7 @@ public sealed class PullRequestReviewCommentAction(
 
         var title = $"{sender.Login} {titleVerb} PR #{pr.Number}: {pr.Title}";
 
-        // コメント本文（長い場合は切り詰める）
+        // Comment body (truncated if long).
         var body = comment.Body is not null && comment.Body.Length > 0
             ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
             : null;
@@ -62,7 +62,7 @@ public sealed class PullRequestReviewCommentAction(
             fields.Add(new("Diff", $"```diff\n{hunk}```", false));
         }
 
-        // PR 作成者への @mention
+        // @mention the PR author.
         var mentions = await GetUsersMentionsAsync(
             sender.Id,
             [(pr.User.Id, pr.User.Login)]);

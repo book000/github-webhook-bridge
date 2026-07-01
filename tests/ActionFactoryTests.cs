@@ -8,18 +8,18 @@ using Moq;
 
 namespace GitHubWebhookBridge.Tests;
 
-/// <summary>ActionFactory のリフレクションレジストリ動作テスト。</summary>
+/// <summary>Tests for the reflection-based registry behavior of ActionFactory.</summary>
 public class ActionFactoryTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
 
-    /// <summary>テスト用 DI コンテナ。ActionFactory が必要とするサービスをモックで登録する。</summary>
+    /// <summary>Test DI container. Registers the services required by ActionFactory as mocks.</summary>
     internal static IServiceProvider BuildServiceProvider()
     {
         var services = new ServiceCollection();
         services.AddLogging();
 
-        // ActionFactory / ActionRegistryValidator が DI から解決するサービスをモックで登録する
+        // Register the services that ActionFactory / ActionRegistryValidator resolve from DI as mocks
         services.AddSingleton(Mock.Of<IDiscordClient>());
         services.AddSingleton(Mock.Of<IMessageCacheService>());
         services.AddSingleton(Mock.Of<IGitHubUserMapManager>());
@@ -57,12 +57,12 @@ public class ActionFactoryTests
         var factory = new ActionFactory(sp);
         var validator = new ActionRegistryValidator(factory, sp);
 
-        // Octokit 型は required メンバーを持つためペイロード生成をスキップするが例外は発生しない
+        // Octokit types have required members, so payload generation is skipped, but no exception is thrown
         var ex = Record.Exception(() => validator.ValidateAll());
         Assert.Null(ex);
     }
 
-    /// <summary>Task 8 完了: 12 アクションがすべて登録されていることを検証する。</summary>
+    /// <summary>Task 8 complete: verifies that all 12 actions are registered.</summary>
     [Fact]
     public void Registry_ContainsTwelveActions()
     {
@@ -71,7 +71,7 @@ public class ActionFactoryTests
         Assert.Equal(12, factory.Registry.Count);
     }
 
-    /// <summary>既知イベント名で GetAction を呼ぶと対応する実装クラスが返ることを検証する。</summary>
+    /// <summary>Verifies that calling GetAction with a known event name returns the corresponding implementation class.</summary>
     public static IEnumerable<object[]> KnownEventData()
     {
         yield return

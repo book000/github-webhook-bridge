@@ -4,19 +4,19 @@ using Microsoft.Azure.Functions.Worker.Http;
 
 namespace GitHubWebhookBridge.Utils;
 
-/// <summary>Azure Functions の <see cref="HttpResponseData"/> に <c>{ "message": ... }</c> 形式の JSON を書き込むユーティリティクラス</summary>
+/// <summary>Utility class that writes <c>{ "message": ... }</c> style JSON to an Azure Functions <see cref="HttpResponseData"/></summary>
 public static class JsonResponseHelper
 {
     /// <summary>
-    /// <c>{ "message": ... }</c> 形式の JSON レスポンスを生成する。
-    /// <c>HttpResponseData.WriteAsJsonAsync</c> は
-    /// <c>WorkerOptions.Serializer</c> の DI 解決に依存するため、
-    /// それを必要としない <c>WriteStringAsync</c> ベースで明示的にシリアライズする
+    /// Builds a <c>{ "message": ... }</c> style JSON response.
+    /// <c>HttpResponseData.WriteAsJsonAsync</c> depends on
+    /// DI resolution of <c>WorkerOptions.Serializer</c>,
+    /// so this serializes explicitly using <c>WriteStringAsync</c>, which does not require it
     /// </summary>
-    /// <param name="req">レスポンス生成元の HTTP リクエスト</param>
-    /// <param name="statusCode">レスポンスの HTTP ステータスコード</param>
-    /// <param name="message">レスポンスボディの <c>message</c> フィールドに設定する文字列</param>
-    /// <returns>生成された <see cref="HttpResponseData"/></returns>
+    /// <param name="req">HTTP request from which the response is created</param>
+    /// <param name="statusCode">HTTP status code of the response</param>
+    /// <param name="message">String set in the <c>message</c> field of the response body</param>
+    /// <returns>The created <see cref="HttpResponseData"/></returns>
     public static async Task<HttpResponseData> CreateAsync(HttpRequestData req, HttpStatusCode statusCode, string message)
     {
         HttpResponseData response = req.CreateResponse(statusCode);

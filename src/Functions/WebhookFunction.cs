@@ -14,8 +14,8 @@ using Microsoft.Extensions.Logging;
 
 namespace GitHubWebhookBridge.Functions;
 
-/// <summary>GitHub Webhook を受信し Discord に通知する Azure Functions のクラス</summary>
-/// <remarks>依存サービスをコンストラクタインジェクションで受け取る</remarks>
+/// <summary>Azure Functions class that receives GitHub webhooks and notifies Discord.</summary>
+/// <remarks>Receives dependent services via constructor injection.</remarks>
 public class WebhookFunction(
     IActionFactory actionFactory,
     IMuteManager muteManager,
@@ -28,30 +28,30 @@ public class WebhookFunction(
     private readonly ILogger<WebhookFunction> _logger = logger;
 
     /// <summary>
-    /// GitHub Webhook リクエストを受け取り、署名検証・ミュートチェックを経て Discord に通知する
+    /// Receives a GitHub webhook request and notifies Discord after signature validation and mute checks.
     /// </summary>
     /// <remarks>
-    /// <c>Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore</c> の ASP.NET Core 統合は
-    /// Windows Consumption プランで「Timed out waiting for the function start call」という既知の
-    /// 未解決バグ（Azure/azure-functions-dotnet-worker#3348）を抱えているため使用しない。
-    /// <see cref="HttpRequestData"/> / <see cref="HttpResponseData"/> ベースの標準 HTTP トリガーを使用する。
-    /// <c>Route = ""</c>（空文字）は <c>routePrefix = ""</c> と組み合わせても関数名 (<c>/githubwebhook</c>)
-    /// にフォールバックしてしまう既知の挙動のため使用しない。正規表現で空セグメントにマッチさせることで
-    /// 文字通りのルートパス（<c>/</c>）にバインドする
+    /// The ASP.NET Core integration in <c>Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore</c>
+    /// is not used because it has a known, unresolved bug on the Windows Consumption plan
+    /// ("Timed out waiting for the function start call", Azure/azure-functions-dotnet-worker#3348).
+    /// The standard HTTP trigger based on <see cref="HttpRequestData"/> / <see cref="HttpResponseData"/> is used instead.
+    /// <c>Route = ""</c> (empty string) is not used because, even combined with <c>routePrefix = ""</c>, it falls back
+    /// to the function name (<c>/githubwebhook</c>) — a known behavior. Matching an empty segment with a regular
+    /// expression binds to the literal root path (<c>/</c>) instead.
     /// </remarks>
-    /// <param name="req">Azure Functions が受け取った HTTP リクエスト</param>
-    /// <returns>処理結果を表す <see cref="HttpResponseData"/></returns>
+    /// <param name="req">The HTTP request received by Azure Functions.</param>
+    /// <returns>An <see cref="HttpResponseData"/> representing the result of processing.</returns>
     [Function("GitHubWebhook")]
-    [SuppressMessage("Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Webhook エントリーポイントは必然的に多くの型を参照する")]
+    [SuppressMessage("Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "The webhook entry point inherently references many types")]
     public async Task<HttpResponseData> RunAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "{x:regex(^$)?}")] HttpRequestData req)
     {
         ArgumentNullException.ThrowIfNull(req);
 
-        // リクエストボディの上限サイズ (10 MB)
+        // Maximum request body size (10 MB)
         const long MaxBodyBytes = 10L * 1024 * 1024;
 
-        // Content-Length ヘッダーは偽装され得るため、宣言値の事前チェックに加えて実読み取りバイト数でも上限を再チェックする
+        // The Content-Length header can be spoofed, so in addition to pre-checking the declared value, re-check the limit against the actual bytes read.
         if (TryGetContentLength(req, out var declaredLength) && declaredLength > MaxBodyBytes)
             return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Body too large").ConfigureAwait(false);
 
@@ -76,7 +76,7 @@ public class WebhookFunction(
         if (!SignatureValidator.Validate(rawBody, signatureHeader, secret))
             return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid X-Hub-Signature-256").ConfigureAwait(false);
 
-        // ログインジェクション防止のため、許可文字以外を含む X-GitHub-Event ヘッダーは拒否する
+        // To prevent log injection, reject any X-GitHub-Event header that contains characters outside the allowed set.
         var rawEventName = GetHeaderValue(req, "X-GitHub-Event");
         if (string.IsNullOrEmpty(rawEventName))
             return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Missing X-GitHub-Event").ConfigureAwait(false);
@@ -88,10 +88,10 @@ public class WebhookFunction(
             return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid X-GitHub-Event").ConfigureAwait(false);
         }
 
-        // ActionFactory のリフレクションレジストリは Ordinal 比較のため小文字に正規化する
+        // ActionFactory's reflection registry uses Ordinal comparison, so normalize to lowercase.
         var eventName = NormalizeEventName(rawEventName);
 
-        // SSRF 対策として discord.com / discordapp.com の Webhook URL のみ許可する
+        // As an SSRF countermeasure, allow only discord.com / discordapp.com webhook URLs.
         Uri webhookUrl;
         var urlParam = req.Query["url"];
         if (!string.IsNullOrEmpty(urlParam))
@@ -107,7 +107,7 @@ public class WebhookFunction(
             webhookUrl = new Uri(defaultUrl);
         }
 
-        // ?disabled-events= が省略された場合は環境変数 DISABLED_EVENTS にフォールバックする
+        // When ?disabled-events= is omitted, fall back to the DISABLED_EVENTS environment variable.
         var disabledEventsParam = req.Query["disabled-events"];
         var disabledEvents = !string.IsNullOrEmpty(disabledEventsParam)
             ? disabledEventsParam
@@ -119,7 +119,7 @@ public class WebhookFunction(
                 return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.Accepted, "Disabled event").ConfigureAwait(false);
         }
 
-        // デシリアライズ前に JSON として妥当か確認しつつ、後続処理のために raw string も保持する
+        // Verify the body is valid JSON before deserialization, while also keeping the raw string for later processing.
         string rawJson;
         try
         {
@@ -141,7 +141,7 @@ public class WebhookFunction(
         }
         catch (JsonException)
         {
-            // デシリアライズに失敗した場合（例: sender.id が非数値）はミュートチェックをスキップして処理を続行する
+            // If deserialization fails (e.g., sender.id is non-numeric), skip the mute check and continue processing.
         }
 
         if (envelope?.Sender?.Id is { } senderId)
@@ -157,7 +157,7 @@ public class WebhookFunction(
         }
         catch (NotImplementedException)
         {
-            // 未実装イベント（スタブ以外の未知のイベント）は 400 を返す
+            // Return 400 for unimplemented events (unknown events other than stubs).
             _logger.LogWarning("Unknown event type: {EventName}", eventName);
             return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, $"Bad Request: Unknown event '{eventName}'").ConfigureAwait(false);
         }
@@ -169,7 +169,7 @@ public class WebhookFunction(
         }
         catch (NotImplementedException)
         {
-            // スタブアクションはまだ実装されていないため 406 を返す
+            // Stub actions are not yet implemented, so return 406.
             _logger.LogInformation("Method not implemented for event: {EventName}", eventName);
             return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.NotAcceptable, "Method not implemented").ConfigureAwait(false);
         }
@@ -180,7 +180,7 @@ public class WebhookFunction(
         }
     }
 
-    /// <summary>Content-Length ヘッダーの値を取得する。未設定・非数値・負数の場合は <see langword="false"/> を返す</summary>
+    /// <summary>Gets the value of the Content-Length header. Returns <see langword="false"/> if it is unset, non-numeric, or negative.</summary>
     private static bool TryGetContentLength(HttpRequestData req, out long length)
     {
         if (req.Headers.TryGetValues("Content-Length", out IEnumerable<string>? values)
@@ -195,26 +195,26 @@ public class WebhookFunction(
         return false;
     }
 
-    /// <summary>指定ヘッダーの値を取得する。未設定の場合は <see langword="null"/> を返す</summary>
+    /// <summary>Gets the value of the specified header. Returns <see langword="null"/> if it is unset.</summary>
     private static string? GetHeaderValue(HttpRequestData req, string name)
         => req.Headers.TryGetValues(name, out IEnumerable<string>? values) ? values.FirstOrDefault() : null;
 
     /// <summary>
-    /// GitHub イベント名として有効な文字（英小文字・アンダースコア・ハイフン・英数字）のみ許可する。
-    /// ログインジェクション攻撃を防ぐ
+    /// Allows only characters that are valid in a GitHub event name (letters, underscores, hyphens, and digits).
+    /// Prevents log injection attacks.
     /// </summary>
     private static string SanitizeEventName(string raw)
         => Regex.Replace(raw, "[^a-zA-Z0-9_-]", string.Empty);
 
     /// <summary>
-    /// GitHub イベント名を小文字に正規化する。
-    /// GitHub のイベント名は仕様上小文字のため ToLowerInvariant を使用する
+    /// Normalizes a GitHub event name to lowercase.
+    /// GitHub event names are lowercase by specification, so ToLowerInvariant is used.
     /// </summary>
-    [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "GitHub イベント名は仕様上小文字のため ToLowerInvariant が正しい")]
+    [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "GitHub event names are lowercase by specification, so ToLowerInvariant is correct")]
     private static string NormalizeEventName(string eventName)
         => eventName.ToLowerInvariant();
 
-    /// <summary>SSRF 対策: discord.com Webhook URL プレフィックスのみ許可する</summary>
+    /// <summary>SSRF countermeasure: allow only discord.com / discordapp.com webhook URL prefixes.</summary>
     private static bool IsAllowedWebhookUrl(string url)
         => url.StartsWith("https://discord.com/api/webhooks/", StringComparison.OrdinalIgnoreCase)
         || url.StartsWith("https://discordapp.com/api/webhooks/", StringComparison.OrdinalIgnoreCase);

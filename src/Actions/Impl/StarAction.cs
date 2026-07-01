@@ -8,7 +8,7 @@ using Octokit.Webhooks.Events;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
-/// <summary>GitHub star イベントを Discord に通知するクラス</summary>
+/// <summary>Notifies Discord of GitHub star events.</summary>
 /// <inheritdoc cref="BaseAction{TEvent}"/>
 [GitHubEvent(WebhookEventType.Star)]
 public sealed class StarAction(

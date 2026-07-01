@@ -6,10 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace GitHubWebhookBridge.Tests;
 
 /// <summary>
-/// DiscordRetryPolicy が "discord" 名前付き HttpClient に構成する再試行挙動のテスト。
-/// Program.cs と同一の登録方法（AddHttpClient + AddResilienceHandler）を
-/// 最小構成の ServiceCollection で再現し、実際の HTTP パイプラインを通して検証する
-/// （ポリシーの中身だけを単体で呼び出すテストでは、DI 登録の配線ミスを検出できないため）
+/// Tests for the retry behavior that DiscordRetryPolicy configures on the "discord" named HttpClient.
+/// Reproduces the same registration used in Program.cs (AddHttpClient + AddResilienceHandler)
+/// on a minimal ServiceCollection and verifies it through the actual HTTP pipeline
+/// (a test that invokes only the policy internals in isolation cannot detect DI wiring mistakes).
 /// </summary>
 public class DiscordRetryPolicyTests
 {
@@ -34,7 +34,7 @@ public class DiscordRetryPolicyTests
         return response;
     }
 
-    /// <summary>429 が 1 回だけ発生した場合、再試行の末に成功する。</summary>
+    /// <summary>When a 429 occurs only once, the request succeeds after a retry.</summary>
     [Fact]
     public async Task SendAsyncRetriesOnceAndSucceedsAfterSingleTooManyRequests()
     {
@@ -49,7 +49,7 @@ public class DiscordRetryPolicyTests
         Assert.Equal(2, handler.CallCount);
     }
 
-    /// <summary>429 が続く場合でも、最大試行回数（初回 + 2 回）で打ち切られる。</summary>
+    /// <summary>Even when 429 persists, retries stop at the maximum attempt count (initial + 2).</summary>
     [Fact]
     public async Task SendAsyncStopsAfterMaxRetryAttemptsWhenAlwaysTooManyRequests()
     {
@@ -62,7 +62,7 @@ public class DiscordRetryPolicyTests
         Assert.Equal(1 + DiscordRetryPolicy.MaxRetryAttempts, handler.CallCount);
     }
 
-    /// <summary>429 以外（5xx 等）は再試行の対象外で、即座に応答が返る。</summary>
+    /// <summary>Statuses other than 429 (e.g. 5xx) are not retried and the response returns immediately.</summary>
     [Fact]
     public async Task SendAsyncDoesNotRetryOnServerError()
     {
@@ -76,9 +76,9 @@ public class DiscordRetryPolicyTests
     }
 
     /// <summary>
-    /// Retry-After ヘッダーが無い 429 応答でも、DelayGenerator が null を返して
-    /// 既定の Delay/MaxDelay に基づく再試行にフォールバックし、再試行の末に成功することを確認する
-    /// （このパスはこれまでテストが無く、既定バックオフの配線ミスを検出できなかったための追加）。
+    /// Confirms that even for a 429 response without a Retry-After header, the DelayGenerator returns null
+    /// and falls back to retries based on the default Delay/MaxDelay, succeeding after a retry
+    /// (this path previously had no test, so a wiring mistake in the default backoff could not be detected).
     /// </summary>
     [Fact]
     public async Task SendAsyncRetriesUsingDefaultDelayWhenRetryAfterHeaderIsAbsent()
@@ -94,13 +94,13 @@ public class DiscordRetryPolicyTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(2, handler.CallCount);
-        // 既定の Delay（500ms）+ ジッター程度に収まるはずだが、CI のフレーク耐性のため閾値には余裕を持たせる
+        // Should fit within the default Delay (500ms) plus jitter, but allow headroom in the threshold for CI flakiness
         Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(15), $"Retry wait too long: {stopwatch.Elapsed}");
     }
 
     /// <summary>
-    /// Retry-After ヘッダーが極端に長い値を指定してきても、MaxDelay で頭打ちになり、
-    /// 全体の待機時間が長すぎるリトライにならないことを確認する
+    /// Confirms that even when the Retry-After header specifies an extremely long value, it is capped by MaxDelay
+    /// and does not result in a retry whose total wait time is excessively long.
     /// </summary>
     [Fact]
     public async Task SendAsyncCapsWaitTimeEvenWhenRetryAfterHeaderIsVeryLong()
@@ -115,7 +115,7 @@ public class DiscordRetryPolicyTests
         stopwatch.Stop();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        // MaxDelay（2 秒）に収まるはずで Retry-After の 10 分は待たないが、CI のフレーク耐性のため閾値には余裕を持たせる
+        // Should fit within MaxDelay (2 seconds) and not wait the 10 minutes from Retry-After, but allow headroom in the threshold for CI flakiness
         Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(15), $"Retry wait too long: {stopwatch.Elapsed}");
     }
 }
