@@ -26,7 +26,7 @@ public sealed class PullRequestAction(
     : BaseAction<PullRequestEvent>(discord, webhookUrl, eventName, pullRequestEvent, cache, userMapManager, logger)
 {
     /// <summary>アクションに対応するキャッシュキーのサフィックスを取得する</summary>
-    private string GetCacheKeySuffix() => Event.Action switch
+    private static string GetCacheKeySuffix(string action) => action switch
     {
         "assigned" or "unassigned" => "assigned",
         "labeled" or "unlabeled" => "label",
@@ -35,12 +35,12 @@ public sealed class PullRequestAction(
         "milestoned" or "demilestoned" => "milestoned",
         "review_requested" or "review_request_removed" => "review_requested",
         "enqueued" or "dequeued" => "enqueued",
-        _ => Event.Action,
+        _ => action,
     };
 
     /// <summary>PR とアクションに対応するキャッシュキーを取得する</summary>
-    private string GetCacheKey() =>
-        $"{Event.Repository.FullName}#{Event.PullRequest.Number}-{GetCacheKeySuffix()}";
+    private static string GetCacheKey(Repository repo, OctokitPR pr, string action) =>
+        $"{repo.FullName}#{pr.Number}-{GetCacheKeySuffix(action)}";
 
     /// <summary>タイトルが WIP（作業中）かどうかを判定する</summary>
     private static bool IsWipTitle(string title) =>
@@ -86,9 +86,14 @@ public sealed class PullRequestAction(
         // synchronize はコミット追加時に発生するが通知不要なためスキップ
         if (Event.Action == "synchronize") return;
 
+        if (Event.Repository is not { } repo || Event.Sender is not { } sender)
+        {
+            Logger.LogWarning("pull_request payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
         OctokitPR pr = Event.PullRequest;
-        Repository repo = Event.Repository;
-        User sender = Event.Sender;
+        var action = Event.Action ?? string.Empty;
 
         // サブタイプ固有プロパティをパターンマッチで取得する
         Label? label = (Event as PullRequestLabeledEvent)?.Label
@@ -99,7 +104,7 @@ public sealed class PullRequestAction(
         Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges? changes =
             (Event as PullRequestEditedEvent)?.Changes;
 
-        (var titleVerb, var color) = GetTitleVerbAndColor(Event.Action, pr.Merged == true);
+        (var titleVerb, var color) = GetTitleVerbAndColor(action, pr.Merged == true);
 
         var title = $"PR {titleVerb}: #{pr.Number} {pr.Title}";
         List<DiscordEmbedField> fields = BuildFields(pr, repo, label, assignee, requestedReviewer);
@@ -108,35 +113,37 @@ public sealed class PullRequestAction(
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
-            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out var senderUrl) ? senderUrl : null,
-            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out var avatarUrl) ? avatarUrl : null);
+            Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
+            IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
             description: description,
-            url: Uri.TryCreate(pr.HtmlUrl, UriKind.Absolute, out var prUrl) ? prUrl : null,
+            url: Uri.TryCreate(pr.HtmlUrl, UriKind.Absolute, out Uri? prUrl) ? prUrl : null,
             author: author,
             fields: fields);
 
-        var key = GetCacheKey();
+        var key = GetCacheKey(repo, pr, action);
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 
     /// <summary>PR の各種情報を Embed フィールドのリストとして構築する</summary>
     private static List<DiscordEmbedField> BuildFields(
-        OctokitPR pr, Repository repo,
-        Label? label, User? assignee, User? requestedReviewer)
+        OctokitPR pr,
+        Repository repo,
+        Label? label,
+        User? assignee,
+        User? requestedReviewer)
     {
+        // Octokit の PullRequest では Additions/Deletions は long（常に存在）
         var fields = new List<DiscordEmbedField>
         {
             new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
             new("Branch", $"`{pr.Head.Ref}` → `{pr.Base.Ref}`", true),
+            new("Changes", $"+{pr.Additions} / -{pr.Deletions} ({pr.ChangedFiles} files)", true),
         };
-
-        // Octokit の PullRequest では Additions/Deletions は long（常に存在）
-        fields.Add(new("Changes", $"+{pr.Additions} / -{pr.Deletions} ({pr.ChangedFiles} files)", true));
 
         if (pr.Draft)
             fields.Add(new("Status", "Draft", true));
@@ -158,8 +165,10 @@ public sealed class PullRequestAction(
     /// Draft PR および WIP タイトル解除前はメンションを抑制する
     /// </summary>
     private async Task<string?> BuildContentAsync(
-        OctokitPR pr, User sender,
-        User? assignee, User? requestedReviewer,
+        OctokitPR pr,
+        User sender,
+        User? assignee,
+        User? requestedReviewer,
         Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges? changes)
     {
         string? content = null;
