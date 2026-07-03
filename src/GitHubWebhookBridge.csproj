@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <!-- Azure Functions -->
-    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.1" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.2" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
     <!--
       Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore (ConfigureFunctionsWebApplication) は
