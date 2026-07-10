@@ -1,195 +1,69 @@
-# GitHub Copilot Instructions
+# Copilot Code Review Instructions
 
-## Project Overview
+Review guidance for this repository. This file is for GitHub Copilot's code
+review; day-to-day development guidance lives in `CLAUDE.md` and is not repeated
+here. Keep comments concise and specific to the diff.
 
-- Purpose: receive GitHub webhooks and send notification messages to Discord
-- Key features:
-  - 12 GitHub webhook event types implemented (other events get an HTTP 406 from `UnhandledAction`)
-  - Discord embed message formatting
-  - User mute feature (include/exclude/all modes)
-  - GitHub-to-Discord user mapping
-  - Event filtering / disabling
-  - Message caching and editing (5-minute window, backed by Azure Table Storage)
-  - HMAC-SHA256 webhook signature verification
-- Target audience: developers who want to connect GitHub and Discord
+**Context**: C# / .NET 10 Azure Functions (v4 Isolated Worker) app that receives
+GitHub webhooks, verifies their signature, and forwards them to Discord.
 
-## General Rules
+## What to flag
 
-- English is mandatory for all project artifacts: code, comments, commit messages, PR titles/bodies, and documentation. Japanese is permitted only where quoting real-world Japanese data verbatim is unavoidable.
-- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
-  - Format: `<type>(<scope>): <description>`
-  - `<description>` is written in English
-  - Example: `feat: add Discord message sending feature`
-- Branch names follow [Conventional Branch](https://conventional-branch.github.io).
-  - Format: `<type>/<description>`
-  - Use the short form for `<type>` (feat, fix)
-  - Example: `feat/add-discord-notification`
+### Conventions enforced in this repo
 
-## Tech Stack
+- **English-only artifacts**: code, comments, XML doc (`///`), log/error messages,
+  commit messages, and PR titles/bodies must be English. The only allowed exception
+  is verbatim real-world Japanese data (e.g. actual GitHub payload text inside test
+  fixtures). Flag newly introduced Japanese prose outside that case.
+- **No `#pragma warning disable`** to silence analyzer/type warnings — the fix is to
+  correct the code. Test-only analyzer relaxations belong in the `[tests/**.cs]`
+  block of `.editorconfig`, never as an inline `#pragma`.
+- **Dependency-injection boundaries** (flag direct bypasses):
+  - `HttpClient` must come from an injected `IHttpClientFactory`, never `new HttpClient(...)`.
+  - Discord calls go through `IDiscordClient` / `DiscordClient`, not ad-hoc HTTP.
+  - Azure Table Storage access goes through `IMessageCacheService`, not raw Azure SDK calls.
+  - Configuration is read via injected `IConfiguration`, not `Environment.GetEnvironmentVariable`.
+- **Payload models**: GitHub webhook payload types come from the `Octokit.Webhooks`
+  NuGet package. Flag hand-written GitHub payload models. (Hand-written DTOs are
+  expected only under `Models/Discord/` for the outbound Discord message shape.)
+- **New webhook handlers**: a new event handler should extend `BaseAction<TEvent>`,
+  override `RunAsync()` (no parameters), and carry a `[GitHubEvent(WebhookEventType.X)]`
+  attribute — `ActionFactory` auto-registers it via reflection. Flag handlers wired up
+  by any other mechanism (e.g. manual switch statements).
 
-- Language: C# 14
-- Runtime: .NET 10
-- Framework: Azure Functions v4 Isolated Worker
-- Deployment target: Azure Functions
-- Package manager: dotnet CLI (NuGet)
-- Test framework: xUnit
+### Security (high priority)
 
-## Coding Conventions
+- Webhook signature verification (`Utils/SignatureValidator.cs`, HMAC-SHA256 over
+  `x-hub-signature-256`) must stay **constant-time**. Flag any change to a
+  short-circuiting or `==`/`.Equals` string comparison of the signature.
+- The `?url=` SSRF guard (`IsAllowedWebhookUrl`) restricts destinations to the
+  `https://discord.com/api/webhooks/` and `https://discordapp.com/api/webhooks/`
+  prefixes. Flag anything that widens or bypasses this allowlist.
+- No secrets in code, logs, or committed config. Flag logging of webhook secrets,
+  connection strings, or full request bodies that may embed tokens.
 
-### C# settings
+### Tests
 
-- Nullable reference types enabled (`<Nullable>enable</Nullable>`)
-- Implicit usings enabled (`<ImplicitUsings>enable</ImplicitUsings>`)
-- Follow the code style defined in `.editorconfig` (`EnforceCodeStyleInBuild=true`)
-- Write/update XML doc comments (`///`) on classes and public methods, in English
-- Comments are written in English
-- Error messages are written in English
-- Use `IHttpClientFactory` via DI for `HttpClient` (direct instantiation is prohibited)
+- New behaviour needs xUnit tests directly under `tests/` (the `tests/` directory is the test project root, `tests/GitHubWebhookBridge.Tests.csproj`).
+- Tests reach internal members via `InternalsVisibleTo` and existing seams
+  (`SetDataForTest` / `LoadForTest`). Flag production members being made `public`
+  purely to enable testing.
 
-### Naming conventions
+## Do NOT flag (known intentional patterns)
 
-- Classes, methods, properties: PascalCase
-- Local variables, parameters: camelCase
-- Private fields: `_` prefix + camelCase
+- **Root route regex** `Route = "{x:regex(^$)?}"` with `routePrefix = ""` in
+  `host.json` — this deliberately binds the literal root path `/`; it is not a typo.
+- **Message editing**: when the same cache key was sent within 5 minutes, the code
+  edits the existing Discord message instead of sending a new one. On edit failure it
+  deletes the cache entry and sends fresh. This is intended, not a race-condition bug.
+- **`SuppressNotifications` forced on** for every Discord message — intentional.
+- **`ToLowerInvariant` on hex** in signature handling — intentional (CA1308 is
+  relaxed for tests in `.editorconfig`); do not push `ToUpperInvariant`.
+- **Underscore-containing test method names** — CA1707 / IDE1006 are intentionally
+  disabled for `tests/**` in `.editorconfig`.
 
-## Development Commands
+## Conventions reference
 
-```bash
-# Restore dependencies
-dotnet restore
-
-# Build
-dotnet build
-
-# Test
-dotnet test
-
-# Start Azure Functions locally
-func start
-```
-
-## Testing Policy
-
-- Test framework: xUnit
-- Test project: `tests/GitHubWebhookBridge.Tests.csproj` (the `tests/` directory is the project root)
-- Add tests when adding new features
-- Verify existing tests still pass
-
-## Security / Sensitive Information
-
-- **Webhook verification**: HMAC-SHA256 signature verification is mandatory
-  - Header: `x-hub-signature-256`
-  - Secret: `GITHUB_WEBHOOK_SECRET` environment variable
-  - Uses a timing-safe comparison (`Utils/SignatureValidator.cs`)
-- **Environment variables**: credentials are managed via environment variables
-  - Required: `GITHUB_WEBHOOK_SECRET`, `AzureWebJobsStorage`
-  - Optional: `DISCORD_WEBHOOK_URL`, `GITHUB_USER_MAP_FILE_PATH`, `MUTES_FILE_PATH`, etc.
-- **No committing secrets**: never commit API keys or credentials to Git
-- **No logging secrets**: never log personal information or credentials
-- **Discord integration**:
-  - Implementation accounts for rate limits
-  - Be mindful of embed message character limits
-  - Provide appropriate fallback behavior on errors
-
-## Documentation Updates
-
-When any of the following need updating, make sure to update them:
-
-- `README.md`: project overview, usage, environment variables
-- XML doc comments: docstrings on classes and public methods
-
-## Repository-Specific Notes
-
-### Architecture
-
-**Directory layout**:
-
-```
-./
-├── src/
-│   ├── Program.cs                      # Azure Functions entry point
-│   ├── GitHubWebhookBridge.csproj      # project file
-│   ├── host.json                       # Azure Functions host configuration
-│   ├── Functions/
-│   │   └── WebhookFunction.cs          # HTTP-triggered function
-│   ├── Actions/
-│   │   ├── IAction.cs                  # Action interface
-│   │   ├── IActionFactory.cs           # Factory interface
-│   │   ├── BaseAction.cs               # abstract base class
-│   │   ├── ActionFactory.cs            # event → Action mapping
-│   │   ├── Impl/                       # 12 implemented Actions
-│   │   └── UnhandledAction.cs          # HTTP 406 fallback for unimplemented events
-│   ├── Managers/
-│   │   ├── MuteManager.cs              # mute rule management
-│   │   └── GitHubUserMapManager.cs     # user mapping management
-│   ├── Models/                         # GitHub webhook payload models
-│   ├── Services/
-│   │   ├── DiscordClient.cs            # Discord webhook sending client
-│   │   └── MessageCacheService.cs      # Azure Table Storage message cache
-│   └── Utils/
-│       ├── SignatureValidator.cs        # HMAC-SHA256 signature verification
-│       ├── EmbedColors.cs              # Discord embed color constants
-│       └── EmbedHelper.cs              # embed builder helper
-└── tests/                               # xUnit test project (GitHubWebhookBridge.Tests.csproj)
-```
-
-**Design patterns**:
-
-- **Factory pattern**: `ActionFactory` maps webhook events to Action classes
-- **Abstract base class pattern**: `BaseAction` provides common functionality for all Actions
-- **Manager pattern**: `MuteManager`, `GitHubUserMapManager` manage data
-
-**Data flow**:
-
-1. Webhook received via `POST /` (the root path; `host.json` sets `routePrefix` to `""` and the function binds an empty-match regex route)
-2. HMAC-SHA256 signature verification (`SignatureValidator`)
-3. Event type determined from the `x-github-event` header
-4. `ActionFactory` instantiates the appropriate Action
-5. After a mute check by `MuteManager`, a Discord embed message is sent
-
-### Creating a GitHub Webhook Handler
-
-1. **Adding a new Action**:
-
-   ```csharp
-   // Actions/Impl/PushAction.cs (example of an existing implementation)
-   namespace GitHubWebhookBridge.Actions.Impl;
-
-   [GitHubEvent(WebhookEventType.Push)]
-   public class PushAction(IDiscordClient discord, Uri webhookUrl, string eventName,
-       PushEvent @event, IMessageCacheService cache, IGitHubUserMapManager userMap,
-       ILogger<PushAction> logger)
-       : BaseAction<PushEvent>(discord, webhookUrl, eventName, @event, cache, userMap, logger)
-   {
-       public override async Task RunAsync() { ... }
-   }
-   ```
-
-2. **Simply adding the `[GitHubEvent]` attribute is enough for `ActionFactory` to auto-register it via reflection at startup** (no manual addition to a switch statement needed)
-
-### Discord Integration Patterns
-
-- **Embed messages**: `EmbedHelper` produces structured information display
-- **Color coding**: `EmbedColors` defines colors per notification type
-- **Field structure**: title, description, fields, and footer are used appropriately
-
-### Project-Specific Constraints
-
-- **Use the dotnet CLI**: `dotnet restore`, `dotnet build`, `dotnet test`
-- **Azure Functions v4 Isolated**: `src/Functions/WebhookFunction.cs` is the HTTP trigger
-- **Endpoint**: `POST /` (root path, not `/GitHubWebhook`)
-- **GitHub webhook event types**: 12 implemented; unimplemented events get an HTTP 406 from `UnhandledAction`
-- **Renovate**: dependencies are updated automatically (base-public config)
-- **CI/CD**:
-  - `dotnet-ci.yml`: main CI (build & test)
-  - `azure-functions-deploy.yml`: Azure Functions deployment (OIDC)
-- **Branch protection**: the main/master branch is protected
-- **URL validation**: the `?url=` parameter only allows the `https://discord.com/api/webhooks/` or `https://discordapp.com/api/webhooks/` prefixes
-
-## Reference Resources
-
-- [Conventional Commits](https://www.conventionalcommits.org/)
-- [Conventional Branch](https://conventional-branch.github.io)
-- [GitHub Webhooks Documentation](https://docs.github.com/en/developers/webhooks-and-events/webhooks)
-- [Discord Webhook Guide](https://discord.com/developers/docs/resources/webhook)
-- [Azure Functions Documentation](https://learn.microsoft.com/azure/azure-functions/)
+- Commits: [Conventional Commits](https://www.conventionalcommits.org/) (`<type>(<scope>): <description>`), English description.
+- Branches: [Conventional Branch](https://conventional-branch.github.io) short form (`feat`, `fix`, ...).
+- Keep `README.md` and public `///` XML docs in sync with behavioural changes.

@@ -48,9 +48,9 @@ cd src && func start              # run Azure Functions locally
 - `BaseAction<TEvent>` — generic abstract base; `abstract Task RunAsync()`.
 - `BaseManager<TData>(IConfiguration, IHttpClientFactory) : IDisposable` — load priority: **Blob > HTTPS URL > local file**.
 - Managers: `MuteManager` / `IMuteManager`, `GitHubUserMapManager` / `IGitHubUserMapManager`.
-- Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`.
-- Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`.
-- GitHub Webhook payload types come from `Octokit.Webhooks` NuGet — do not create hand-written payload models.
+- Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`. `ActionRegistryValidator` validates the reflection-based `[GitHubEvent]` registration at startup.
+- Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`, `JsonResponseHelper`, `OctokitJsonOptions` (shared `Octokit.Webhooks` deserialization settings), `DiscordRetryPolicy` (bounded retry for Discord HTTP 429 — keep it bounded, never an unbounded loop).
+- GitHub Webhook payload types come from `Octokit.Webhooks` NuGet — do not create hand-written payload models. Only `Models/Discord/` holds hand-written DTOs (the outbound Discord message shape).
 
 ---
 
@@ -59,7 +59,7 @@ cd src && func start              # run Azure Functions locally
 1. Create a file in `Actions/Impl/` (follow an existing file such as `PushAction.cs`).
 2. Extend `BaseAction<TYourEventModel>` and override `RunAsync()` (no parameters; payload available via constructor-injected field).
 3. Annotate the class with `[GitHubEvent(WebhookEventType.X)]` — `ActionFactory` auto-registers it via reflection at startup.
-4. Add tests under `tests/GitHubWebhookBridge.Tests/`.
+4. Add tests directly under `tests/` (that directory is the test project root).
 
 ---
 
@@ -88,7 +88,7 @@ All keys are read via `IConfiguration`. Required keys must be set in `local.sett
 
 ## Testing
 
-- Framework: xUnit, project at `tests/GitHubWebhookBridge.Tests/`.
+- Framework: xUnit, project `tests/GitHubWebhookBridge.Tests.csproj` (the `tests/` directory itself is the project root).
 - Add tests for any new behaviour; `dotnet test -c Release` must stay green.
 - Analyzer/style rules (including CA1707, IDE1006, CA1308 suppressions for tests) live in `.editorconfig`.
 - Tests access internal members via `InternalsVisibleTo`; use `SetDataForTest` / `LoadForTest` on managers as test seams — do not make members public to enable testing.
