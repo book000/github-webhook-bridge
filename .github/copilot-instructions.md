@@ -44,7 +44,7 @@ GitHub webhooks, verifies their signature, and forwards them to Discord.
 
 ### Tests
 
-- New behaviour needs xUnit tests under `tests/GitHubWebhookBridge.Tests/`.
+- New behaviour needs xUnit tests directly under `tests/` (the `tests/` directory is the test project root, `tests/GitHubWebhookBridge.Tests.csproj`).
 - Tests reach internal members via `InternalsVisibleTo` and existing seams
   (`SetDataForTest` / `LoadForTest`). Flag production members being made `public`
   purely to enable testing.

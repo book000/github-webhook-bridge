@@ -59,7 +59,7 @@ cd src && func start              # run Azure Functions locally
 1. Create a file in `Actions/Impl/` (follow an existing file such as `PushAction.cs`).
 2. Extend `BaseAction<TYourEventModel>` and override `RunAsync()` (no parameters; payload available via constructor-injected field).
 3. Annotate the class with `[GitHubEvent(WebhookEventType.X)]` — `ActionFactory` auto-registers it via reflection at startup.
-4. Add tests under `tests/GitHubWebhookBridge.Tests/`.
+4. Add tests directly under `tests/` (that directory is the test project root).
 
 ---
 
@@ -88,7 +88,7 @@ All keys are read via `IConfiguration`. Required keys must be set in `local.sett
 
 ## Testing
 
-- Framework: xUnit, project at `tests/GitHubWebhookBridge.Tests/`.
+- Framework: xUnit, project `tests/GitHubWebhookBridge.Tests.csproj` (the `tests/` directory itself is the project root).
 - Add tests for any new behaviour; `dotnet test -c Release` must stay green.
 - Analyzer/style rules (including CA1707, IDE1006, CA1308 suppressions for tests) live in `.editorconfig`.
 - Tests access internal members via `InternalsVisibleTo`; use `SetDataForTest` / `LoadForTest` on managers as test seams — do not make members public to enable testing.
