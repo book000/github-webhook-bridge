@@ -48,9 +48,9 @@ cd src && func start              # run Azure Functions locally
 - `BaseAction<TEvent>` — generic abstract base; `abstract Task RunAsync()`.
 - `BaseManager<TData>(IConfiguration, IHttpClientFactory) : IDisposable` — load priority: **Blob > HTTPS URL > local file**.
 - Managers: `MuteManager` / `IMuteManager`, `GitHubUserMapManager` / `IGitHubUserMapManager`.
-- Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`.
-- Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`.
-- GitHub Webhook payload types come from `Octokit.Webhooks` NuGet — do not create hand-written payload models.
+- Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`. `ActionRegistryValidator` validates the reflection-based `[GitHubEvent]` registration at startup.
+- Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`, `JsonResponseHelper`, `OctokitJsonOptions` (shared `Octokit.Webhooks` deserialization settings), `DiscordRetryPolicy` (bounded retry for Discord HTTP 429 — keep it bounded, never an unbounded loop).
+- GitHub Webhook payload types come from `Octokit.Webhooks` NuGet — do not create hand-written payload models. Only `Models/Discord/` holds hand-written DTOs (the outbound Discord message shape).
 
 ---
 
