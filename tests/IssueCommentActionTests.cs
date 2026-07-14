@@ -36,9 +36,16 @@ public class IssueCommentActionTests
         string action = "created",
         bool isPullRequest = false,
         string commentBody = "LGTM",
-        long commentId = 9001) => JsonSerializer.Deserialize<IssueCommentEvent>(
-        $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(3,"Test issue",isPr:isPullRequest,userLogin:"issue-author",userId:10)}},"comment":{{TestFixtures.IssueCommentJson(commentId,commentBody)}},"repository":{{TestFixtures.RepoJson("test/repo")}},"sender":{{TestFixtures.UserJson("commenter",20)}}}""",
-        OctokitJsonOptions.Value)!;
+        long commentId = 9001,
+        string? changedBodyFrom = null)
+    {
+        var changesJson = action == "edited"
+            ? $$""","changes":{"body":{{(changedBodyFrom is not null ? $$"""{"from":"{{changedBodyFrom}}"}""" : "null")}}}"""
+            : "";
+        return JsonSerializer.Deserialize<IssueCommentEvent>(
+            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(3,"Test issue",isPr:isPullRequest,userLogin:"issue-author",userId:10)}},"comment":{{TestFixtures.IssueCommentJson(commentId,commentBody)}},"repository":{{TestFixtures.RepoJson("test/repo")}},"sender":{{TestFixtures.UserJson("commenter",20)}}{{changesJson}}}""",
+            OctokitJsonOptions.Value)!;
+    }
 
     /// <summary>For created + a regular Issue, the title contains "Issue" and "commented on".</summary>
     [Fact]
@@ -136,6 +143,107 @@ public class IssueCommentActionTests
             d => d.SendMessageAsync(
                 It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m => m.Embeds![0].Description!.Contains("..."))),
+            Times.Once);
+    }
+
+    /// <summary>When the body actually changed on an edited event, the description becomes a diff code block.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithBodyChangeShowsDiff()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IssueCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment",
+            MakeEvent("edited", commentBody: "Fixed typo", changedBodyFrom: "Fxied typo"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Description!.StartsWith("```diff", StringComparison.Ordinal) &&
+                    m.Embeds![0].Description!.Contains("- Fxied typo") &&
+                    m.Embeds![0].Description!.Contains("+ Fixed typo"))),
+            Times.Once);
+    }
+
+    /// <summary>When an edited event has no body change (only other fields were edited), the plain body is shown.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithoutBodyChangeShowsPlainBody()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IssueCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment",
+            MakeEvent("edited", commentBody: "LGTM"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => m.Embeds![0].Description == "LGTM")),
+            Times.Once);
+    }
+
+    /// <summary>When the diffed source text contains a run of 3 backticks on an edited event, the code fence does not break out.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithBacktickFenceInBodyEscapesFence()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IssueCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment",
+            MakeEvent("edited", commentBody: "after ``` more", changedBodyFrom: "before ``` more"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => IsFenceIntact(m.Embeds![0].Description))),
+            Times.Once);
+    }
+
+    /// <summary>Checks that the description keeps its ```diff...``` shape and contains no fence-breakout backtick runs inside.</summary>
+    private static bool IsFenceIntact(string? description)
+    {
+        if (description is null ||
+            !description.StartsWith("```diff", StringComparison.Ordinal) ||
+            !description.EndsWith("```", StringComparison.Ordinal))
+            return false;
+
+        var inner = description.Substring("```diff\n".Length, description.Length - "```diff\n".Length - "```".Length);
+        return !inner.Contains("```", StringComparison.Ordinal);
+    }
+
+    /// <summary>When the diff is very long on an edited event, the description is truncated to stay within Discord's Embed limit.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithLongBodyChangeTruncatesDescription()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IssueCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment",
+            MakeEvent("edited", commentBody: new string('y', 5000), changedBodyFrom: new string('x', 5000)));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Description!.Length <= 4096 &&
+                    m.Embeds![0].Description!.Contains("..."))),
             Times.Once);
     }
 
