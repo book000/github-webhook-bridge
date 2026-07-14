@@ -109,7 +109,7 @@ public sealed class PullRequestAction(
         (var titleVerb, var color) = GetTitleVerbAndColor(action, pr.Merged == true);
 
         var title = $"PR {titleVerb}: #{pr.Number} {pr.Title}";
-        List<DiscordEmbedField> fields = BuildFields(pr, repo, label, assignee, requestedReviewer);
+        List<DiscordEmbedField> fields = BuildFields(pr, label, assignee, requestedReviewer);
         var content = await BuildContentAsync(pr, sender, assignee, requestedReviewer, changes);
         var description = BuildDescription(pr, changes);
 
@@ -134,14 +134,12 @@ public sealed class PullRequestAction(
     /// <summary>Builds the various PR details into a list of embed fields.</summary>
     private static List<DiscordEmbedField> BuildFields(
         OctokitPR pr,
-        Repository repo,
         Label? label,
         User? assignee,
         User? requestedReviewer)
     {
         var fields = new List<DiscordEmbedField>
         {
-            new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
             new("Branch", $"`{pr.Head.Ref}` → `{pr.Base.Ref}`", true),
             // In Octokit's PullRequest, Additions/Deletions are long (always present).
             new("Changes", $"+{pr.Additions} / -{pr.Deletions} ({pr.ChangedFiles} files)", true),

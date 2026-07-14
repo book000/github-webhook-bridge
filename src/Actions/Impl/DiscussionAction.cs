@@ -60,10 +60,7 @@ public sealed class DiscussionAction(
         DiscussionAnswer? answer = (Event as DiscussionAnsweredEvent)?.Answer;
         DiscussionCategory? newCategory = (Event as DiscussionCategoryChangedEvent)?.Changes?.Category?.From;
 
-        var fields = new List<DiscordEmbedField>
-        {
-            new("Repository", $"[{repo.FullName}]({repo.HtmlUrl})", true),
-        };
+        var fields = new List<DiscordEmbedField>();
 
         if (discussion.Category is not null)
             fields.Add(new("Category", discussion.Category.Name, true));
