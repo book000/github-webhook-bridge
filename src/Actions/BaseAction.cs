@@ -132,4 +132,27 @@ public abstract class BaseAction<TEvent>(
 
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Wraps a CreatePatch result in a ```diff code block for use as an Embed description.
+    /// Since the diffed source text is fully attacker-controlled (the comment author), this escapes
+    /// code-fence breakout sequences and truncates the result to stay within Discord's Embed
+    /// description limit (4096 characters).
+    /// </summary>
+    /// <param name="patch">The diff string returned by CreatePatch.</param>
+    /// <returns>A description string wrapped in a ```diff code block.</returns>
+    protected static string BuildDiffDescription(string patch)
+    {
+        ArgumentNullException.ThrowIfNull(patch);
+
+        // A run of 3 backticks in the diffed source text would close the code fence early, so
+        // neutralize it by inserting a visually near-identical zero-width space.
+        var escaped = patch.Replace("```", "``\u200b`", StringComparison.Ordinal);
+
+        const int maxLength = 4000; // Leaves headroom under the 4096-char Embed description limit for the fence markers.
+        if (escaped.Length > maxLength)
+            escaped = $"{escaped[..maxLength]}...\n";
+
+        return $"```diff\n{escaped}```";
+    }
 }

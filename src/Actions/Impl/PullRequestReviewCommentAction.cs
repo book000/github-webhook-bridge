@@ -6,7 +6,9 @@ using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Octokit.Webhooks;
 using Octokit.Webhooks.Events;
+using Octokit.Webhooks.Events.PullRequestReviewComment;
 using Octokit.Webhooks.Models;
+using PullRequestReviewCommentEventChanges = Octokit.Webhooks.Models.PullRequestReviewCommentEvent.Changes;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
@@ -35,20 +37,21 @@ public sealed class PullRequestReviewCommentAction(
             return;
         }
 
-        (var titleVerb, var color) = Event.Action switch
+        // Use an explicit default rather than an empty string when missing, to keep the notification title unique.
+        var action = Event.Action ?? "unknown";
+
+        (var titleVerb, var color) = action switch
         {
             "created" => ("commented on", EmbedColors.PullRequestReviewCommentCreated),
             "edited" => ("edited comment on", EmbedColors.PullRequestReviewCommentEdited),
             "deleted" => ("deleted comment on", EmbedColors.PullRequestReviewCommentDeleted),
-            _ => (Event.Action, EmbedColors.Unknown),
+            _ => (action, EmbedColors.Unknown),
         };
 
         var title = $"{sender.Login} {titleVerb} PR #{pr.Number}: {pr.Title}";
 
-        // Comment body (truncated if long).
-        var body = comment.Body is not null && comment.Body.Length > 0
-            ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
-            : null;
+        PullRequestReviewCommentEventChanges? changes = (Event as PullRequestReviewCommentEditedEvent)?.Changes;
+        var body = BuildDescription(action, comment, changes);
 
         var fields = new List<DiscordEmbedField>();
         if (comment.Path is not null)
@@ -84,5 +87,23 @@ public sealed class PullRequestReviewCommentAction(
 
         var key = $"{repo.FullName}-pr-review-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
+    }
+
+    /// <summary>Builds the description (a body-change diff for edited events).</summary>
+    private static string? BuildDescription(
+        string action,
+        PullRequestReviewComment comment,
+        PullRequestReviewCommentEventChanges? changes)
+    {
+        // For edited events, render the body change as a diff description.
+        if (action == "edited" && changes?.Body?.From is not null)
+        {
+            var patch = CreatePatch(changes.Body.From, comment.Body ?? string.Empty, "comment");
+            return BuildDiffDescription(patch);
+        }
+
+        return comment.Body is not null && comment.Body.Length > 0
+            ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
+            : null;
     }
 }

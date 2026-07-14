@@ -6,7 +6,9 @@ using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Octokit.Webhooks;
 using Octokit.Webhooks.Events;
+using Octokit.Webhooks.Events.IssueComment;
 using Octokit.Webhooks.Models;
+using IssueCommentEventChanges = Octokit.Webhooks.Models.IssueCommentEvent.Changes;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
@@ -38,19 +40,21 @@ public sealed class IssueCommentAction(
         // Vary the type depending on whether the issue is a PR (it is a PR if IssuePullRequest.HtmlUrl is non-empty).
         var issueType = !string.IsNullOrEmpty(issue.PullRequest?.HtmlUrl) ? "PR" : "Issue";
 
-        (var titleVerb, var color) = Event.Action switch
+        // Use an explicit default rather than an empty string when missing, to keep the notification title unique.
+        var action = Event.Action ?? "unknown";
+
+        (var titleVerb, var color) = action switch
         {
             "created" => ("commented on", EmbedColors.IssueCommentCreated),
             "edited" => ("edited comment on", EmbedColors.IssueCommentEdited),
             "deleted" => ("deleted comment on", EmbedColors.IssueCommentDeleted),
-            _ => (Event.Action, EmbedColors.Unknown),
+            _ => (action, EmbedColors.Unknown),
         };
 
         var title = $"{sender.Login} {titleVerb} {issueType} #{issue.Number}: {issue.Title}";
 
-        var body = comment.Body is not null && comment.Body.Length > 0
-            ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
-            : null;
+        IssueCommentEventChanges? changes = (Event as IssueCommentEditedEvent)?.Changes;
+        var body = BuildDescription(action, comment, changes);
 
         // @mention the issue author (excluding the sender).
         var mentions = await GetUsersMentionsAsync(
@@ -74,5 +78,20 @@ public sealed class IssueCommentAction(
 
         var key = $"{repo.FullName}-issue-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
+    }
+
+    /// <summary>Builds the description (a body-change diff for edited events).</summary>
+    private static string? BuildDescription(string action, IssueComment comment, IssueCommentEventChanges? changes)
+    {
+        // For edited events, render the body change as a diff description.
+        if (action == "edited" && changes?.Body?.From is not null)
+        {
+            var patch = CreatePatch(changes.Body.From, comment.Body ?? string.Empty, "comment");
+            return BuildDiffDescription(patch);
+        }
+
+        return comment.Body is not null && comment.Body.Length > 0
+            ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
+            : null;
     }
 }
