@@ -27,7 +27,7 @@
       標準の Microsoft.Azure.Functions.Worker.Extensions.Http (HttpRequestData/HttpResponseData) を使用する
     -->
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.7" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.1.0" />
     <!-- OpenTelemetry / Azure Monitor -->
     <PackageReference Include="Microsoft.Azure.Functions.Worker.OpenTelemetry" Version="1.2.0" />
     <!-- Azure Storage -->
