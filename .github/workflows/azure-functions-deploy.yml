@@ -60,10 +60,10 @@ jobs:
             --template-file "${{ env.BICEP_TEMPLATE_FILE }}" \
             --parameters "${{ env.BICEP_PARAMETERS_FILE }}"
         env:
-          # NOTE: GitHub reserves the GITHUB_ prefix for secret/variable *names*
-          # stored in Settings, so the underlying secret/variable is named without
-          # it; the left-hand side here still matches what infra/main.bicepparam's
-          # readEnvironmentVariable() expects.
+          # NOTE: GitHub reserves the GITHUB_ prefix for secret/variable names
+          # in Settings, so the underlying names omit it.
+          # The keys below keep the prefix because that's what
+          # infra/main.bicepparam's readEnvironmentVariable() expects.
           GITHUB_WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
           GITHUB_USER_MAP_BLOB: ${{ vars.USER_MAP_BLOB }}
           MUTES_BLOB: ${{ vars.MUTES_BLOB }}
