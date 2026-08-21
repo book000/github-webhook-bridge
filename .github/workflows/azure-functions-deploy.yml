@@ -8,13 +8,15 @@ on:
 
 concurrency:
   group: azure-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions: {}
 
 env:
   DOTNET_VERSION: "10.0.x"
   PUBLISH_OUTPUT_DIR: ./output
+  BICEP_TEMPLATE_FILE: infra/main.bicep
+  BICEP_PARAMETERS_FILE: infra/main.bicepparam
 
 jobs:
   deploy:
@@ -31,13 +33,6 @@ jobs:
       - name: 🛎 Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: 🔑 Login to Azure (OIDC)
-        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       - name: 🏗 Setup .NET SDK
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
@@ -51,10 +46,44 @@ jobs:
       - name: 🏗 Publish
         run: dotnet publish src/GitHubWebhookBridge.csproj --configuration Release --no-restore --output ${{ env.PUBLISH_OUTPUT_DIR }}
 
+      - name: 🔑 Login to Azure (OIDC)
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: 🔍 Bicep what-if
+        run: |
+          az deployment group what-if \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file "${{ env.BICEP_TEMPLATE_FILE }}" \
+            --parameters "${{ env.BICEP_PARAMETERS_FILE }}"
+        env:
+          # NOTE: GitHub reserves the GITHUB_ prefix for secret/variable names
+          # in Settings, so the underlying names omit it.
+          # The keys below keep the prefix because that's what
+          # infra/main.bicepparam's readEnvironmentVariable() expects.
+          GITHUB_WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          GITHUB_USER_MAP_BLOB: ${{ vars.USER_MAP_BLOB }}
+          MUTES_BLOB: ${{ vars.MUTES_BLOB }}
+
+      - name: 🚀 Bicep deployment
+        run: |
+          az deployment group create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file "${{ env.BICEP_TEMPLATE_FILE }}" \
+            --parameters "${{ env.BICEP_PARAMETERS_FILE }}"
+        env:
+          # See the note above the 🔍 Bicep what-if step for why these secret/
+          # variable names differ from the GITHUB_-prefixed env var names.
+          GITHUB_WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          GITHUB_USER_MAP_BLOB: ${{ vars.USER_MAP_BLOB }}
+          MUTES_BLOB: ${{ vars.MUTES_BLOB }}
+
       - name: 🚀 Deploy to Azure Functions
         uses: Azure/functions-action@c5060b3b8bb1ebbcb531abd00c822ecbaa8ea656 # v1.5.7
         with:
           app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
           package: ${{ env.PUBLISH_OUTPUT_DIR }}
           scm-do-build-during-deployment: false
-
