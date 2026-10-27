@@ -3,6 +3,11 @@ namespace GitHubWebhookBridge.Actions;
 /// <summary>Interface defining the creation of an <see cref="IAction"/> from an event name.</summary>
 public interface IActionFactory
 {
+    /// <summary>Returns whether an action handler is registered for the event name.</summary>
+    /// <param name="eventName">The GitHub Webhook X-GitHub-Event header value (lowercase).</param>
+    /// <returns><see langword="true"/> when the event has a registered handler.</returns>
+    bool IsRegistered(string eventName);
+
     /// <summary>Creates and returns the appropriate <see cref="IAction"/> instance from an event name and raw JSON.</summary>
     /// <param name="eventName">The GitHub Webhook X-GitHub-Event header value (lowercase).</param>
     /// <param name="rawJson">The raw JSON string of the Webhook payload.</param>

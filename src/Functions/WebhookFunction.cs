@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using GitHubWebhookBridge.Actions;
 using GitHubWebhookBridge.Managers;
+using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -14,21 +15,24 @@ using Microsoft.Extensions.Logging;
 
 namespace GitHubWebhookBridge.Functions;
 
-/// <summary>Azure Functions class that receives GitHub webhooks and notifies Discord.</summary>
+/// <summary>Azure Functions class that receives GitHub webhooks and queues them for Discord delivery.</summary>
 /// <remarks>Receives dependent services via constructor injection.</remarks>
 public class WebhookFunction(
     IActionFactory actionFactory,
     IMuteManager muteManager,
+    IWebhookQueue webhookQueue,
     IConfiguration config,
     ILogger<WebhookFunction> logger)
 {
     private readonly IActionFactory _actionFactory = actionFactory;
     private readonly IMuteManager _muteManager = muteManager;
+    private readonly IWebhookQueue _webhookQueue = webhookQueue;
     private readonly IConfiguration _config = config;
     private readonly ILogger<WebhookFunction> _logger = logger;
 
     /// <summary>
-    /// Receives a GitHub webhook request and notifies Discord after signature validation and mute checks.
+    /// Receives a GitHub webhook request and, after signature validation and mute checks, stores it in the
+    /// event queue (HTTP 202). Discord delivery happens asynchronously in <see cref="ProcessWebhookEventFunction"/>.
     /// </summary>
     /// <remarks>
     /// The ASP.NET Core integration in <c>Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore</c>
@@ -92,19 +96,21 @@ public class WebhookFunction(
         var eventName = NormalizeEventName(rawEventName);
 
         // As an SSRF countermeasure, allow only discord.com / discordapp.com webhook URLs.
-        Uri webhookUrl;
+        // Only an explicit ?url= is queued; the default webhook is resolved from configuration at processing time
+        // so its token is never stored in the queue.
+        Uri? queuedWebhookUrl = null;
         var urlParam = req.Query["url"];
         if (!string.IsNullOrEmpty(urlParam))
         {
-            if (!IsAllowedWebhookUrl(urlParam))
+            if (!WebhookUrlValidator.IsAllowedWebhookUrl(urlParam))
                 return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid url parameter").ConfigureAwait(false);
-            webhookUrl = new Uri(urlParam);
+            queuedWebhookUrl = new Uri(urlParam);
         }
         else
         {
             var defaultUrl = _config["DISCORD_WEBHOOK_URL"]
                 ?? throw new InvalidOperationException("DISCORD_WEBHOOK_URL not set");
-            webhookUrl = new Uri(defaultUrl);
+            _ = new Uri(defaultUrl);
         }
 
         // When ?disabled-events= is omitted, fall back to the DISABLED_EVENTS environment variable.
@@ -150,35 +156,40 @@ public class WebhookFunction(
                 return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.OK, "Muted user").ConfigureAwait(false);
         }
 
-        IAction actionHandler;
-        try
+        if (!_actionFactory.IsRegistered(eventName))
         {
-            actionHandler = _actionFactory.GetAction(eventName, rawJson, webhookUrl);
-        }
-        catch (NotImplementedException)
-        {
-            // Return 400 for unimplemented events (unknown events other than stubs).
-            _logger.LogWarning("Unknown event type: {EventName}", eventName);
-            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, $"Bad Request: Unknown event '{eventName}'").ConfigureAwait(false);
-        }
-
-        try
-        {
-            await actionHandler.RunAsync().ConfigureAwait(false);
-            return req.CreateResponse(HttpStatusCode.OK);
-        }
-        catch (NotImplementedException)
-        {
-            // Stub actions are not yet implemented, so return 406.
             _logger.LogInformation("Method not implemented for event: {EventName}", eventName);
             return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.NotAcceptable, "Method not implemented").ConfigureAwait(false);
         }
+
+        WebhookQueueMessage message = new(
+            ResolveDeliveryId(GetHeaderValue(req, "X-GitHub-Delivery")),
+            eventName,
+            rawJson,
+            null,
+            queuedWebhookUrl,
+            DateTimeOffset.UtcNow);
+        try
+        {
+            await _webhookQueue.EnqueueAsync(message).ConfigureAwait(false);
+            return req.CreateResponse(HttpStatusCode.Accepted);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error processing event: {EventName}", eventName);
+            // A failure here must not be acknowledged: returning 5xx lets GitHub redeliver the event.
+            _logger.LogError(ex, "Failed to enqueue webhook event: {EventName}", eventName);
             return req.CreateResponse(HttpStatusCode.InternalServerError);
         }
     }
+
+    /// <summary>
+    /// Returns the GitHub delivery ID, or a new GUID when the header is missing or contains characters outside
+    /// the GUID alphabet. The value is stored in the queue and logged, so it is restricted like the event name.
+    /// </summary>
+    private static string ResolveDeliveryId(string? header)
+        => header is { Length: > 0 and <= 64 } && header.All(c => char.IsAsciiLetterOrDigit(c) || c == '-')
+            ? header
+            : Guid.NewGuid().ToString();
 
     /// <summary>Gets the value of the Content-Length header. Returns <see langword="false"/> if it is unset, non-numeric, or negative.</summary>
     private static bool TryGetContentLength(HttpRequestData req, out long length)
@@ -213,9 +224,4 @@ public class WebhookFunction(
     [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "GitHub event names are lowercase by specification, so ToLowerInvariant is correct")]
     private static string NormalizeEventName(string eventName)
         => eventName.ToLowerInvariant();
-
-    /// <summary>SSRF countermeasure: allow only discord.com / discordapp.com webhook URL prefixes.</summary>
-    private static bool IsAllowedWebhookUrl(string url)
-        => url.StartsWith("https://discord.com/api/webhooks/", StringComparison.OrdinalIgnoreCase)
-        || url.StartsWith("https://discordapp.com/api/webhooks/", StringComparison.OrdinalIgnoreCase);
 }

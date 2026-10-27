@@ -42,6 +42,18 @@ public class ActionFactoryTests
         Assert.IsType<UnhandledAction>(action);
     }
 
+    [Theory]
+    [InlineData("push", true)]
+    [InlineData("pull_request_review_comment", true)]
+    [InlineData("completely_unknown_event", false)]
+    [InlineData("PUSH", false)]
+    public void IsRegistered_ReflectsTheRegistry(string eventName, bool expected)
+    {
+        var factory = new ActionFactory(BuildServiceProvider());
+
+        Assert.Equal(expected, factory.IsRegistered(eventName));
+    }
+
     [Fact]
     public async Task GetAction_UnknownEvent_ThrowsNotImplementedException()
     {
