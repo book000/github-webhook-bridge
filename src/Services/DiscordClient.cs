@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Net;
 using System.Net.Http.Json;
 using GitHubWebhookBridge.Models.Discord;
 
@@ -5,9 +7,8 @@ namespace GitHubWebhookBridge.Services;
 
 /// <summary>
 /// Class implementing the Discord Webhook API client.
-/// Retries for 429 (rate limit) are handled by the Microsoft.Extensions.Http.Resilience
-/// retry handler configured on the "discord" named HttpClient
-/// (see <see cref="Program"/> and <see cref="Utils.DiscordRetryPolicy"/>)
+/// A 429 (rate limit) is not retried here; it surfaces as <see cref="DiscordRateLimitException"/>
+/// so the queue worker can re-schedule the event according to Discord's Retry-After.
 /// </summary>
 public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClient
 {
@@ -60,10 +61,35 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
     /// </summary>
     private static void EnsureSuccess(HttpResponseMessage response)
     {
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException(
-                $"Discord API error: {(int)response.StatusCode} {response.ReasonPhrase}");
-        }
+        if (response.IsSuccessStatusCode)
+            return;
+
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            throw CreateRateLimitException(response);
+
+        throw new HttpRequestException(
+            $"Discord API error: {(int)response.StatusCode} {response.ReasonPhrase}");
+    }
+
+    private static DiscordRateLimitException CreateRateLimitException(HttpResponseMessage response)
+    {
+        var isGlobal = response.Headers.TryGetValues("X-RateLimit-Global", out IEnumerable<string>? global)
+            && global.Any(v => string.Equals(v, "true", StringComparison.OrdinalIgnoreCase));
+        var scope = response.Headers.TryGetValues("X-RateLimit-Scope", out IEnumerable<string>? scopes)
+            ? scopes.FirstOrDefault()
+            : null;
+        return new DiscordRateLimitException(ParseRetryAfter(response), isGlobal, scope);
+    }
+
+    // Discord sends Retry-After as (possibly fractional) seconds, which the typed RetryAfter header rejects.
+    private static TimeSpan ParseRetryAfter(HttpResponseMessage response)
+    {
+        var maxSeconds = TimeSpan.FromDays(1).TotalSeconds;
+        return response.Headers.TryGetValues("Retry-After", out IEnumerable<string>? values)
+            && double.TryParse(values.FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)
+            && double.IsFinite(seconds)
+            && seconds > 0
+            ? TimeSpan.FromSeconds(Math.Min(seconds, maxSeconds))
+            : DiscordRateLimitException.DefaultRetryAfter;
     }
 }

@@ -59,6 +59,9 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
     }
 
     /// <inheritdoc/>
+    public bool IsRegistered(string eventName) => _registry.ContainsKey(eventName);
+
+    /// <inheritdoc/>
     public IAction GetAction(string eventName, string rawJson, Uri webhookUrl)
     {
         if (!_registry.TryGetValue(eventName, out (Type Action, Type Payload) entry))

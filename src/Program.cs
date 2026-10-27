@@ -1,5 +1,6 @@
 using Azure.Monitor.OpenTelemetry.Exporter;
 using GitHubWebhookBridge.Actions;
+using GitHubWebhookBridge.Functions;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
@@ -39,13 +40,15 @@ hostBuilder.ConfigureServices(services =>
         // Client for fetching configuration files
         .AddHttpClient("config", c => c.Timeout = TimeSpan.FromSeconds(10))
         .Services
-        // Client for Discord webhooks (15-second timeout)
-        // See DiscordRetryPolicy for the retry policy details (also shared with unit tests).
-        .AddHttpClient("discord", c => c.Timeout = TimeSpan.FromSeconds(15))
-        .AddResilienceHandler(DiscordRetryPolicy.HandlerName, DiscordRetryPolicy.Configure)
+        // Client for Discord webhooks (rate limits are handled by the queue worker, not by an HTTP retry handler)
+        .AddDiscordHttpClient()
         .Services
         // Discord client
         .AddSingleton<IDiscordClient, DiscordClient>()
+        // Event queue (receiver writes, queue-triggered worker reads) and the worker's delivery logic
+        .AddSingleton<IWebhookQueue, WebhookQueue>()
+        .AddSingleton(TimeProvider.System)
+        .AddSingleton<WebhookEventProcessor>()
         // Register MessageCacheService both as the concrete class and the interface
         // (so TableStorageInitializer can be injected with the concrete class).
         .AddSingleton<MessageCacheService>()

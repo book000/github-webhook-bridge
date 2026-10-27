@@ -69,6 +69,11 @@ public abstract class BaseAction<TEvent>(
                 await Discord.EditMessageAsync(WebhookUrl, cached.MessageId, message);
                 return;
             }
+            catch (DiscordRateLimitException)
+            {
+                // Falling back to a new message would post a duplicate; let the queue retry the whole event.
+                throw;
+            }
             catch (Exception ex)
             {
                 // On edit failure (e.g. the message was deleted), discard the cache entry and fall back to sending a new message.

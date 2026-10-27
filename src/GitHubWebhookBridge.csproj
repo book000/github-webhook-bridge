@@ -19,6 +19,7 @@
   <ItemGroup>
     <!-- Azure Functions -->
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.10.0" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.28.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
     <!--
       Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore (ConfigureFunctionsWebApplication) は
@@ -27,6 +28,7 @@
       標準の Microsoft.Azure.Functions.Worker.Extensions.Http (HttpRequestData/HttpResponseData) を使用する
     -->
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" Version="5.5.5" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.1.0" />
     <!-- OpenTelemetry / Azure Monitor -->
     <PackageReference Include="Microsoft.Azure.Functions.Worker.OpenTelemetry" Version="1.2.0" />
@@ -35,7 +37,7 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.30.1" />
     <!-- Utilities -->
     <PackageReference Include="DiffPlex" Version="1.9.0" />
-    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.14" />
     <PackageReference Include="Octokit.Webhooks" Version="4.2.2" />
     <!-- StyleCop: ビルド時のみ使用（出力には含まれない） -->
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">

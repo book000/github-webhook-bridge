@@ -54,6 +54,70 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+// The queue and blob services already exist on every storage account; reference them instead of declaring
+// them so their account-level settings are not reset by this template.
+resource queueService 'Microsoft.Storage/storageAccounts/queueServices@2023-05-01' existing = {
+  parent: storageAccount
+  name: 'default'
+}
+
+resource webhookEventsQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-05-01' = {
+  parent: queueService
+  name: 'webhook-events'
+}
+
+resource webhookEventsPoisonQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-05-01' = {
+  parent: queueService
+  name: 'webhook-events-poison'
+}
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' existing = {
+  parent: storageAccount
+  name: 'default'
+}
+
+resource webhookPayloadsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'webhook-payloads'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// Payloads too large for a queue message are stored as blobs; delete them after the queue message TTL (7 days).
+resource webhookPayloadsLifecycle 'Microsoft.Storage/storageAccounts/managementPolicies@2023-05-01' = {
+  parent: storageAccount
+  name: 'default'
+  properties: {
+    policy: {
+      rules: [
+        {
+          name: 'delete-webhook-payloads-after-7d'
+          enabled: true
+          type: 'Lifecycle'
+          definition: {
+            filters: {
+              blobTypes: [
+                'blockBlob'
+              ]
+              prefixMatch: [
+                'webhook-payloads/'
+              ]
+            }
+            actions: {
+              baseBlob: {
+                delete: {
+                  daysAfterCreationGreaterThan: 7
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: appServicePlanName
   location: location
@@ -116,6 +180,11 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'AzureWebJobsDisableHomepage'
           value: 'true'
+        }
+        // One worker instance keeps Discord sends serial so the queue worker does not rate-limit itself.
+        {
+          name: 'WEBSITE_MAX_DYNAMIC_APPLICATION_SCALE_OUT'
+          value: '1'
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'

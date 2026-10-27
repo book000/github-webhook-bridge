@@ -13,6 +13,8 @@ Stack: C# / .NET 10, Azure Functions v4 Isolated, Azure Table + Blob Storage, xU
 - Never instantiate `HttpClient` directly — inject `IHttpClientFactory` via DI.
 - Send Discord messages via `IDiscordClient` / `DiscordClient`; never call Discord APIs directly.
 - Use `IMessageCacheService` / `MessageCacheService` for Azure Table Storage — no raw Azure SDK calls.
+- `IWebhookQueue` / `WebhookQueue` is the only place that touches Azure Queue Storage and the `webhook-payloads` blob container — no raw queue SDK calls elsewhere.
+- Register the `discord` HttpClient only via `AddDiscordHttpClient()` (default HttpClientFactory request logging is removed because it logs the webhook token); never log `WebhookUrl` or exception text containing it.
 - Configuration is read via `IConfiguration` (DI-injected), not `Environment.GetEnvironmentVariable`.
 
 ---
@@ -35,11 +37,12 @@ cd src && func start              # run Azure Functions locally
 
 1. `Functions/WebhookFunction.cs` receives the HTTP POST.
 2. `Utils/SignatureValidator.cs` verifies HMAC-SHA256 (`x-hub-signature-256`, timing-safe, lowercases hex).
-3. `x-github-event` header selects the handler via `Actions/ActionFactory.cs`.
-4. `ActionFactory` instantiates the matching `BaseAction<TEvent>` subclass from `Actions/Impl/`
-   (payload passed via constructor; override `RunAsync()` — no parameters).
-5. `Managers/MuteManager.cs` checks mute rules (include / exclude / all modes).
-6. `BaseAction.SendMessageAsync(key, message)` sends via `DiscordClient`; if the same key was sent within the last 5 minutes, it **edits** the existing Discord message instead. On edit failure the cache entry is deleted and a new message is sent. Every message has `SuppressNotifications` forced on.
+3. `x-github-event` header selects the event; `ActionFactory.IsRegistered` checks the `[GitHubEvent]` registration and unregistered events return HTTP 406.
+4. `Managers/MuteManager.cs` checks mute rules (include / exclude / all modes).
+5. The receiver stores a `WebhookQueueMessage` through `IWebhookQueue` (payloads over 32 KiB go to blob container `webhook-payloads`, the queue carries a reference) and returns 202; an enqueue failure returns 500.
+6. Queue-triggered `Functions/ProcessWebhookEventFunction.cs` → `Functions/WebhookEventProcessor.cs` builds the matching `BaseAction<TEvent>` via `ActionFactory` (payload passed via constructor) and runs it.
+7. `BaseAction.SendMessageAsync(key, message)` sends via `DiscordClient`; if the same key was sent within the last 5 minutes, it **edits** the existing Discord message instead. On edit failure the cache entry is deleted and a new message is sent. Every message has `SuppressNotifications` forced on.
+8. A Discord 429 surfaces as `DiscordRateLimitException` and is re-enqueued with `Retry-After` (clamped 1 s..15 min plus up to 5 s jitter, given up after 6 h); other failures are retried by the Functions queue host (`maxDequeueCount` 10) and then land in `webhook-events-poison`.
 
 `GET /` is handled separately by `Functions/RootFunction.cs` (same route regex, `"get"` method) and returns a `200 OK` health-check style JSON body — this avoids the Azure Functions default placeholder homepage ("Your Functions x.x app is up and running") that would otherwise appear for unmatched methods on the root route. Shared `{ "message": ... }` JSON response building lives in `Utils/JsonResponseHelper.cs`, used by both `WebhookFunction` and `RootFunction`.
 
@@ -48,8 +51,8 @@ cd src && func start              # run Azure Functions locally
 - `BaseAction<TEvent>` — generic abstract base; `abstract Task RunAsync()`.
 - `BaseManager<TData>(IConfiguration, IHttpClientFactory) : IDisposable` — load priority: **Blob > HTTPS URL > local file**.
 - Managers: `MuteManager` / `IMuteManager`, `GitHubUserMapManager` / `IGitHubUserMapManager`.
-- Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`. `ActionRegistryValidator` validates the reflection-based `[GitHubEvent]` registration at startup.
-- Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`, `JsonResponseHelper`, `OctokitJsonOptions` (shared `Octokit.Webhooks` deserialization settings), `DiscordRetryPolicy` (bounded retry for Discord HTTP 429 — keep it bounded, never an unbounded loop).
+- Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`, `WebhookQueue` / `IWebhookQueue`, `WebhookEventProcessor`, `DiscordRateLimitException`, `QueueNames`. `ActionRegistryValidator` validates the reflection-based `[GitHubEvent]` registration at startup.
+- Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`, `JsonResponseHelper`, `OctokitJsonOptions` (shared `Octokit.Webhooks` deserialization settings), `WebhookUrlValidator` (`IsAllowedWebhookUrl`), `DiscordHttpClientConfiguration` (`AddDiscordHttpClient()`).
 - GitHub Webhook payload types come from `Octokit.Webhooks` NuGet — do not create hand-written payload models. Only `Models/Discord/` holds hand-written DTOs (the outbound Discord message shape).
 
 ---
@@ -82,7 +85,9 @@ All keys are read via `IConfiguration`. Required keys must be set in `local.sett
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | — | Azure Monitor / Application Insights telemetry (OpenTelemetry exporter) |
 
 **SSRF guard**: `?url=` query parameter is restricted to prefixes  
-`https://discord.com/api/webhooks/` and `https://discordapp.com/api/webhooks/` (`IsAllowedWebhookUrl`).
+`https://discord.com/api/webhooks/` and `https://discordapp.com/api/webhooks/` (`WebhookUrlValidator.IsAllowedWebhookUrl`).
+
+Queues `webhook-events` / `webhook-events-poison` and container `webhook-payloads` are provisioned by `infra/main.bicep` (not created at runtime). `src/host.json` `extensions.queues` values are guarded by `tests/HostConfigurationTests.cs` and must stay in sync with `WebhookEventProcessor.MaxDequeueCount`. App setting `WEBSITE_MAX_DYNAMIC_APPLICATION_SCALE_OUT=1` keeps one worker instance.
 
 ---
 
@@ -97,7 +102,7 @@ All keys are read via `IConfiguration`. Required keys must be set in `local.sett
 
 ## Reference
 
-- **12 implemented** event types; unhandled events return HTTP 406 via `UnhandledAction`.
+- **12 implemented** event types; `POST /` returns 202 Accepted once the event is queued (Discord delivery is asynchronous); unregistered events return HTTP 406.
 - CI: `.github/workflows/dotnet-ci.yml` (windows-latest, .NET 10.0.x).
 - Deploy: `.github/workflows/azure-functions-deploy.yml` (push to `master`, OIDC → `Azure/functions-action`).
 - Keep in sync on any change: `README.md` and XML doc comments (`///`) on public classes/methods.

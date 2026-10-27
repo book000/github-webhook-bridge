@@ -3,8 +3,21 @@
 An Azure Functions application that receives GitHub Webhooks and forwards them to Discord.
 
 - **Endpoints**: `POST /` (webhook receiver), `GET /` (health check)
-- **Stack**: C# / .NET 10 / Azure Functions v4 Isolated / Azure Table + Blob Storage
+- **Stack**: C# / .NET 10 / Azure Functions v4 Isolated / Azure Table + Blob + Queue Storage
 - **Signature verification**: HMAC-SHA256 (`x-hub-signature-256`, timing-safe comparison)
+
+## Architecture
+
+Receiving a webhook and delivering it to Discord are decoupled, so a Discord outage or rate limit never makes GitHub see an error for an event the bridge has already accepted.
+
+1. `POST /` validates the request (size, signature, event, `?url=`, disabled events, mute rules) and writes the event to the Azure Storage queue `webhook-events`. Payloads over 32 KiB are stored in the blob container `webhook-payloads` and the queue message carries a reference. It then returns `202 Accepted`. If the queue write fails it returns `500`, so GitHub can redeliver.
+2. A queue-triggered function (`ProcessWebhookEvent`) builds the Discord message and sends it. Only an explicit `?url=` destination is stored in the queue; the default `DISCORD_WEBHOOK_URL` is read from configuration at processing time.
+3. When Discord answers `429 Too Many Requests`, the event is re-enqueued with a delay taken from `Retry-After` (clamped to 1 second–15 minutes, plus up to 5 seconds of jitter). An event that is still rate-limited 6 hours after receipt is moved to the poison queue.
+4. Any other failure is retried by the Functions queue host (up to 10 attempts, 30 seconds apart) and then moved to the poison queue `webhook-events-poison`.
+
+Delivery is at-least-once. Duplicate posts are controlled by the existing 5-minute message cache: a replay of an event whose Discord message already exists edits that message instead of posting a new one. There is no per-delivery dedupe store, to avoid a storage read and write for every event.
+
+The queues, the payload container (with a 7-day deletion rule), and a single-instance scale-out cap (`WEBSITE_MAX_DYNAMIC_APPLICATION_SCALE_OUT=1`, so one worker sends to Discord at a time) are provisioned by `infra/main.bicep`; the application does not create them.
 
 ## Setup
 
@@ -56,7 +69,7 @@ Endpoint: `http://localhost:7071/`
 | Production | `https://<functionapp>.azurewebsites.net/` |
 | Local | `http://localhost:7071/` |
 
-- `POST /` (webhook receiver): Receives GitHub webhook events and forwards them to Discord.
+- `POST /` (webhook receiver): Receives GitHub webhook events, queues them for delivery to Discord, and returns `202 Accepted`.
 - `GET /` (health check): Returns `200 OK` with `{ "message": "book000/github-webhook-bridge is running" }`.
 
 ### Query parameters
@@ -120,6 +133,28 @@ Mapping a GitHub user ID (numeric) to a Discord user ID lets notifications gener
   "1234567": "987654321098765432"
 }
 ```
+
+## Operations
+
+### Finding events that were not delivered
+
+Events that cannot be delivered end up in the storage queue `webhook-events-poison` (storage account `stgithubwebhookbridge`). The worker logs an Error `Webhook event dead-lettered` for events it gives up on, and the exception from a failing delivery also appears in Application Insights, so the existing exception alerts fire.
+
+```bash
+az storage message peek --queue-name webhook-events-poison --account-name stgithubwebhookbridge --auth-mode login --num-messages 32
+```
+
+Each message body is the Base64 text of a JSON envelope. Decode it (`base64 -d`) to read `DeliveryId`, `EventName`, `ReceivedAt`, and whether the payload is inline (`RawJson`) or stored in the blob container (`PayloadBlob`). Payload blobs are deleted 7 days after creation, so replay or discard a poisoned event within that window.
+
+### Replaying a poisoned event
+
+1. Check the cause in Application Insights (search for `Webhook event dead-lettered` and the `DeliveryId`).
+2. Add the message body, unchanged, to the queue `webhook-events` (do not decode or re-encode it), for example with Azure Storage Explorer or the portal, and delete it from the poison queue.
+3. A replay posts a new Discord message if the original was already delivered more than 5 minutes ago; replay only events whose Discord message is missing.
+
+### Comparing with GitHub deliveries
+
+In the repository (or organization) webhook settings, open *Recent Deliveries* and match `X-GitHub-Delivery` with the queued `DeliveryId`. A delivery that GitHub shows as failed (`5xx`) was not accepted by the bridge; redeliver it from GitHub. A delivery shown as `202` is already in the queue or was delivered, so redelivering it can post a duplicate.
 
 ## License
 
