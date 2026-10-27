@@ -13,7 +13,7 @@ Receiving a webhook and delivering it to Discord are decoupled, so a Discord out
 1. `POST /` validates the request (size, signature, event, `?url=`, disabled events, mute rules) and writes the event to the Azure Storage queue `webhook-events`. Payloads over 32 KiB are stored in the blob container `webhook-payloads` and the queue message carries a reference. It then returns `202 Accepted`. If the queue write fails it returns `500`, so GitHub can redeliver.
 2. A queue-triggered function (`ProcessWebhookEvent`) builds the Discord message and sends it. Only an explicit `?url=` destination is stored in the queue; the default `DISCORD_WEBHOOK_URL` is read from configuration at processing time.
 3. When Discord answers `429 Too Many Requests`, the event is re-enqueued with a delay taken from `Retry-After` (clamped to 1 second–15 minutes, plus up to 5 seconds of jitter). An event that is still rate-limited 6 hours after receipt is moved to the poison queue.
-4. Any other failure is retried by the Functions queue host (up to 10 attempts, 30 seconds apart) and then moved to the poison queue `webhook-events-poison`.
+4. Any other failure is retried by the Functions queue host (up to 10 attempts, at least 30 seconds apart; a persistently failing event reached the poison queue after about 8 minutes in a local run) and then moved to the poison queue `webhook-events-poison`.
 
 Delivery is at-least-once. Duplicate posts are controlled by the existing 5-minute message cache: a replay of an event whose Discord message already exists edits that message instead of posting a new one. There is no per-delivery dedupe store, to avoid a storage read and write for every event.
 
