@@ -23,12 +23,28 @@ public class BaseActionTests
         public override Task RunAsync() => SendMessageAsync("key", _message);
     }
 
+    private sealed class PatchingAction(IDiscordClient discord, IMessageCacheService cache, IGitHubUserMapManager userMap)
+        : BaseAction<WebhookEvent>(discord, _webhookUri, "test", Mock.Of<WebhookEvent>(), cache, userMap, Mock.Of<ILogger>())
+    {
+        public override Task RunAsync() => Task.CompletedTask;
+
+        public static string Patch(string oldText, string newText, string fileName) => CreatePatch(oldText, newText, fileName);
+    }
+
     private static (SendingAction Action, Mock<IDiscordClient> Discord, Mock<IMessageCacheService> Cache) Create()
     {
         Mock<IDiscordClient> discord = new();
         Mock<IMessageCacheService> cache = new();
         cache.Setup(c => c.GetAsync(_webhookUri, "key")).ReturnsAsync(new CachedMessage("existing-id"));
         return (new SendingAction(discord.Object, cache.Object, Mock.Of<IGitHubUserMapManager>()), discord, cache);
+    }
+
+    [Fact]
+    public void CreatePatch_MultiLineEditWithUnchangedLines_PrefixesEachLine()
+    {
+        var patch = PatchingAction.Patch("keep\nold\nend", "keep\nnew\nend", "body");
+
+        Assert.Equal("--- body\n+++ body\n  keep\n- old\n+ new\n  end\n".ReplaceLineEndings(), patch.ReplaceLineEndings());
     }
 
     [Fact]
