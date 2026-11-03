@@ -127,10 +127,8 @@ public abstract class BaseAction<TEvent>(
             {
                 ChangeType.Inserted => "+",
                 ChangeType.Deleted => "-",
-                ChangeType.Unchanged => throw new NotImplementedException(),
-                ChangeType.Imaginary => throw new NotImplementedException(),
-                ChangeType.Modified => throw new NotImplementedException(),
-                _ => " ",
+                ChangeType.Unchanged or ChangeType.Imaginary or ChangeType.Modified => " ",
+                _ => throw new InvalidOperationException($"Unknown diff line type: {line.Type}"),
             };
             sb.AppendLine(CultureInfo.InvariantCulture, $"{prefix} {line.Text}");
         }
