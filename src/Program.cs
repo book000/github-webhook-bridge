@@ -38,7 +38,7 @@ hostBuilder.ConfigureServices(services =>
         })
         .Services
         // Client for fetching configuration files
-        .AddHttpClient("config", c => c.Timeout = TimeSpan.FromSeconds(10))
+        .AddConfigHttpClient()
         .Services
         // Client for Discord webhooks (rate limits are handled by the queue worker, not by an HTTP retry handler)
         .AddDiscordHttpClient()

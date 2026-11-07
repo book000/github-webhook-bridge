@@ -49,10 +49,10 @@ cd src && func start              # run Azure Functions locally
 **Key patterns**
 
 - `BaseAction<TEvent>` — generic abstract base; `abstract Task RunAsync()`.
-- `BaseManager<TData>(IConfiguration, IHttpClientFactory) : IDisposable` — load priority: **Blob > HTTPS URL > local file**.
+- `BaseManager<TData>(IConfiguration, IHttpClientFactory, TimeProvider? timeProvider = null, ILogger? logger = null) : IDisposable` — load priority: **Blob > HTTPS URL > local file**. If retrieval fails (`HttpRequestException`, timeout, `RequestFailedException`, `IOException`, `JsonException`), the manager logs a Warning, continues with empty data from `GetDefaultContent()`, and does not retry for 5 minutes; misconfiguration (non-HTTPS URL, invalid Blob path, missing `AzureWebJobsStorage`) still throws.
 - Managers: `MuteManager` / `IMuteManager`, `GitHubUserMapManager` / `IGitHubUserMapManager`.
 - Services: `DiscordClient` / `IDiscordClient`, `MessageCacheService` / `IMessageCacheService`, `WebhookQueue` / `IWebhookQueue`, `WebhookEventProcessor`, `DiscordRateLimitException`, `QueueNames`. `ActionRegistryValidator` validates the reflection-based `[GitHubEvent]` registration at startup.
-- Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`, `JsonResponseHelper`, `OctokitJsonOptions` (shared `Octokit.Webhooks` deserialization settings), `WebhookUrlValidator` (`IsAllowedWebhookUrl`), `DiscordHttpClientConfiguration` (`AddDiscordHttpClient()`).
+- Utils: `SignatureValidator`, `EmbedColors`, `EmbedHelper`, `JsonResponseHelper`, `OctokitJsonOptions` (shared `Octokit.Webhooks` deserialization settings), `WebhookUrlValidator` (`IsAllowedWebhookUrl`), `DiscordHttpClientConfiguration` (`AddDiscordHttpClient()`), `ConfigHttpClientConfiguration` (`AddConfigHttpClient()`, registers the `config` HttpClient with a 10 s timeout and `User-Agent: github-webhook-bridge`).
 - GitHub Webhook payload types come from `Octokit.Webhooks` NuGet — do not create hand-written payload models. Only `Models/Discord/` holds hand-written DTOs (the outbound Discord message shape).
 
 ---
