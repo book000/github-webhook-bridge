@@ -3,6 +3,8 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GitHubWebhookBridge.Managers;
 
@@ -11,7 +13,11 @@ namespace GitHubWebhookBridge.Managers;
 /// Priority: Blob > HTTPS URL > local file.
 /// </summary>
 /// <typeparam name="TData">The data type to deserialize into.</typeparam>
-public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFactory httpClientFactory) : IDisposable
+public abstract class BaseManager<TData>(
+    IConfiguration config,
+    IHttpClientFactory httpClientFactory,
+    TimeProvider? timeProvider = null,
+    ILogger? logger = null) : IDisposable
 {
     /// <summary>Gets the local file path configured from an environment variable.</summary>
     protected abstract string? FilePath { get; }
@@ -28,8 +34,13 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
     /// <summary>Gets the loaded data. Valid after <see cref="EnsureLoadedAsync"/> has been called.</summary>
     protected TData Data { get; private set; } = default!;
 
+    private static readonly TimeSpan CooldownDuration = TimeSpan.FromMinutes(5);
+
     private volatile bool _loaded;
+    private DateTimeOffset _retryNotBefore = DateTimeOffset.MinValue;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
+    private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
     // Options that support JSONC (JSON with comments and trailing commas).
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -42,7 +53,12 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
     private readonly IConfiguration _config = config;
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
-    /// <summary>Loads the data only on the first call (prevents double initialization).</summary>
+    /// <summary>
+    /// Loads the data only on the first successful call (prevents double initialization).
+    /// When retrieval fails (HTTP, timeout, Blob, I/O or malformed JSON), a warning is logged, the manager
+    /// continues with empty data, and retrieval is not attempted again for five minutes.
+    /// Misconfiguration (non-HTTPS URL, invalid Blob path, missing storage connection string) still throws.
+    /// </summary>
     public async Task EnsureLoadedAsync()
     {
         if (_loaded) return;
@@ -50,16 +66,43 @@ public abstract class BaseManager<TData>(IConfiguration config, IHttpClientFacto
         try
         {
             if (_loaded) return;
-            var json = await LoadJsonAsync();
-            Data = Deserialize(json)
-                ?? throw new InvalidOperationException($"Failed to deserialize {GetType().Name} data");
-            _loaded = true;
+            if (_clock.GetUtcNow() < _retryNotBefore) return;
+            try
+            {
+                var json = await LoadJsonAsync();
+                Data = Deserialize(json)
+                    ?? throw new InvalidOperationException($"Failed to deserialize {GetType().Name} data");
+                _loaded = true;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException
+                or RequestFailedException or IOException or JsonException)
+            {
+                EnterDegradedMode(ex);
+            }
         }
         finally
         {
             _lock.Release();
         }
     }
+
+    private void EnterDegradedMode(Exception ex)
+    {
+        Data = Deserialize(GetDefaultContent())
+            ?? throw new InvalidOperationException($"Failed to deserialize default {GetType().Name} data");
+        _retryNotBefore = _clock.GetUtcNow() + CooldownDuration;
+
+        // The exception object is not passed on: its message may contain a URL that embeds a token.
+        _logger.LogWarning(
+            "{Manager} could not load its configuration from {Source} ({ExceptionType}, HTTP status {StatusCode}); continuing with empty data and retrying after {RetryNotBefore:O}",
+            GetType().Name,
+            SourceKind,
+            ex.GetType().Name,
+            (ex as HttpRequestException)?.StatusCode?.ToString() ?? "none",
+            _retryNotBefore);
+    }
+
+    private string SourceKind => BlobPath is not null ? "blob" : FileUrl is not null ? "url" : "file";
 
     /// <summary>Deserializes a JSON string. Implemented by each subclass.</summary>
     /// <param name="json">The JSON string to deserialize.</param>

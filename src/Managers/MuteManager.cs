@@ -1,10 +1,15 @@
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace GitHubWebhookBridge.Managers;
 
 /// <summary>Class that manages users' mute settings.</summary>
-public class MuteManager(IConfiguration config, IHttpClientFactory httpClientFactory) : BaseManager<List<MuteRecord>>(config, httpClientFactory), IMuteManager
+public class MuteManager(
+    IConfiguration config,
+    IHttpClientFactory httpClientFactory,
+    TimeProvider? timeProvider = null,
+    ILogger<MuteManager>? logger = null) : BaseManager<List<MuteRecord>>(config, httpClientFactory, timeProvider, logger), IMuteManager
 {
     protected override string? FilePath { get; } = config["MUTES_FILE_PATH"];
 

@@ -134,6 +134,12 @@ Mapping a GitHub user ID (numeric) to a Discord user ID lets notifications gener
 }
 ```
 
+### Retrieval failures
+
+If the mute rules or the user map cannot be retrieved (HTTP error such as 429 or 5xx, timeout, Blob or I/O error, malformed JSON), the service keeps handling webhooks with empty data: no mute rules are applied and no mentions are generated. The failure is logged as a Warning (`... could not load its configuration from ...`), and retrieval is not attempted again for 5 minutes. Once a retrieval succeeds, the loaded data is used for the lifetime of the process.
+
+Misconfiguration still fails fast: a non-HTTPS URL, a Blob path without a container, or a missing `AzureWebJobsStorage` throws instead of degrading.
+
 ## Operations
 
 ### Finding events that were not delivered

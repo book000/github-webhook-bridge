@@ -3,11 +3,16 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace GitHubWebhookBridge.Managers;
 
 /// <summary>Class that manages the mapping from GitHub user IDs to Discord user IDs.</summary>
-public class GitHubUserMapManager(IConfiguration config, IHttpClientFactory httpClientFactory) : BaseManager<Dictionary<long, string>>(config, httpClientFactory), IGitHubUserMapManager
+public class GitHubUserMapManager(
+    IConfiguration config,
+    IHttpClientFactory httpClientFactory,
+    TimeProvider? timeProvider = null,
+    ILogger<GitHubUserMapManager>? logger = null) : BaseManager<Dictionary<long, string>>(config, httpClientFactory, timeProvider, logger), IGitHubUserMapManager
 {
     protected override string? FilePath { get; } = config["GITHUB_USER_MAP_FILE_PATH"];
 
