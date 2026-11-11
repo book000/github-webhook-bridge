@@ -3,7 +3,7 @@ namespace GitHubWebhookBridge.Managers;
 /// <summary>Interface defining mute determination for users.</summary>
 public interface IMuteManager
 {
-    /// <summary>Loads the data only on the first call (prevents double initialization).</summary>
+    /// <summary>Loads the data on the first successful call (prevents double initialization). If retrieval fails, empty data is used and retrieval is retried after a cool-down.</summary>
     /// <returns>A <see cref="Task"/> representing completion.</returns>
     Task EnsureLoadedAsync();
 

@@ -4,13 +4,13 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>GitHubWebhookBridge</RootNamespace>
     <AssemblyName>GitHubWebhookBridge</AssemblyName>
-    <!-- .editorconfig の IDE 診断ルールをビルド時に有効化する -->
+    <!-- Enforce the IDE diagnostics configured in .editorconfig at build time -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- テストプロジェクトから internal メンバーへのアクセスを許可する -->
+    <!-- Let the test project access internal members -->
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>GitHubWebhookBridge.Tests</_Parameter1>
     </AssemblyAttribute>
@@ -22,10 +22,10 @@
     <PackageReference Include="Azure.Storage.Queues" Version="12.28.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
     <!--
-      Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore (ConfigureFunctionsWebApplication) は
-      Windows Consumption プランで "Timed out waiting for the function start call" という
-      既知の未解決バグ (Azure/azure-functions-dotnet-worker#3348) を抱えているため使用しない。
-      標準の Microsoft.Azure.Functions.Worker.Extensions.Http (HttpRequestData/HttpResponseData) を使用する
+      Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore (ConfigureFunctionsWebApplication) is not used
+      because of a known unresolved bug on the Windows Consumption plan
+      ("Timed out waiting for the function start call", Azure/azure-functions-dotnet-worker#3348).
+      The standard Microsoft.Azure.Functions.Worker.Extensions.Http (HttpRequestData/HttpResponseData) is used instead.
     -->
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" Version="5.5.5" />
@@ -39,7 +39,7 @@
     <PackageReference Include="DiffPlex" Version="1.9.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.14" />
     <PackageReference Include="Octokit.Webhooks" Version="4.2.3" />
-    <!-- StyleCop: ビルド時のみ使用（出力には含まれない） -->
+    <!-- StyleCop: build-time only (not part of the output) -->
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -47,7 +47,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- StyleCop 設定ファイル -->
+    <!-- StyleCop configuration file -->
     <AdditionalFiles Include="stylecop.json" />
   </ItemGroup>
 

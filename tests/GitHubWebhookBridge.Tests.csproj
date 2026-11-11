@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Xunit 名前空間をグローバル using として追加 -->
+    <!-- Add the Xunit namespace as a global using -->
     <Using Include="Xunit" />
   </ItemGroup>
 

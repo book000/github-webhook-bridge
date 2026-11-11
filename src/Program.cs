@@ -53,9 +53,9 @@ hostBuilder.ConfigureServices(services =>
         // (so TableStorageInitializer can be injected with the concrete class).
         .AddSingleton<MessageCacheService>()
         .AddSingleton<IMessageCacheService>(sp => sp.GetRequiredService<MessageCacheService>())
-        // Mute manager (loaded once at startup)
+        // Mute manager (loaded lazily on first use)
         .AddSingleton<IMuteManager, MuteManager>()
-        // GitHub user mapping manager (loaded once at startup)
+        // GitHub user mapping manager (loaded lazily on first use)
         .AddSingleton<IGitHubUserMapManager, GitHubUserMapManager>()
         // CAPTIVE DEPENDENCY GUARD: the IServiceProvider that ActionFactory receives is the root SP.
         // All Action dependencies must be Singleton.
