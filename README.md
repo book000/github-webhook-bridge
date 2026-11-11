@@ -37,14 +37,14 @@ Set these in `src/local.settings.json` (register them as application settings in
 |------|:----:|------|
 | `GITHUB_WEBHOOK_SECRET` | ✅ | HMAC-SHA256 signature verification secret |
 | `AzureWebJobsStorage` | ✅ | Azure Storage connection string (use `UseDevelopmentStorage=true` locally) |
-| `DISCORD_WEBHOOK_URL` | — | Default destination Discord webhook URL (fallback when `?url=` is not specified) |
+| `DISCORD_WEBHOOK_URL` | ✅ unless every request sets `?url=` | Default destination Discord webhook URL, used when `?url=` is not specified (a request without `?url=` fails when this is unset) |
 | `DISABLED_EVENTS` | — | Comma-separated event names to disable; can also be overridden via the `?disabled-events=` query parameter |
-| `MUTES_FILE_PATH` | — | Local file path for mute rules |
+| `MUTES_FILE_PATH` | — | Local file path for mute rules (default `data/mutes.json`, created as `[]` if missing) |
 | `MUTES_FILE_URL` | — | HTTPS URL for mute rules |
-| `MUTES_BLOB` | — | Azure Blob URI for mute rules |
-| `GITHUB_USER_MAP_FILE_PATH` | — | Local file path for the GitHub→Discord user map |
+| `MUTES_BLOB` | — | Blob path for mute rules, in the form `container/path/to/file.json` (read with `AzureWebJobsStorage`) |
+| `GITHUB_USER_MAP_FILE_PATH` | — | Local file path for the GitHub→Discord user map (default `data/github-user-map.json`, created as `{}` if missing) |
 | `GITHUB_USER_MAP_FILE_URL` | — | HTTPS URL for the user map |
-| `GITHUB_USER_MAP_BLOB` | — | Azure Blob URI for the user map |
+| `GITHUB_USER_MAP_BLOB` | — | Blob path for the user map, in the form `container/path/to/file.json` (read with `AzureWebJobsStorage`) |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | — | Application Insights / Azure Monitor connection string |
 
 ### Running locally

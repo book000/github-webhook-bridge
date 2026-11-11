@@ -68,7 +68,7 @@ jobs:
 
   mutation-test:
     runs-on: windows-latest
-    # mutation test は master への PR 時のみ実行（時間がかかるため push ごとには実行しない）
+    # Run mutation tests only on PRs to master (they are slow, so not on every push)
     if: github.event_name == 'pull_request' && github.base_ref == 'master'
     permissions:
       contents: read
