@@ -26,6 +26,12 @@ public sealed class PullRequestAction(
     PullRequestEvent pullRequestEvent)
     : BaseAction<PullRequestEvent>(discord, webhookUrl, eventName, pullRequestEvent, cache, userMapManager, logger)
 {
+    /// <summary>
+    /// Gets or sets the base branch before an <c>edited</c> event changed it (<c>changes.base.ref.from</c>).
+    /// Octokit.Webhooks does not model it, so <see cref="ActionFactory"/> reads it from the raw payload.
+    /// </summary>
+    internal string? PreviousBaseRef { get; set; }
+
     /// <summary>Gets the cache key suffix corresponding to the action.</summary>
     private static string GetCacheKeySuffix(string action) => action switch
     {
@@ -109,7 +115,7 @@ public sealed class PullRequestAction(
         (var titleVerb, var color) = GetTitleVerbAndColor(action, pr.Merged == true);
 
         var title = $"PR {titleVerb}: #{pr.Number} {pr.Title}";
-        List<DiscordEmbedField> fields = BuildFields(pr, label, assignee, requestedReviewer);
+        List<DiscordEmbedField> fields = BuildFields(pr, label, assignee, requestedReviewer, PreviousBaseRef);
         var content = await BuildContentAsync(pr, sender, assignee, requestedReviewer, changes);
         var description = BuildDescription(pr, changes);
 
@@ -136,7 +142,8 @@ public sealed class PullRequestAction(
         OctokitPR pr,
         Label? label,
         User? assignee,
-        User? requestedReviewer)
+        User? requestedReviewer,
+        string? previousBaseRef)
     {
         var fields = new List<DiscordEmbedField>
         {
@@ -144,6 +151,9 @@ public sealed class PullRequestAction(
             // In Octokit's PullRequest, Additions/Deletions are long (always present).
             new("Changes", $"+{pr.Additions} / -{pr.Deletions} ({pr.ChangedFiles} files)", true),
         };
+
+        if (previousBaseRef is not null)
+            fields.Add(new("Base changed", $"`{previousBaseRef}` → `{pr.Base.Ref}`", true));
 
         if (pr.Draft)
             fields.Add(new("Status", "Draft", true));
@@ -213,7 +223,7 @@ public sealed class PullRequestAction(
 
     /// <summary>
     /// Builds the embed description on the opened / edited actions.
-    /// If edited and the title changed, it is shown in diff format.
+    /// If edited, a body change is shown in diff format, otherwise a title change is.
     /// </summary>
     private string? BuildDescription(
         OctokitPR pr,
@@ -222,12 +232,17 @@ public sealed class PullRequestAction(
         if (Event.Action is not ("opened" or "edited"))
             return null;
 
-        // On edited, prefer showing the title-change diff.
+        // The notification has room for only one diff; a body change takes precedence over a title change.
+        if (Event.Action == "edited" && changes?.Body?.From is not null)
+        {
+            var patch = CreatePatch(changes.Body.From, pr.Body ?? string.Empty, "body");
+            return BuildDiffDescription(patch);
+        }
+
         if (Event.Action == "edited" && changes?.Title?.From is not null)
         {
-            var oldTitle = changes.Title.From;
-            var patch = CreatePatch(oldTitle, pr.Title, "title");
-            return $"```diff\n{patch}```";
+            var patch = CreatePatch(changes.Title.From, pr.Title, "title");
+            return BuildDiffDescription(patch);
         }
 
         // PR body (truncated if long).

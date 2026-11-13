@@ -1,8 +1,10 @@
 using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.Json;
+using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using PullRequestEditedEvent = Octokit.Webhooks.Events.PullRequest.PullRequestEditedEvent;
 
 namespace GitHubWebhookBridge.Actions;
 
@@ -71,7 +73,32 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
                       ?? throw new InvalidOperationException(
                           $"Deserialization returned null for event '{eventName}' ({entry.Payload.Name}).");
 
-        return (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, webhookUrl, eventName, payload);
+        var action = (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, webhookUrl, eventName, payload);
+
+        if (action is PullRequestAction pullRequestAction && payload is PullRequestEditedEvent)
+            pullRequestAction.PreviousBaseRef = ReadPreviousBaseRef(rawJson);
+
+        return action;
+    }
+
+    /// <summary>
+    /// Reads <c>changes.base.ref.from</c> from a pull_request edited payload.
+    /// Returns null when any level is missing or has an unexpected type.
+    /// </summary>
+    private static string? ReadPreviousBaseRef(string rawJson)
+    {
+        using var doc = JsonDocument.Parse(rawJson);
+        JsonElement node = doc.RootElement;
+        foreach (var name in new[] { "changes", "base", "ref" })
+        {
+            if (node.ValueKind != JsonValueKind.Object || !node.TryGetProperty(name, out node))
+                return null;
+        }
+
+        if (node.ValueKind != JsonValueKind.Object || !node.TryGetProperty("from", out JsonElement from))
+            return null;
+
+        return from.ValueKind == JsonValueKind.String && from.GetString() is { Length: > 0 } value ? value : null;
     }
 
     /// <summary>Gets the registry (for tests and ActionRegistryValidator).</summary>

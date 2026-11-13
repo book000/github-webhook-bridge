@@ -29,13 +29,14 @@ internal static class TestFixtures
     public static string IssueJson(
         long number = 1, string title = "Test Issue", string state = "open",
         string? htmlUrl = null, string? body = null, bool isPr = false,
-        string userLogin = "octocat", long userId = 1)
+        string userLogin = "octocat", long userId = 1, string? stateReason = null)
     {
         var userJson = UserJson(userLogin, userId);
+        var stateReasonPart = stateReason is null ? string.Empty : $",\"state_reason\":\"{stateReason}\"";
         var prPart = isPr ? ",\"pull_request\":{\"url\":\"\",\"html_url\":\"https://github.com/owner/repo/pull/1\",\"diff_url\":\"\",\"patch_url\":\"\"}" : string.Empty;
         var bodyPart = body is null ? "null" : $"\"{body}\"";
         var url = htmlUrl ?? $"https://github.com/owner/repo/issues/{number}";
-        return $$$"""{"url":"","repository_url":"","labels_url":"","comments_url":"","events_url":"","html_url":"{{{url}}}","id":{{{number}}},"node_id":"I_{{{number}}}","number":{{{number}}},"title":"{{{title}}}","user":{{{userJson}}},"labels":[],"state":"{{{state}}}","locked":false,"assignees":[],"comments":0,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","author_association":"NONE","body":{{{bodyPart}}}{{{prPart}}}}""";
+        return $$$"""{"url":"","repository_url":"","labels_url":"","comments_url":"","events_url":"","html_url":"{{{url}}}","id":{{{number}}},"node_id":"I_{{{number}}}","number":{{{number}}},"title":"{{{title}}}","user":{{{userJson}}},"labels":[],"state":"{{{state}}}","locked":false,"assignees":[],"comments":0,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","author_association":"NONE","body":{{{bodyPart}}}{{{stateReasonPart}}}{{{prPart}}}}""";
     }
 
     /// <summary>Minimal JSON for a SimplePullRequest.</summary>

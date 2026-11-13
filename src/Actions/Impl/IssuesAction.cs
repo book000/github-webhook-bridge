@@ -48,7 +48,7 @@ public sealed class IssuesAction(
                                ?? (Event as IssuesDemilestonedEvent)?.Milestone;
         IssuesEventChanges? changes = (Event as IssuesEditedEvent)?.Changes;
 
-        List<DiscordEmbedField> fields = BuildFields(issue, label, assignee, milestone);
+        List<DiscordEmbedField> fields = BuildFields(action, issue, label, assignee, milestone);
         var description = BuildDescription(action, issue, changes);
 
         var author = new DiscordEmbedAuthor(
@@ -95,6 +95,7 @@ public sealed class IssuesAction(
 
     /// <summary>Builds the list of embed fields.</summary>
     private static List<DiscordEmbedField> BuildFields(
+        string action,
         Issue issue,
         Label? label,
         User? assignee,
@@ -104,6 +105,9 @@ public sealed class IssuesAction(
         {
             new("State", issue.State?.StringValue ?? "unknown", true),
         };
+
+        if (action == "closed" && !string.IsNullOrEmpty(issue.StateReason))
+            fields.Add(new("Reason", issue.StateReason.Replace('_', ' '), true));
 
         if (label is not null)
             fields.Add(new("Label", label.Name, true));

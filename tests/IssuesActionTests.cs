@@ -39,7 +39,8 @@ public class IssuesActionTests
         string? milestoneTitle = null,
         string issueBody = "",
         string? changedTitleFrom = null,
-        string? changedBodyFrom = null)
+        string? changedBodyFrom = null,
+        string? stateReason = null)
     {
         var changeFields = new List<string>();
         if (changedTitleFrom is not null)
@@ -49,7 +50,7 @@ public class IssuesActionTests
         var changesJson = changeFields.Count > 0 ? ",\"changes\":{" + string.Join(",", changeFields) + "}" : string.Empty;
 
         return JsonSerializer.Deserialize<IssuesEvent>(
-            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7, "Fix bug", action == "closed" ? "closed" : "open", body: issueBody.Length > 0 ? issueBody : null, userLogin: "opener", userId: 1)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender", 2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin, 3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}{{changesJson}}}""",
+            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7, "Fix bug", action == "closed" ? "closed" : "open", body: issueBody.Length > 0 ? issueBody : null, userLogin: "opener", userId: 1, stateReason: stateReason)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender", 2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin, 3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}{{changesJson}}}""",
             OctokitJsonOptions.Value)!;
     }
 
@@ -115,6 +116,56 @@ public class IssuesActionTests
         await action.RunAsync();
 
         Assert.Equal(EmbedColors.IssueClosed, capturedColor);
+    }
+
+    private static async Task<IList<DiscordEmbedField>> RunAndCaptureFieldsAsync(IssuesEvent issuesEvent)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IList<DiscordEmbedField>? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg.Embeds![0].Fields)
+               .ReturnsAsync("msg-id");
+
+        IssuesAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", issuesEvent);
+
+        await action.RunAsync();
+
+        return captured!;
+    }
+
+    /// <summary>A closed event with a state_reason shows the reason with underscores replaced by spaces.</summary>
+    [Theory]
+    [InlineData("not_planned", "not planned")]
+    [InlineData("completed", "completed")]
+    [InlineData("duplicate", "duplicate")]
+    public async Task RunAsyncClosedWithStateReasonShowsReasonField(string stateReason, string expected)
+    {
+        IList<DiscordEmbedField> fields = await RunAndCaptureFieldsAsync(MakeEvent("closed", stateReason: stateReason));
+
+        Assert.Equal(expected, Assert.Single(fields, f => f.Name == "Reason").Value);
+        Assert.Equal("closed", Assert.Single(fields, f => f.Name == "State").Value);
+    }
+
+    /// <summary>A closed event without a state_reason has no Reason field.</summary>
+    [Fact]
+    public async Task RunAsyncClosedWithoutStateReasonHasNoReasonField()
+    {
+        IList<DiscordEmbedField> fields = await RunAndCaptureFieldsAsync(MakeEvent("closed"));
+
+        Assert.DoesNotContain(fields, f => f.Name == "Reason");
+    }
+
+    /// <summary>A non-closed action never shows a Reason field, even when the payload carries a state_reason.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithStateReasonHasNoReasonField()
+    {
+        IList<DiscordEmbedField> fields = await RunAndCaptureFieldsAsync(MakeEvent("edited", stateReason: "not_planned"));
+
+        Assert.DoesNotContain(fields, f => f.Name == "Reason");
     }
 
     /// <summary>The labeled event includes the label name in an embed field.</summary>
