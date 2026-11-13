@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
@@ -21,7 +22,8 @@ public sealed class DiscussionCommentAction(
     ILogger<DiscussionCommentAction> logger,
     Uri webhookUrl,
     string eventName,
-    DiscussionCommentEvent discussionCommentEvent)
+    DiscussionCommentEvent discussionCommentEvent,
+    RawPayload? rawPayload = null)
     : BaseAction<DiscussionCommentEvent>(discord, webhookUrl, eventName, discussionCommentEvent, cache, userMapManager, logger)
 {
     /// <inheritdoc/>
@@ -48,10 +50,20 @@ public sealed class DiscussionCommentAction(
 
         var title = $"{sender.Login} {titleVerb} Discussion #{discussion.Number}: {discussion.Title}";
 
-        // Octokit.Webhooks models Changes.Body as Changes itself, so the previous body is unreachable and no diff is shown for edits.
-        var body = comment.Body is { Length: > 0 }
-            ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
-            : null;
+        string? body;
+        if (action == "edited" && GetPreviousBody() is { } previousBody)
+        {
+            body = BuildDiffDescription(CreatePatch(previousBody, comment.Body ?? string.Empty, "comment"));
+        }
+        else
+        {
+            if (action == "edited")
+                Logger.LogWarning("discussion_comment edited payload is missing changes.body.from; falling back to the current body.");
+
+            body = comment.Body is { Length: > 0 }
+                ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
+                : null;
+        }
 
         var mentions = await GetUsersMentionsAsync(
             sender.Id,
@@ -74,5 +86,29 @@ public sealed class DiscussionCommentAction(
 
         var key = $"{repo.FullName}-discussion-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
+    }
+
+    /// <summary>
+    /// Reads "changes.body.from" from the raw payload, because Octokit.Webhooks drops it from the typed "changes" model.
+    /// Returns null for any other shape; an empty string is a valid previous body.
+    /// </summary>
+    private string? GetPreviousBody()
+    {
+        if (rawPayload is null)
+            return null;
+
+        using var doc = JsonDocument.Parse(rawPayload.Json);
+        if (doc.RootElement.ValueKind == JsonValueKind.Object
+            && doc.RootElement.TryGetProperty("changes", out JsonElement changes)
+            && changes.ValueKind == JsonValueKind.Object
+            && changes.TryGetProperty("body", out JsonElement bodyChange)
+            && bodyChange.ValueKind == JsonValueKind.Object
+            && bodyChange.TryGetProperty("from", out JsonElement previous)
+            && previous.ValueKind == JsonValueKind.String)
+        {
+            return previous.GetString();
+        }
+
+        return null;
     }
 }

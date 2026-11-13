@@ -41,7 +41,9 @@ public class PingActionTests
         long hookId = 12345,
         string? repoFullName = null,
         string? senderLogin = null,
-        string? hookType = null)
+        string? hookType = null,
+        string eventsJson = "[\"push\"]",
+        bool active = true)
     {
         var repoPart = repoFullName is not null
             ? $",\"repository\":{TestFixtures.RepoJson(repoFullName)}"
@@ -51,7 +53,7 @@ public class PingActionTests
             : string.Empty;
         // Hook.Type is required, so use the default "Repository"
         var hookTypeStr = hookType ?? "Repository";
-        var hookJson = "{\"id\":1,\"type\":\"" + hookTypeStr + "\",\"name\":\"web\",\"active\":true,\"events\":[\"push\"],\"config\":{\"url\":\"https://example.com\",\"content_type\":\"json\",\"insecure_ssl\":\"0\"},\"updated_at\":\"2024-01-01T00:00:00Z\",\"created_at\":\"2024-01-01T00:00:00Z\",\"url\":\"https://api.github.com/repos/owner/repo/hooks/1\",\"test_url\":\"https://api.github.com/repos/owner/repo/hooks/1/test\",\"ping_url\":\"https://api.github.com/repos/owner/repo/hooks/1/pings\",\"deliveries_url\":\"https://api.github.com/repos/owner/repo/hooks/1/deliveries\"}";
+        var hookJson = "{\"id\":1,\"type\":\"" + hookTypeStr + "\",\"name\":\"web\",\"active\":" + (active ? "true" : "false") + ",\"events\":" + eventsJson + ",\"config\":{\"url\":\"https://example.com\",\"content_type\":\"json\",\"insecure_ssl\":\"0\"},\"updated_at\":\"2024-01-01T00:00:00Z\",\"created_at\":\"2024-01-01T00:00:00Z\",\"url\":\"https://api.github.com/repos/owner/repo/hooks/1\",\"test_url\":\"https://api.github.com/repos/owner/repo/hooks/1/test\",\"ping_url\":\"https://api.github.com/repos/owner/repo/hooks/1/pings\",\"deliveries_url\":\"https://api.github.com/repos/owner/repo/hooks/1/deliveries\"}";
         return JsonSerializer.Deserialize<PingEvent>(
             "{\"zen\":\"" + zen + "\",\"hook_id\":" + hookId + ",\"hook\":" + hookJson + repoPart + senderPart + "}",
             OctokitJsonOptions.Value)!;
@@ -148,5 +150,71 @@ public class PingActionTests
         discord.Verify(
             d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()),
             Times.Never);
+    }
+
+    [Theory]
+    [InlineData("[\"push\",\"issues\",\"pull_request\"]", "push, issues, pull_request")]
+    [InlineData("[]", "N/A")]
+    public async Task RunAsyncListsSubscribedEventNames(string eventsJson, string expected)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        PingAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PingAction>>(),
+            _webhookUri, "ping", MakePingEvent(eventsJson: eventsJson));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                _webhookUri,
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Fields!.Any(f => f.Name == "Events" && f.Value == expected))),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsyncTruncatesLongEventList()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        var eventsJson = "[" + string.Join(",", Enumerable.Repeat("\"push\"", 400)) + "]";
+
+        PingAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PingAction>>(),
+            _webhookUri, "ping", MakePingEvent(eventsJson: eventsJson));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                _webhookUri,
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Fields!.Any(f => f.Name == "Events" && f.Value.Length == 1024 && f.Value.EndsWith('…')))),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true, "Yes")]
+    [InlineData(false, "No")]
+    public async Task RunAsyncShowsHookIdAndActiveState(bool active, string expected)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        PingAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PingAction>>(),
+            _webhookUri, "ping", MakePingEvent(hookId: 4242, active: active));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                _webhookUri,
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Fields!.Any(f => f.Name == "Hook ID" && f.Value == "4242") &&
+                    m.Embeds[0].Fields!.Any(f => f.Name == "Active" && f.Value == expected))),
+            Times.Once);
     }
 }
