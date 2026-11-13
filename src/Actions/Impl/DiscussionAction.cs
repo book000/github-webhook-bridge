@@ -62,18 +62,23 @@ public sealed class DiscussionAction(
         Label? label = (Event as DiscussionLabeledEvent)?.Label
                        ?? (Event as DiscussionUnlabeledEvent)?.Label;
         DiscussionAnswer? answer = (Event as DiscussionAnsweredEvent)?.Answer;
-        DiscussionCategory? newCategory = (Event as DiscussionCategoryChangedEvent)?.Changes?.Category?.From;
+        DiscussionCategory? previousCategory = (Event as DiscussionCategoryChangedEvent)?.Changes?.Category?.From;
 
         var fields = new List<DiscordEmbedField>();
 
-        if (discussion.Category is not null)
+        if (previousCategory is not null)
+        {
+            fields.Add(new("From Category", previousCategory.Name, true));
+            if (discussion.Category is not null)
+                fields.Add(new("To Category", discussion.Category.Name, true));
+        }
+        else if (discussion.Category is not null)
+        {
             fields.Add(new("Category", discussion.Category.Name, true));
+        }
 
         if (label is not null)
             fields.Add(new("Label", label.Name, true));
-
-        if (newCategory is not null)
-            fields.Add(new("New Category", newCategory.Name, true));
 
         // On the answered event, show the answer body.
         string? description = null;

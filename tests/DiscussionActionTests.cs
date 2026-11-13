@@ -157,9 +157,9 @@ public class DiscussionActionTests
         cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-discussion-5"), Times.Once);
     }
 
-    /// <summary>The category_changed event includes the previous category name in a field (Changes.Category.From).</summary>
+    /// <summary>The category_changed event shows the previous category (Changes.Category.From) as "From Category" and the current one (Discussion.Category) as "To Category", without a separate "Category" field.</summary>
     [Fact]
-    public async Task RunAsyncCategoryChangedIncludesNewCategoryField()
+    public async Task RunAsyncCategoryChangedShowsFromAndToCategoryFields()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
@@ -176,7 +176,9 @@ public class DiscussionActionTests
                 It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m =>
                     m.Embeds![0].Fields != null &&
-                    m.Embeds![0].Fields!.Any(f => f.Value.Contains("Q&A")))),
+                    m.Embeds![0].Fields!.Count == 2 &&
+                    m.Embeds![0].Fields!.Any(f => f.Name == "From Category" && f.Value == "Q&A") &&
+                    m.Embeds![0].Fields!.Any(f => f.Name == "To Category" && f.Value == "General"))),
             Times.Once);
     }
 }

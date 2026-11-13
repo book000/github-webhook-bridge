@@ -31,17 +31,38 @@ public sealed class PushAction(
             return;
         }
 
-        if (allCommits.Count == 0) return;
-
         // Strip refs/heads/ and refs/tags/ to get a short branch name.
         var shortRef = gitRef
             .Replace("refs/heads/", string.Empty)
             .Replace("refs/tags/", string.Empty);
+        var refKind = Event.Ref.StartsWith("refs/tags/", StringComparison.Ordinal) ? "tag" : "branch";
 
-        // Show only the first 5 commits.
-        const int CommitLimit = 5;
-        var commits = allCommits.Take(CommitLimit).ToList();
-        var description = GetDescription(commits, allCommits.Count);
+        // The suffix keeps ref lifecycle notices from overwriting an earlier commit message for the same ref.
+        (string Summary, string? Description, string KeySuffix) notice;
+        if (Event.Deleted)
+        {
+            notice = ($"{refKind} deleted", null, ":deleted");
+        }
+        else if (allCommits.Count == 0 && Event.Created)
+        {
+            notice = ($"{refKind} created", null, ":created");
+        }
+        else if (allCommits.Count == 0 && Event.Forced)
+        {
+            notice = ("force pushed", null, ":forced");
+        }
+        else if (allCommits.Count == 0)
+        {
+            return;
+        }
+        else
+        {
+            // Show only the first 5 commits.
+            const int CommitLimit = 5;
+            var commits = allCommits.Take(CommitLimit).ToList();
+            var forceMarker = Event.Forced ? " (force push)" : string.Empty;
+            notice = ($"{allCommits.Count} new commit(s){forceMarker}", GetDescription(commits, allCommits.Count), string.Empty);
+        }
 
         if (Event.Sender is not { } sender || Event.Repository is not { } repo)
         {
@@ -57,11 +78,11 @@ public sealed class PushAction(
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: EmbedColors.Push,
-            title: $"[{repo.FullName}:{shortRef}] {allCommits.Count} new commit(s)",
-            description: description,
+            title: $"[{repo.FullName}:{shortRef}] {notice.Summary}",
+            description: notice.Description,
             author: author);
 
-        var key = $"{repo.FullName}:{Event.Ref}";
+        var key = $"{repo.FullName}:{Event.Ref}{notice.KeySuffix}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 

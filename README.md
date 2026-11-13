@@ -86,7 +86,7 @@ Endpoint: `http://localhost:7071/`
 | Event | Description |
 |---------|------|
 | `ping` | Webhook registration check |
-| `push` | Code push |
+| `push` | Code push, including branch/tag creation and deletion and force pushes |
 | `pull_request` | Pull request operations |
 | `pull_request_review` | Pull request review |
 | `pull_request_review_comment` | Review comment |

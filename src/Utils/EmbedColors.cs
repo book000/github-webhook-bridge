@@ -79,6 +79,9 @@ public static class EmbedColors
     /// <summary>Color for a pull request review requesting changes (orange)</summary>
     public const int PullRequestReviewChangesRequested = 0xf39c12;
 
+    /// <summary>Color for a pull request review submitted as a plain comment (gray)</summary>
+    public const int PullRequestReviewCommented = 0x95a5a6;
+
     /// <summary>Color for a pull request review dismissed (red)</summary>
     public const int PullRequestReviewDismissed = 0xe74c3c;
 
