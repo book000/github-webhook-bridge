@@ -107,6 +107,29 @@ public class DiscussionCommentActionTests
         return captured!;
     }
 
+    /// <summary>A payload missing the discussion or the comment object is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingDiscussionOrCommentSendsNothingAndWarns(bool dropDiscussion)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        DiscussionCommentEvent evt = dropDiscussion
+            ? MakeEvent("created") with { Discussion = null! }
+            : MakeEvent("created") with { Comment = null! };
+
+        DiscussionCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<DiscussionCommentAction>(logs).Object,
+            _webhookUri, "discussion_comment", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "discussion_comment payload is missing discussion or comment; skipping notification.");
+    }
+
     /// <summary>created shows the commenter, discussion number/title, comment body, comment URL, and the created color.</summary>
     [Fact]
     public async Task RunAsyncCreatedShowsCommentDetails()
@@ -220,6 +243,28 @@ public class DiscussionCommentActionTests
         DiscordMessage message = await RunAsync(MakeEvent("created", commentBody: new string('x', 600)));
 
         Assert.Equal(new string('x', 500) + "...", message.Embeds![0].Description);
+    }
+
+    /// <summary>A deleted comment does not mention the discussion author even when mapped.</summary>
+    [Fact]
+    public async Task RunAsyncDeletedDoesNotMentionDiscussionAuthor()
+    {
+        (Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache, Mock<IGitHubUserMapManager> userMap) = CreateMocks();
+        userMap.Setup(u => u.GetById(10L)).Returns("123");
+
+        DiscordMessage? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg)
+               .ReturnsAsync("msg-id");
+
+        DiscussionCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionCommentAction>>(),
+            _webhookUri, "discussion_comment", MakeEvent("deleted"));
+
+        await action.RunAsync();
+
+        Assert.Null(captured!.Content);
     }
 
     /// <summary>The discussion author is @mentioned when mapped and not the sender.</summary>

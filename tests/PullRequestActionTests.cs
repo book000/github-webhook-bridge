@@ -25,7 +25,7 @@ public class PullRequestActionTests
         string title = "Add awesome feature",
         string body = "This PR adds an awesome feature.",
         string baseRef = "main",
-        string? changedTitleFrom = null,
+        string? previousTitle = null,
         string? changedBodyFrom = null,
         string? changesJsonOverride = null,
         string? requestedTeamName = null,
@@ -35,8 +35,8 @@ public class PullRequestActionTests
         string requestedTeamsJson = "[]")
     {
         var changeFields = new List<string>();
-        if (changedTitleFrom is not null)
-            changeFields.Add($"\"title\":{{\"from\":{JsonSerializer.Serialize(changedTitleFrom)}}}");
+        if (previousTitle is not null)
+            changeFields.Add($"\"title\":{{\"from\":{JsonSerializer.Serialize(previousTitle)}}}");
         if (changedBodyFrom is not null)
             changeFields.Add($"\"body\":{{\"from\":{JsonSerializer.Serialize(changedBodyFrom)}}}");
         if (changesJsonOverride is not null)
@@ -81,7 +81,7 @@ public class PullRequestActionTests
         long? requestedReviewerId = null,
         string title = "Add awesome feature",
         string body = "This PR adds an awesome feature.",
-        string? changedTitleFrom = null,
+        string? previousTitle = null,
         string? changedBodyFrom = null,
         string? requestedTeamName = null,
         string labelsJson = "[]",
@@ -92,7 +92,7 @@ public class PullRequestActionTests
             MakePrJson(
                 action, merged, draft, requestedReviewerLogin, requestedReviewerId,
                 title: title, body: body,
-                changedTitleFrom: changedTitleFrom, changedBodyFrom: changedBodyFrom,
+                previousTitle: previousTitle, changedBodyFrom: changedBodyFrom,
                 requestedTeamName: requestedTeamName, labelsJson: labelsJson,
                 assigneesJson: assigneesJson, requestedReviewersJson: requestedReviewersJson,
                 requestedTeamsJson: requestedTeamsJson),
@@ -151,6 +151,34 @@ public class PullRequestActionTests
         userMap.Setup(u => u.EnsureLoadedAsync()).Returns(Task.CompletedTask);
 
         return (discord, cache, userMap);
+    }
+
+    /// <summary>A payload missing the pull request, its head, or its base is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData("pull_request")]
+    [InlineData("head")]
+    [InlineData("base")]
+    public async Task RunAsyncMissingPullRequestObjectSendsNothingAndWarns(string missing)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        PullRequestEvent valid = MakePrEvent("opened");
+        PullRequestEvent evt = missing switch
+        {
+            "pull_request" => valid with { PullRequest = null! },
+            "head" => valid with { PullRequest = valid.PullRequest with { Head = null! } },
+            _ => valid with { PullRequest = valid.PullRequest with { Base = null! } },
+        };
+
+        PullRequestAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PullRequestAction>(logs).Object,
+            _webhookUri, "pull_request", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "pull_request payload is missing pull_request or pull_request.head or pull_request.base; skipping notification.");
     }
 
     [Fact]
@@ -278,6 +306,31 @@ public class PullRequestActionTests
                 It.Is<DiscordMessage>(m =>
                     m.Content != null &&
                     m.Content.Contains("<@discord-user-id-300>"))),
+            Times.Once);
+    }
+
+    /// <summary>Two GitHub reviewers mapped to the same Discord ID produce a single mention when the WIP title is cleared.</summary>
+    [Fact]
+    public async Task RunAsyncDeduplicatesMentionsResolvingToSameDiscordId()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        userMap.Setup(u => u.GetById(301L)).Returns("shared-discord-id");
+        userMap.Setup(u => u.GetById(302L)).Returns("shared-discord-id");
+
+        var reviewers = $"[{TestFixtures.UserJson("reviewer-a", 301)},{TestFixtures.UserJson("reviewer-b", 302)}]";
+        PullRequestAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestAction>>(),
+            _webhookUri, "pull_request",
+            MakePrEvent("edited", previousTitle: "WIP: Add awesome feature", requestedReviewersJson: reviewers));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => m.Content == "<@shared-discord-id>")),
             Times.Once);
     }
 
@@ -451,7 +504,7 @@ public class PullRequestActionTests
     public async Task RunAsyncEditedWithBodyAndTitleChangeShowsBodyDiff()
     {
         DiscordEmbed embed = await RunEditedAsync(
-            MakePrEvent("edited", body: "new", changedBodyFrom: "old", changedTitleFrom: "Old title"));
+            MakePrEvent("edited", body: "new", changedBodyFrom: "old", previousTitle: "Old title"));
 
         Assert.Contains("--- body", embed.Description);
         Assert.DoesNotContain("--- title", embed.Description);
@@ -461,7 +514,7 @@ public class PullRequestActionTests
     [Fact]
     public async Task RunAsyncEditedWithTitleChangeShowsTitleDiff()
     {
-        DiscordEmbed embed = await RunEditedAsync(MakePrEvent("edited", changedTitleFrom: "Old title"));
+        DiscordEmbed embed = await RunEditedAsync(MakePrEvent("edited", previousTitle: "Old title"));
 
         Assert.StartsWith("```diff\n", embed.Description);
         Assert.Contains("--- title", embed.Description);
@@ -474,7 +527,7 @@ public class PullRequestActionTests
     public async Task RunAsyncEditedTitleWithBackticksStaysInsideFence()
     {
         DiscordEmbed embed = await RunEditedAsync(
-            MakePrEvent("edited", title: "new ``` title", changedTitleFrom: "old ``` title"));
+            MakePrEvent("edited", title: "new ``` title", previousTitle: "old ``` title"));
 
         var description = embed.Description!;
         Assert.StartsWith("```diff\n", description);
@@ -488,7 +541,7 @@ public class PullRequestActionTests
     public async Task RunAsyncEditedLongTitleDiffIsTruncated()
     {
         DiscordEmbed embed = await RunEditedAsync(
-            MakePrEvent("edited", title: new string('n', 6000), changedTitleFrom: new string('o', 6000)));
+            MakePrEvent("edited", title: new string('n', 6000), previousTitle: new string('o', 6000)));
 
         Assert.True(embed.Description!.Length <= 4096, $"Description length was {embed.Description.Length}");
     }
@@ -512,7 +565,7 @@ public class PullRequestActionTests
     [Fact]
     public async Task RunAsyncEditedWithoutBaseChangeHasNoBaseChangedField()
     {
-        DiscordEmbed embed = await RunThroughFactoryAsync(MakePrJson("edited", changedTitleFrom: "Old title"));
+        DiscordEmbed embed = await RunThroughFactoryAsync(MakePrJson("edited", previousTitle: "Old title"));
 
         Assert.DoesNotContain(embed.Fields!, f => f.Name == "Base changed");
     }
@@ -543,7 +596,7 @@ public class PullRequestActionTests
     public async Task RunAsyncEditedWithMalformedBaseChangeHasNoBaseChangedField(string baseChangeJson)
     {
         DiscordEmbed embed = await RunThroughFactoryAsync(MakePrJson(
-            "edited", changedTitleFrom: "Old title", changesJsonOverride: baseChangeJson));
+            "edited", previousTitle: "Old title", changesJsonOverride: baseChangeJson));
 
         Assert.DoesNotContain(embed.Fields!, f => f.Name == "Base changed");
     }

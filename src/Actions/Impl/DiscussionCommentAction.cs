@@ -7,8 +7,6 @@ using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Octokit.Webhooks;
 using Octokit.Webhooks.Events;
-using Octokit.Webhooks.Models;
-using DiscussionCommentModel = Octokit.Webhooks.Models.DiscussionCommentEvent.DiscussionComment;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
@@ -29,12 +27,15 @@ public sealed class DiscussionCommentAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        Discussion discussion = Event.Discussion;
-        DiscussionCommentModel comment = Event.Comment;
-
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("discussion_comment payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.Discussion is not { } discussion || Event.Comment is not { } comment)
+        {
+            Logger.LogWarning("discussion_comment payload is missing discussion or comment; skipping notification.");
             return;
         }
 
@@ -65,9 +66,11 @@ public sealed class DiscussionCommentAction(
                 : null;
         }
 
-        var mentions = await GetUsersMentionsAsync(
-            sender.Id,
-            [(discussion.User.Id, discussion.User.Login)]);
+        var mentions = SuppressesMentions(action)
+            ? string.Empty
+            : await GetUsersMentionsAsync(
+                sender.Id,
+                [(discussion.User.Id, discussion.User.Login)]);
 
         var content = mentions.Length > 0 ? mentions : null;
 

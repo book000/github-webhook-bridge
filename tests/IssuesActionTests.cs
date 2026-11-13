@@ -56,6 +56,24 @@ public class IssuesActionTests
             OctokitJsonOptions.Value)!;
     }
 
+    /// <summary>A payload without the issue object is skipped with a warning instead of throwing.</summary>
+    [Fact]
+    public async Task RunAsyncMissingIssueSendsNothingAndWarns()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+
+        IssuesAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<IssuesAction>(logs).Object,
+            _webhookUri, "issues", MakeEvent("opened") with { Issue = null! });
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "issues payload is missing issue; skipping notification.");
+    }
+
     /// <summary>The opened event contains "opened" and the Issue number in the title.</summary>
     [Fact]
     public async Task RunAsyncOpenedTitleContainsOpenedAndNumber()

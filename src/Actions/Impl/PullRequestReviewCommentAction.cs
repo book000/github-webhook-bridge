@@ -28,12 +28,15 @@ public sealed class PullRequestReviewCommentAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        PullRequestReviewComment comment = Event.Comment;
-        SimplePullRequest pr = Event.PullRequest;
-
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("pull_request_review_comment payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.Comment is not { } comment || Event.PullRequest is not { } pr)
+        {
+            Logger.LogWarning("pull_request_review_comment payload is missing comment or pull_request; skipping notification.");
             return;
         }
 
@@ -66,9 +69,11 @@ public sealed class PullRequestReviewCommentAction(
         }
 
         // @mention the PR author.
-        var mentions = await GetUsersMentionsAsync(
-            sender.Id,
-            [(pr.User.Id, pr.User.Login)]);
+        var mentions = SuppressesMentions(action)
+            ? string.Empty
+            : await GetUsersMentionsAsync(
+                sender.Id,
+                [(pr.User.Id, pr.User.Login)]);
         var content = mentions.Length > 0 ? mentions : null;
 
         var author = new DiscordEmbedAuthor(

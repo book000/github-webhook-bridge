@@ -28,12 +28,15 @@ public sealed class IssueCommentAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        Issue issue = Event.Issue;
-        IssueComment comment = Event.Comment;
-
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("issue_comment payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.Issue is not { } issue || Event.Comment is not { } comment)
+        {
+            Logger.LogWarning("issue_comment payload is missing issue or comment; skipping notification.");
             return;
         }
 
@@ -56,10 +59,12 @@ public sealed class IssueCommentAction(
         IssueCommentEventChanges? changes = (Event as IssueCommentEditedEvent)?.Changes;
         var body = BuildDescription(action, comment, changes);
 
-        // @mention the issue author (excluding the sender).
-        var mentions = await GetUsersMentionsAsync(
-            sender.Id,
-            [(issue.User.Id, issue.User.Login)]);
+        // @mention the issue author (excluding the sender); deleted comments do not mention.
+        var mentions = SuppressesMentions(action)
+            ? string.Empty
+            : await GetUsersMentionsAsync(
+                sender.Id,
+                [(issue.User.Id, issue.User.Login)]);
 
         var content = mentions.Length > 0 ? mentions : null;
 
