@@ -25,9 +25,6 @@ public sealed class SecretScanningAlertAction(
     SecretScanningAlertEvent secretScanningAlertEvent)
     : BaseAction<SecretScanningAlertEvent>(discord, webhookUrl, eventName, secretScanningAlertEvent, cache, userMapManager, logger)
 {
-    private const int MaxTitleLength = 256;
-    private const int MaxFieldValueLength = 1024;
-
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
@@ -61,19 +58,19 @@ public sealed class SecretScanningAlertAction(
             return;
         }
 
-        var secretType = Truncate(alert.SecretType, MaxFieldValueLength);
-        var title = Truncate($"Secret scanning alert {verb}: #{alert.Number} ({secretType}) in {repo.FullName}", MaxTitleLength);
+        var secretType = alert.SecretType;
+        var title = $"Secret scanning alert {verb}: #{alert.Number} ({secretType}) in {repo.FullName}";
 
         var fields = new List<DiscordEmbedField>
         {
-            new("Repository", Truncate(repo.FullName, MaxFieldValueLength), true),
+            new("Repository", repo.FullName, true),
             new("Alert", $"#{alert.Number}", true),
             new("Secret type", secretType, true),
             new("State", state, true),
         };
 
         if (alert.Resolution is { } resolution)
-            fields.Add(new("Resolution", Truncate(resolution.StringValue, MaxFieldValueLength), true));
+            fields.Add(new("Resolution", resolution.StringValue, true));
 
         Uri? alertUrl = Uri.TryCreate(repo.HtmlUrl, UriKind.Absolute, out Uri? repoUrl)
             ? new Uri($"{repoUrl.AbsoluteUri.TrimEnd('/')}/security/secret-scanning/{alert.Number}")
@@ -99,7 +96,4 @@ public sealed class SecretScanningAlertAction(
         var key = $"{repo.FullName}-secret-scanning-alert-{alert.Number}-{state}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
-
-    private static string Truncate(string value, int maxLength)
-        => value.Length > maxLength ? value[..maxLength] : value;
 }

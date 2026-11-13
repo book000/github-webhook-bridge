@@ -148,6 +148,71 @@ public class DiscordClientTests
         Assert.Equal("Discord API error: 500 Internal Server Error", ex.Message);
     }
 
+    private static HttpResponseMessage BadRequest(string body)
+        => new(HttpStatusCode.BadRequest) { Content = new StringContent(body) };
+
+    [Fact]
+    public async Task SendMessageAsync_400WithBody_IncludesBodyInException()
+    {
+        const string Body = """{"embeds":["Must be 6000 or fewer in length."]}""";
+        DiscordClient client = BuildClient(new QueueHttpMessageHandler(_ => BadRequest(Body)));
+
+        HttpRequestException ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.SendMessageAsync(_webhookUrl, _message));
+
+        Assert.Equal($"Discord API error: 400 Bad Request: {Body}", ex.Message);
+    }
+
+    [Fact]
+    public async Task EditMessageAsync_400WithBody_IncludesBodyInException()
+    {
+        const string Body = """{"embeds":["Must be 6000 or fewer in length."]}""";
+        DiscordClient client = BuildClient(new QueueHttpMessageHandler(_ => BadRequest(Body)));
+
+        HttpRequestException ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.EditMessageAsync(_webhookUrl, "42", _message));
+
+        Assert.Equal($"Discord API error: 400 Bad Request: {Body}", ex.Message);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_400BodyContainingWebhookUrl_RedactsPathAndToken()
+    {
+        DiscordClient client = BuildClient(new QueueHttpMessageHandler(_ => BadRequest($"bad {_webhookUrl.AbsolutePath} and {Token}")));
+
+        HttpRequestException ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.SendMessageAsync(_webhookUrl, _message));
+
+        Assert.Equal("Discord API error: 400 Bad Request: bad [redacted] and [redacted]", ex.Message);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_400WithEmptyBody_KeepsStatusOnlyMessage()
+    {
+        DiscordClient client = BuildClient(new QueueHttpMessageHandler(_ => BadRequest(string.Empty)));
+
+        HttpRequestException ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.SendMessageAsync(_webhookUrl, _message));
+
+        Assert.Equal("Discord API error: 400 Bad Request", ex.Message);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_400WithWebhookUrlWithoutTokenSegment_KeepsBodyAsIs()
+    {
+        DiscordClient client = BuildClient(new QueueHttpMessageHandler(_ => BadRequest("bad request")));
+
+        HttpRequestException ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.SendMessageAsync(new Uri("https://discord.com/"), _message));
+
+        Assert.Equal("Discord API error: 400 Bad Request: bad request", ex.Message);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_400WithLongBody_TruncatesBodyTo1000Characters()
+    {
+        DiscordClient client = BuildClient(new QueueHttpMessageHandler(_ => BadRequest(new string('x', 5000))));
+
+        HttpRequestException ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.SendMessageAsync(_webhookUrl, _message));
+
+        Assert.Equal($"Discord API error: 400 Bad Request: {new string('x', 999)}…", ex.Message);
+    }
+
     [Fact]
     public async Task Sending_ThroughSharedHttpClientConfiguration_NeverLogsTheWebhookToken()
     {

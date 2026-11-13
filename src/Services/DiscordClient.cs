@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using GitHubWebhookBridge.Models.Discord;
+using GitHubWebhookBridge.Utils;
 
 namespace GitHubWebhookBridge.Services;
 
@@ -12,6 +13,8 @@ namespace GitHubWebhookBridge.Services;
 /// </summary>
 public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClient
 {
+    private const int MaxErrorBodyLength = 1000;
+
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
     /// <inheritdoc/>
@@ -21,7 +24,7 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
         HttpClient http = _httpClientFactory.CreateClient("discord");
         // With ?wait=true, Discord returns the message object (including id)
         HttpResponseMessage response = await http.PostAsJsonAsync(BuildSendUrl(webhookUrl), message);
-        EnsureSuccess(response);
+        await EnsureSuccessAsync(response, webhookUrl);
         DiscordMessageResponse result = await response.Content.ReadFromJsonAsync<DiscordMessageResponse>()
             ?? throw new InvalidOperationException("Discord returned null message response");
         return result.Id;
@@ -34,7 +37,7 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
         HttpClient http = _httpClientFactory.CreateClient("discord");
         Uri editUrl = BuildEditUrl(webhookUrl, messageId);
         HttpResponseMessage response = await http.PatchAsJsonAsync(editUrl, message);
-        EnsureSuccess(response);
+        await EnsureSuccessAsync(response, webhookUrl);
     }
 
     /// <summary>
@@ -57,9 +60,11 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
 
     /// <summary>
     /// Performs custom error handling instead of EnsureSuccessStatusCode()
-    /// to prevent the Discord Webhook token from leaking into Application Insights telemetry
+    /// to prevent the Discord Webhook token from leaking into Application Insights telemetry.
+    /// The response body (Discord's form-error details) is appended to the exception message
+    /// with the webhook path and token redacted, truncated to <see cref="MaxErrorBodyLength"/> characters.
     /// </summary>
-    private static void EnsureSuccess(HttpResponseMessage response)
+    private static async Task EnsureSuccessAsync(HttpResponseMessage response, Uri webhookUrl)
     {
         if (response.IsSuccessStatusCode)
             return;
@@ -67,8 +72,20 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
             throw CreateRateLimitException(response);
 
-        throw new HttpRequestException(
-            $"Discord API error: {(int)response.StatusCode} {response.ReasonPhrase}");
+        var message = $"Discord API error: {(int)response.StatusCode} {response.ReasonPhrase}";
+        var body = await ReadBodyAsync(response, webhookUrl);
+        throw new HttpRequestException(body.Length == 0 ? message : $"{message}: {body}");
+    }
+
+    private static async Task<string> ReadBodyAsync(HttpResponseMessage response, Uri webhookUrl)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        var token = webhookUrl.Segments[^1].Trim('/');
+        body = body.Replace(webhookUrl.AbsolutePath, "[redacted]", StringComparison.Ordinal);
+        if (token.Length > 0)
+            body = body.Replace(token, "[redacted]", StringComparison.Ordinal);
+
+        return EmbedHelper.Truncate(body, MaxErrorBodyLength);
     }
 
     private static DiscordRateLimitException CreateRateLimitException(HttpResponseMessage response)
