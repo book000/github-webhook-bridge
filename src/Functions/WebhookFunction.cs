@@ -139,6 +139,12 @@ public class WebhookFunction(
             return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.BadRequest, "Bad Request: Invalid JSON body").ConfigureAwait(false);
         }
 
+        if (!_actionFactory.IsRegistered(eventName))
+        {
+            _logger.LogInformation("Method not implemented for event: {EventName}", eventName);
+            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.NotAcceptable, "Method not implemented").ConfigureAwait(false);
+        }
+
         await _muteManager.EnsureLoadedAsync().ConfigureAwait(false);
         WebhookEnvelope? envelope = null;
         try
@@ -153,13 +159,7 @@ public class WebhookFunction(
         if (envelope?.Sender?.Id is { } senderId)
         {
             if (_muteManager.IsMuted(senderId, eventName, envelope.Action))
-                return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.OK, "Muted user").ConfigureAwait(false);
-        }
-
-        if (!_actionFactory.IsRegistered(eventName))
-        {
-            _logger.LogInformation("Method not implemented for event: {EventName}", eventName);
-            return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.NotAcceptable, "Method not implemented").ConfigureAwait(false);
+                return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.Accepted, "Muted user").ConfigureAwait(false);
         }
 
         WebhookQueueMessage message = new(

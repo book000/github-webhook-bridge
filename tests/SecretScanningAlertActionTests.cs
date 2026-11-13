@@ -214,14 +214,21 @@ public class SecretScanningAlertActionTests
         Assert.DoesNotContain(logs, l => l.Contains(FakeSecret, StringComparison.Ordinal));
     }
 
-    [Fact]
-    public async Task RunAsyncUsesPerAlertCacheKey()
+    [Theory]
+    [InlineData("created", "open")]
+    [InlineData("publicly_leaked", "open")]
+    [InlineData("validated", "open")]
+    [InlineData("reopened", "open")]
+    [InlineData("resolved", "resolved")]
+    [InlineData("revoked", "resolved")]
+    public async Task RunAsyncUsesPerAlertAndStateCacheKey(string action, string expectedState)
     {
-        (SecretScanningAlertAction act, _, Mock<IMessageCacheService> cache, _) = CreateAction(MakeEvent("created", number: 42));
+        (SecretScanningAlertAction act, _, Mock<IMessageCacheService> cache, _) = CreateAction(MakeEvent(action, number: 42));
 
         await act.RunAsync();
 
-        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-secret-scanning-alert-42"), Times.Once);
-        cache.Verify(c => c.SetAsync(_webhookUri, "test/repo-secret-scanning-alert-42", "msg-id"), Times.Once);
+        var expectedKey = $"test/repo-secret-scanning-alert-42-{expectedState}";
+        cache.Verify(c => c.GetAsync(_webhookUri, expectedKey), Times.Once);
+        cache.Verify(c => c.SetAsync(_webhookUri, expectedKey, "msg-id"), Times.Once);
     }
 }

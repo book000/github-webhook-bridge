@@ -90,7 +90,8 @@ public sealed class SecretScanningAlertAction(
             author: author,
             fields: fields);
 
-        var key = $"{repo.FullName}-secret-scanning-alert-{alert.Number}";
+        // Open-state actions share one message; resolution posts a separate one so it does not edit the creation notice away.
+        var key = $"{repo.FullName}-secret-scanning-alert-{alert.Number}-{state}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 

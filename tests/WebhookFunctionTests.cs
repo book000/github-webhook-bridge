@@ -406,9 +406,30 @@ public class WebhookFunctionTests
 
     // ---- Mute tests ----
 
-    /// <summary>A request from a muted user returns 200 "Muted user".</summary>
+    /// <summary>A muted event on an unregistered event name still returns 406, not the muted acknowledgement.</summary>
     [Fact]
-    public async Task RunMutedUserReturns200WithMutedMessage()
+    public async Task RunMutedUnregisteredEventReturns406()
+    {
+        var muteMock = new Mock<IMuteManager>();
+        muteMock.Setup(m => m.EnsureLoadedAsync()).Returns(Task.CompletedTask);
+        muteMock.Setup(m => m.IsMuted(12345L, "unknown_event", It.IsAny<string?>())).Returns(true);
+        var factoryMock = new Mock<IActionFactory>();
+        factoryMock.Setup(f => f.IsRegistered("unknown_event")).Returns(false);
+        Mock<IWebhookQueue> queue = NewQueue();
+
+        WebhookFunction fn = CreateFunction(factoryMock: factoryMock, muteMock: muteMock, queueMock: queue);
+        HttpRequestData req = BuildRequest("""{"sender":{"id":12345,"login":"testuser"}}""", TestSecret, "unknown_event");
+
+        HttpResponseData result = await fn.RunAsync(req);
+
+        Assert.Equal(HttpStatusCode.NotAcceptable, result.StatusCode);
+        Assert.Contains("Method not implemented", ReadBody(result), StringComparison.Ordinal);
+        VerifyNothingEnqueued(queue);
+    }
+
+    /// <summary>A request from a muted user returns 202 "Muted user", like a disabled event.</summary>
+    [Fact]
+    public async Task RunMutedUserReturns202WithMutedMessage()
     {
         var muteMock = new Mock<IMuteManager>();
         muteMock.Setup(m => m.EnsureLoadedAsync()).Returns(Task.CompletedTask);
@@ -423,7 +444,7 @@ public class WebhookFunctionTests
 
         HttpResponseData result = await fn.RunAsync(req);
 
-        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, result.StatusCode);
         Assert.Contains("Muted user", ReadBody(result), StringComparison.Ordinal);
         VerifyNothingEnqueued(queue);
     }
