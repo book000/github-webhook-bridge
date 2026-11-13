@@ -26,11 +26,15 @@ public sealed class DiscussionAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        Discussion discussion = Event.Discussion;
-
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("discussion payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.Discussion is not { } discussion)
+        {
+            Logger.LogWarning("discussion payload is missing discussion; skipping notification.");
             return;
         }
 
@@ -102,7 +106,17 @@ public sealed class DiscussionAction(
             author: author,
             fields: fields);
 
-        var key = $"{repo.FullName}-discussion-{discussion.Number}";
+        var key = $"{repo.FullName}-discussion-{discussion.Number}-{GetKeySuffix(Event.Action ?? "unknown")}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
+
+    /// <summary>Maps an action to its cache key suffix; paired actions share one suffix so they edit the same message.</summary>
+    private static string GetKeySuffix(string action) => action switch
+    {
+        "pinned" or "unpinned" => "pinned",
+        "locked" or "unlocked" => "locked",
+        "answered" or "unanswered" => "answered",
+        "labeled" or "unlabeled" => "label",
+        _ => action,
+    };
 }

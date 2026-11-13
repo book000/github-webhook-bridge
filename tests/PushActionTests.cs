@@ -23,6 +23,7 @@ public class PushActionTests
         bool created = false,
         bool deleted = false,
         bool forced = false,
+        string after = "bbb",
         string compare = "https://github.com")
     {
         var commitsJson = string.Join(",", commitJsons ?? [MakeCommitJson("abcdef1234567890", "feat: add new feature")]);
@@ -30,7 +31,7 @@ public class PushActionTests
         var senderJson = TestFixtures.UserJson("octocat", 1, "https://github.com/octocat");
         var flags = $"\"created\":{created.ToString().ToLowerInvariant()},\"deleted\":{deleted.ToString().ToLowerInvariant()},\"forced\":{forced.ToString().ToLowerInvariant()}";
         return JsonSerializer.Deserialize<PushEvent>(
-            $$$"""{"ref":"{{{refName}}}",{{{flags}}},"before":"aaa","after":"bbb","compare":"{{{compare}}}","commits":[{{{commitsJson}}}],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":"octocat@example.com"}}""",
+            $$$"""{"ref":"{{{refName}}}",{{{flags}}},"before":"aaa","after":"{{{after}}}","compare":"{{{compare}}}","commits":[{{{commitsJson}}}],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":"octocat@example.com"}}""",
             OctokitJsonOptions.Value)!;
     }
 
@@ -121,6 +122,40 @@ public class PushActionTests
     }
 
     [Fact]
+    public async Task RunAsyncCacheKeyContainsRefAndAfterSha()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        PushAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PushAction>>(),
+            _webhookUri, "push", MakePushEvent());
+
+        await action.RunAsync();
+
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo:refs/heads/main:bbb"), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsyncSeparatePushesToSameRefUseDifferentCacheKeys()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        foreach (var after in new[] { "bbb", "ccc" })
+        {
+            PushAction action = new(
+                discord.Object, cache.Object, userMap.Object,
+                Mock.Of<ILogger<PushAction>>(),
+                _webhookUri, "push", MakePushEvent(after: after));
+
+            await action.RunAsync();
+        }
+
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo:refs/heads/main:bbb"), Times.Once);
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo:refs/heads/main:ccc"), Times.Once);
+    }
+
+    [Fact]
     public async Task RunAsyncSendsMessageWithCommitInfo()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
@@ -141,6 +176,47 @@ public class PushActionTests
                     m.Embeds[0].Title!.Contains("test/repo:main") &&
                     m.Embeds[0].Title!.Contains("1 new commit"))),
             Times.Once);
+    }
+
+    /// <summary>A payload missing the commits or the ref is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingCommitsOrRefSendsNothingAndWarns(bool dropCommits)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        PushEvent evt = dropCommits
+            ? MakePushEvent() with { Commits = null! }
+            : MakePushEvent() with { Ref = null! };
+
+        PushAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PushAction>(logs).Object,
+            _webhookUri, "push", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "push payload is missing commits or ref; skipping notification.");
+    }
+
+    /// <summary>An empty commit list is still skipped silently.</summary>
+    [Fact]
+    public async Task RunAsyncEmptyCommitsSendsNothingAndLogsNothing()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+
+        PushAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PushAction>(logs).Object,
+            _webhookUri, "push", MakePushEvent() with { Commits = [] });
+
+        await action.RunAsync();
+
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+        Assert.Empty(logs);
     }
 
     [Fact]
@@ -245,7 +321,7 @@ public class PushActionTests
             await RunAsync(MakePushEvent([], deleted: true));
 
         VerifySentTitle(discord, "[test/repo:main] branch deleted");
-        VerifyCacheKey(cache, "test/repo:refs/heads/main:deleted");
+        VerifyCacheKey(cache, "test/repo:refs/heads/main:bbb:deleted");
     }
 
     [Fact]
@@ -264,7 +340,7 @@ public class PushActionTests
             await RunAsync(MakePushEvent([], created: true));
 
         VerifySentTitle(discord, "[test/repo:main] branch created");
-        VerifyCacheKey(cache, "test/repo:refs/heads/main:created");
+        VerifyCacheKey(cache, "test/repo:refs/heads/main:bbb:created");
     }
 
     [Fact]
@@ -274,7 +350,7 @@ public class PushActionTests
             await RunAsync(MakePushEvent(created: true));
 
         VerifySentTitle(discord, "[test/repo:main] 1 new commit(s)");
-        VerifyCacheKey(cache, "test/repo:refs/heads/main");
+        VerifyCacheKey(cache, "test/repo:refs/heads/main:bbb");
     }
 
     [Fact]
@@ -284,7 +360,7 @@ public class PushActionTests
             await RunAsync(MakePushEvent([], forced: true));
 
         VerifySentTitle(discord, "[test/repo:main] force pushed");
-        VerifyCacheKey(cache, "test/repo:refs/heads/main:forced");
+        VerifyCacheKey(cache, "test/repo:refs/heads/main:bbb:forced");
     }
 
     [Fact]
@@ -294,7 +370,7 @@ public class PushActionTests
             await RunAsync(MakePushEvent(forced: true));
 
         VerifySentTitle(discord, "[test/repo:main] 1 new commit(s) (force push)");
-        VerifyCacheKey(cache, "test/repo:refs/heads/main");
+        VerifyCacheKey(cache, "test/repo:refs/heads/main:bbb");
     }
 
     [Fact]
@@ -313,7 +389,7 @@ public class PushActionTests
             await RunAsync(MakePushEvent([], created: true, forced: true));
 
         VerifySentTitle(discord, "[test/repo:main] branch created");
-        VerifyCacheKey(cache, "test/repo:refs/heads/main:created");
+        VerifyCacheKey(cache, "test/repo:refs/heads/main:bbb:created");
     }
 
     [Fact]
@@ -323,7 +399,7 @@ public class PushActionTests
             await RunAsync(MakePushEvent(deleted: true));
 
         VerifySentTitle(discord, "[test/repo:main] branch deleted");
-        VerifyCacheKey(cache, "test/repo:refs/heads/main:deleted");
+        VerifyCacheKey(cache, "test/repo:refs/heads/main:bbb:deleted");
     }
 
     [Fact]

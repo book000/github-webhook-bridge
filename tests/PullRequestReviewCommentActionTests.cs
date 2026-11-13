@@ -61,6 +61,29 @@ public class PullRequestReviewCommentActionTests
             OctokitJsonOptions.Value)!;
     }
 
+    /// <summary>A payload missing the comment or the pull request is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingCommentOrPullRequestSendsNothingAndWarns(bool dropComment)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        PullRequestReviewCommentEvent evt = dropComment
+            ? MakeEvent() with { Comment = null! }
+            : MakeEvent() with { PullRequest = null! };
+
+        PullRequestReviewCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PullRequestReviewCommentAction>(logs).Object,
+            _webhookUri, "pull_request_review_comment", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "pull_request_review_comment payload is missing comment or pull_request; skipping notification.");
+    }
+
     /// <summary>The title of the created event contains "commented on" and the PR number.</summary>
     [Fact]
     public async Task RunAsyncCreatedTitleContainsCommentedOnAndPrNumber()
