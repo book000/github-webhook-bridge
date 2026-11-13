@@ -1,4 +1,412 @@
 {
+  "DiscussionCommentEvent": {
+    "AdditionalProperties": "array:String",
+    "action": "String",
+    "comment": {
+      "author_association": {
+        "StringValue": "String",
+        "Value": {
+          "type": "enum:AuthorAssociation",
+          "members": [
+            "Collaborator=0",
+            "Contributor=1",
+            "FirstTimeContributor=3",
+            "FirstTimer=2",
+            "Mannequin=4",
+            "Member=5",
+            "None=6",
+            "Owner=7"
+          ]
+        }
+      },
+      "body": "String",
+      "child_comment_count": "Int64",
+      "created_at": "DateTimeOffset",
+      "discussion_id": "Int64",
+      "html_url": "String",
+      "id": "Int64",
+      "node_id": "String",
+      "parent_id": "Int32",
+      "reactions": {
+        "\u002B1": "Int64",
+        "-1": "Int64",
+        "confused": "Int64",
+        "eyes": "Int64",
+        "heart": "Int64",
+        "hooray": "Int64",
+        "laugh": "Int64",
+        "rocket": "Int64",
+        "total_count": "Int64",
+        "url": "String"
+      },
+      "repository_url": "String",
+      "updated_at": "DateTimeOffset",
+      "user": {
+        "avatar_url": "String",
+        "email": "String",
+        "events_url": "String",
+        "followers_url": "String",
+        "following_url": "String",
+        "gists_url": "String",
+        "gravatar_id": "String",
+        "html_url": "String",
+        "id": "Int64",
+        "login": "String",
+        "name": "String",
+        "node_id": "String",
+        "organizations_url": "String",
+        "received_events_url": "String",
+        "repos_url": "String",
+        "site_admin": "Boolean",
+        "starred_url": "String",
+        "subscriptions_url": "String",
+        "type": {
+          "StringValue": "String",
+          "Value": {
+            "type": "enum:UserType",
+            "members": [
+              "Bot=0",
+              "Organization=2",
+              "User=1"
+            ]
+          }
+        },
+        "url": "String"
+      }
+    },
+    "discussion": {
+      "active_lock_reason": "String",
+      "answer_chosen_at": "DateTimeOffset",
+      "answer_chosen_by": {
+        "avatar_url": "String",
+        "email": "String",
+        "events_url": "String",
+        "followers_url": "String",
+        "following_url": "String",
+        "gists_url": "String",
+        "gravatar_id": "String",
+        "html_url": "String",
+        "id": "Int64",
+        "login": "String",
+        "name": "String",
+        "node_id": "String",
+        "organizations_url": "String",
+        "received_events_url": "String",
+        "repos_url": "String",
+        "site_admin": "Boolean",
+        "starred_url": "String",
+        "subscriptions_url": "String",
+        "type": {
+          "StringValue": "String",
+          "Value": {
+            "type": "enum:UserType",
+            "members": [
+              "Bot=0",
+              "Organization=2",
+              "User=1"
+            ]
+          }
+        },
+        "url": "String"
+      },
+      "answer_html_url": "String",
+      "author_association": {
+        "StringValue": "String",
+        "Value": {
+          "type": "enum:AuthorAssociation",
+          "members": [
+            "Collaborator=0",
+            "Contributor=1",
+            "FirstTimeContributor=3",
+            "FirstTimer=2",
+            "Mannequin=4",
+            "Member=5",
+            "None=6",
+            "Owner=7"
+          ]
+        }
+      },
+      "body": "String",
+      "category": {
+        "created_at": "DateTimeOffset",
+        "description": "String",
+        "emoji": "String",
+        "id": "Int64",
+        "is_answerable": "Boolean",
+        "name": "String",
+        "repository_id": "Int64",
+        "slug": "String",
+        "updated_at": "DateTimeOffset"
+      },
+      "comments": "Int64",
+      "created_at": "DateTimeOffset",
+      "html_url": "String",
+      "id": "Int64",
+      "locked": "Boolean",
+      "node_id": "String",
+      "number": "Int64",
+      "reactions": {
+        "\u002B1": "Int64",
+        "-1": "Int64",
+        "confused": "Int64",
+        "eyes": "Int64",
+        "heart": "Int64",
+        "hooray": "Int64",
+        "laugh": "Int64",
+        "rocket": "Int64",
+        "total_count": "Int64",
+        "url": "String"
+      },
+      "repository_url": "String",
+      "state": {
+        "StringValue": "String",
+        "Value": {
+          "type": "enum:DiscussionState",
+          "members": [
+            "Converting=2",
+            "Locked=1",
+            "Open=0"
+          ]
+        }
+      },
+      "title": "String",
+      "updated_at": "DateTimeOffset",
+      "user": {
+        "avatar_url": "String",
+        "email": "String",
+        "events_url": "String",
+        "followers_url": "String",
+        "following_url": "String",
+        "gists_url": "String",
+        "gravatar_id": "String",
+        "html_url": "String",
+        "id": "Int64",
+        "login": "String",
+        "name": "String",
+        "node_id": "String",
+        "organizations_url": "String",
+        "received_events_url": "String",
+        "repos_url": "String",
+        "site_admin": "Boolean",
+        "starred_url": "String",
+        "subscriptions_url": "String",
+        "type": {
+          "StringValue": "String",
+          "Value": {
+            "type": "enum:UserType",
+            "members": [
+              "Bot=0",
+              "Organization=2",
+              "User=1"
+            ]
+          }
+        },
+        "url": "String"
+      }
+    },
+    "installation": {
+      "id": "Int64",
+      "node_id": "String"
+    },
+    "organization": {
+      "avatar_url": "String",
+      "description": "String",
+      "events_url": "String",
+      "hooks_url": "String",
+      "html_url": "String",
+      "id": "Int64",
+      "issues_url": "String",
+      "login": "String",
+      "members_url": "String",
+      "node_id": "String",
+      "public_members_url": "String",
+      "repos_url": "String",
+      "url": "String"
+    },
+    "repository": {
+      "allow_auto_merge": "Boolean",
+      "allow_forking": "Boolean",
+      "allow_merge_commit": "Boolean",
+      "allow_rebase_merge": "Boolean",
+      "allow_squash_merge": "Boolean",
+      "allow_update_branch": "Boolean",
+      "archive_url": "String",
+      "archived": "Boolean",
+      "assignees_url": "String",
+      "blobs_url": "String",
+      "branches_url": "String",
+      "clone_url": "String",
+      "collaborators_url": "String",
+      "comments_url": "String",
+      "commits_url": "String",
+      "compare_url": "String",
+      "contents_url": "String",
+      "contributors_url": "String",
+      "created_at": "DateTimeOffset",
+      "custom_properties": "array:String",
+      "default_branch": "String",
+      "delete_branch_on_merge": "Boolean",
+      "deployments_url": "String",
+      "description": "String",
+      "disabled": "Boolean",
+      "downloads_url": "String",
+      "events_url": "String",
+      "fork": "Boolean",
+      "forks": "Int64",
+      "forks_count": "Int64",
+      "forks_url": "String",
+      "full_name": "String",
+      "git_commits_url": "String",
+      "git_refs_url": "String",
+      "git_tags_url": "String",
+      "git_url": "String",
+      "has_discussions": "Boolean",
+      "has_downloads": "Boolean",
+      "has_issues": "Boolean",
+      "has_pages": "Boolean",
+      "has_projects": "Boolean",
+      "has_wiki": "Boolean",
+      "homepage": "String",
+      "hooks_url": "String",
+      "html_url": "String",
+      "id": "Int64",
+      "is_template": "Boolean",
+      "issue_comment_url": "String",
+      "issue_events_url": "String",
+      "issues_url": "String",
+      "keys_url": "String",
+      "labels_url": "String",
+      "language": "String",
+      "languages_url": "String",
+      "license": {
+        "key": "String",
+        "name": "String",
+        "node_id": "String",
+        "spdx_id": "String",
+        "url": "String"
+      },
+      "master_branch": "String",
+      "merge_commit_message": "String",
+      "merge_commit_title": "String",
+      "merges_url": "String",
+      "milestones_url": "String",
+      "mirror_url": "String",
+      "name": "String",
+      "node_id": "String",
+      "notifications_url": "String",
+      "open_issues": "Int64",
+      "open_issues_count": "Int64",
+      "organization": "String",
+      "owner": {
+        "avatar_url": "String",
+        "email": "String",
+        "events_url": "String",
+        "followers_url": "String",
+        "following_url": "String",
+        "gists_url": "String",
+        "gravatar_id": "String",
+        "html_url": "String",
+        "id": "Int64",
+        "login": "String",
+        "name": "String",
+        "node_id": "String",
+        "organizations_url": "String",
+        "received_events_url": "String",
+        "repos_url": "String",
+        "site_admin": "Boolean",
+        "starred_url": "String",
+        "subscriptions_url": "String",
+        "type": {
+          "StringValue": "String",
+          "Value": {
+            "type": "enum:UserType",
+            "members": [
+              "Bot=0",
+              "Organization=2",
+              "User=1"
+            ]
+          }
+        },
+        "url": "String"
+      },
+      "permissions": {
+        "admin": "Boolean",
+        "maintain": "Boolean",
+        "pull": "Boolean",
+        "push": "Boolean",
+        "triage": "Boolean"
+      },
+      "private": "Boolean",
+      "public": "Boolean",
+      "pulls_url": "String",
+      "pushed_at": "DateTimeOffset",
+      "releases_url": "String",
+      "size": "Int64",
+      "squash_merge_commit_message": "String",
+      "squash_merge_commit_title": "String",
+      "ssh_url": "String",
+      "stargazers": "Int32",
+      "stargazers_count": "Int64",
+      "stargazers_url": "String",
+      "statuses_url": "String",
+      "subscribers_url": "String",
+      "subscription_url": "String",
+      "svn_url": "String",
+      "tags_url": "String",
+      "teams_url": "String",
+      "topics": "array:String",
+      "trees_url": "String",
+      "updated_at": "DateTimeOffset",
+      "url": "String",
+      "use_squash_pr_title_as_default": "Boolean",
+      "visibility": {
+        "StringValue": "String",
+        "Value": {
+          "type": "enum:RepositoryVisibility",
+          "members": [
+            "Internal=2",
+            "Private=1",
+            "Public=0"
+          ]
+        }
+      },
+      "watchers": "Int64",
+      "watchers_count": "Int64",
+      "web_commit_signoff_required": "Boolean"
+    },
+    "sender": {
+      "avatar_url": "String",
+      "email": "String",
+      "events_url": "String",
+      "followers_url": "String",
+      "following_url": "String",
+      "gists_url": "String",
+      "gravatar_id": "String",
+      "html_url": "String",
+      "id": "Int64",
+      "login": "String",
+      "name": "String",
+      "node_id": "String",
+      "organizations_url": "String",
+      "received_events_url": "String",
+      "repos_url": "String",
+      "site_admin": "Boolean",
+      "starred_url": "String",
+      "subscriptions_url": "String",
+      "type": {
+        "StringValue": "String",
+        "Value": {
+          "type": "enum:UserType",
+          "members": [
+            "Bot=0",
+            "Organization=2",
+            "User=1"
+          ]
+        }
+      },
+      "url": "String"
+    }
+  },
   "DiscussionEvent": {
     "AdditionalProperties": "array:String",
     "action": "String",

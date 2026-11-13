@@ -74,13 +74,13 @@ public class ActionFactoryTests
         Assert.Null(ex);
     }
 
-    /// <summary>Task 8 complete: verifies that all 12 actions are registered.</summary>
+    /// <summary>Verifies that all 13 actions are registered.</summary>
     [Fact]
-    public void Registry_ContainsTwelveActions()
+    public void Registry_ContainsThirteenActions()
     {
         var factory = new ActionFactory(BuildServiceProvider());
 
-        Assert.Equal(12, factory.Registry.Count);
+        Assert.Equal(13, factory.Registry.Count);
     }
 
     /// <summary>Verifies that calling GetAction with a known event name returns the corresponding implementation class.</summary>

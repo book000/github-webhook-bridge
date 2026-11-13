@@ -28,10 +28,11 @@ public class RealPayloadIntegrationTests
         Path.GetDirectoryName(typeof(RealPayloadIntegrationTests).Assembly.Location)!,
         "RealPayloads");
 
-    /// <summary>X-GitHub-Event names and their corresponding real payload file names (for the 12 implemented events).</summary>
+    /// <summary>X-GitHub-Event names and their corresponding real payload file names (for the 13 implemented events).</summary>
     public static TheoryData<string, string> Fixtures => new()
     {
         { "discussion", "discussion.created.json" },
+        { "discussion_comment", "discussion_comment.created.json" },
         { "fork", "fork.json" },
         { "issue_comment", "issue_comment.created.json" },
         { "issues", "issues.opened.json" },
