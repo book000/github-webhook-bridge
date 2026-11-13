@@ -32,7 +32,8 @@ public class PullRequestActionTests
         string labelsJson = "[]",
         string assigneesJson = "[]",
         string requestedReviewersJson = "[]",
-        string requestedTeamsJson = "[]")
+        string requestedTeamsJson = "[]",
+        (long Position, long Size)? stack = null)
     {
         var changeFields = new List<string>();
         if (previousTitle is not null)
@@ -66,6 +67,9 @@ public class PullRequestActionTests
                 {{(requestedTeamName is not null
                     ? $",\"requested_team\":{TestFixtures.TeamJson(requestedTeamName)}"
                     : string.Empty)}}
+                {{(stack is { } s
+                    ? $",\"stack\":{{\"base\":{{\"ref\":\"main\",\"sha\":\"abc\"}},\"size\":{s.Size},\"position\":{s.Position},\"id\":1,\"number\":42}}"
+                    : string.Empty)}}
             }
             """;
     }
@@ -87,7 +91,8 @@ public class PullRequestActionTests
         string labelsJson = "[]",
         string assigneesJson = "[]",
         string requestedReviewersJson = "[]",
-        string requestedTeamsJson = "[]") =>
+        string requestedTeamsJson = "[]",
+        (long Position, long Size)? stack = null) =>
         JsonSerializer.Deserialize<PullRequestEvent>(
             MakePrJson(
                 action, merged, draft, requestedReviewerLogin, requestedReviewerId,
@@ -95,7 +100,7 @@ public class PullRequestActionTests
                 previousTitle: previousTitle, changedBodyFrom: changedBodyFrom,
                 requestedTeamName: requestedTeamName, labelsJson: labelsJson,
                 assigneesJson: assigneesJson, requestedReviewersJson: requestedReviewersJson,
-                requestedTeamsJson: requestedTeamsJson),
+                requestedTeamsJson: requestedTeamsJson, stack: stack),
             OctokitJsonOptions.Value)!;
 
     private static async Task<DiscordEmbed> RunAndCaptureEmbedAsync(IAction action, Mock<IDiscordClient> discord)
@@ -599,5 +604,28 @@ public class PullRequestActionTests
             "edited", previousTitle: "Old title", changesJsonOverride: baseChangeJson));
 
         Assert.DoesNotContain(embed.Fields!, f => f.Name == "Base changed");
+    }
+
+    /// <summary>The stacked event has the stacked title and color, and shows the stack position.</summary>
+    [Fact]
+    public async Task RunAsyncStackedShowsStackFieldWithStackedTitleAndColor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        PullRequestAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestAction>>(),
+            _webhookUri, "pull_request", MakePrEvent("stacked", stack: (2, 3)));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Title == "PR stacked: #42 Add awesome feature" &&
+                    m.Embeds![0].Color == EmbedColors.PullRequestStacked &&
+                    m.Embeds![0].Fields!.Any(f => f.Name == "Stack" && f.Value == "2 / 3"))),
+            Times.Once);
     }
 }

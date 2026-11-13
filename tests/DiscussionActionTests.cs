@@ -229,4 +229,48 @@ public class DiscussionActionTests
                     m.Embeds![0].Fields!.Any(f => f.Name == "To Category" && f.Value == "General"))),
             Times.Once);
     }
+
+    /// <summary>The closed event has the closed title and the DiscussionClosed color.</summary>
+    [Fact]
+    public async Task RunAsyncClosedUsesClosedTitleAndColor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        DiscussionAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionAction>>(),
+            _webhookUri, "discussion", MakeEvent("closed"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Title == "Discussion closed: #5 Great discussion" &&
+                    m.Embeds![0].Color == EmbedColors.DiscussionClosed)),
+            Times.Once);
+    }
+
+    /// <summary>The reopened event has the reopened title and the DiscussionReopened color.</summary>
+    [Fact]
+    public async Task RunAsyncReopenedUsesReopenedTitleAndColor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        DiscussionAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionAction>>(),
+            _webhookUri, "discussion", MakeEvent("reopened"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Title == "Discussion reopened: #5 Great discussion" &&
+                    m.Embeds![0].Color == EmbedColors.DiscussionReopened)),
+            Times.Once);
+    }
 }

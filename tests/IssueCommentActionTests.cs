@@ -149,6 +149,24 @@ public class IssueCommentActionTests
         cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-issue-comment-9001"), Times.Once);
     }
 
+    /// <summary>Pin and unpin share a separate cache key so they never overwrite the original comment message.</summary>
+    [Theory]
+    [InlineData("pinned")]
+    [InlineData("unpinned")]
+    public async Task RunAsyncPinChangeUsesSeparateCacheKey(string pinAction)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IssueCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent(pinAction, commentId: 9001));
+
+        await action.RunAsync();
+
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-issue-comment-9001-pin"), Times.Once);
+    }
+
     /// <summary>The comment body is truncated when it exceeds 500 characters.</summary>
     [Fact]
     public async Task RunAsyncBodyTruncatedAt500Chars()
@@ -314,6 +332,56 @@ public class IssueCommentActionTests
                 It.Is<DiscordMessage>(m =>
                     m.Content != null &&
                     m.Content.Contains("<@discord-id-of-author>"))),
+            Times.Once);
+    }
+
+    /// <summary>The pinned event has the pinned title and color, no comment body, and no author mention.</summary>
+    [Fact]
+    public async Task RunAsyncPinnedHasPinnedTitleAndColorWithoutBodyOrMention()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        userMap.Setup(u => u.GetById(10L)).Returns("discord-id-of-author");
+
+        IssueCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent("pinned"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Title == "commenter pinned comment on Issue #3: Test issue" &&
+                    m.Embeds![0].Color == EmbedColors.IssueCommentPinned &&
+                    m.Embeds![0].Description == null &&
+                    m.Content == null)),
+            Times.Once);
+    }
+
+    /// <summary>The unpinned event has the unpinned title and color, no comment body, and no author mention.</summary>
+    [Fact]
+    public async Task RunAsyncUnpinnedHasUnpinnedTitleAndColorWithoutBodyOrMention()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        userMap.Setup(u => u.GetById(10L)).Returns("discord-id-of-author");
+
+        IssueCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent("unpinned"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Title == "commenter unpinned comment on Issue #3: Test issue" &&
+                    m.Embeds![0].Color == EmbedColors.IssueCommentUnpinned &&
+                    m.Embeds![0].Description == null &&
+                    m.Content == null)),
             Times.Once);
     }
 }

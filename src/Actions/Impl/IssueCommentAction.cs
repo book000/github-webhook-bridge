@@ -51,16 +51,19 @@ public sealed class IssueCommentAction(
             "created" => ("commented on", EmbedColors.IssueCommentCreated),
             "edited" => ("edited comment on", EmbedColors.IssueCommentEdited),
             "deleted" => ("deleted comment on", EmbedColors.IssueCommentDeleted),
+            "pinned" => ("pinned comment on", EmbedColors.IssueCommentPinned),
+            "unpinned" => ("unpinned comment on", EmbedColors.IssueCommentUnpinned),
             _ => (action, EmbedColors.Unknown),
         };
 
         var title = $"{sender.Login} {titleVerb} {issueType} #{issue.Number}: {issue.Title}";
 
         IssueCommentEventChanges? changes = (Event as IssueCommentEditedEvent)?.Changes;
-        var body = BuildDescription(action, comment, changes);
+        var isPinChange = action is "pinned" or "unpinned";
+        var body = isPinChange ? null : BuildDescription(action, comment, changes);
 
-        // @mention the issue author (excluding the sender); deleted comments do not mention.
-        var mentions = SuppressesMentions(action)
+        // @mention the issue author (excluding the sender); deleted comments and pin changes (not new content) do not mention.
+        var mentions = SuppressesMentions(action) || isPinChange
             ? string.Empty
             : await GetUsersMentionsAsync(
                 sender.Id,
@@ -81,7 +84,7 @@ public sealed class IssueCommentAction(
             url: Uri.TryCreate(comment.HtmlUrl, UriKind.Absolute, out Uri? commentUrl) ? commentUrl : null,
             author: author);
 
-        var key = $"{repo.FullName}-issue-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}";
+        var key = $"{repo.FullName}-issue-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}{(isPinChange ? "-pin" : string.Empty)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 
