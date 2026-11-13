@@ -93,7 +93,12 @@ public sealed class PullRequestAction(
             return;
         }
 
-        OctokitPR pr = Event.PullRequest;
+        if (Event.PullRequest is not { Head: not null, Base: not null } pr)
+        {
+            Logger.LogWarning("pull_request payload is missing pull_request or pull_request.head or pull_request.base; skipping notification.");
+            return;
+        }
+
         // Use an explicit default rather than an empty string when missing, to keep the notification title and cache key unique.
         var action = Event.Action ?? "unknown";
 

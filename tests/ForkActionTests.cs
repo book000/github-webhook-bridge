@@ -36,6 +36,24 @@ public class ForkActionTests
         $$"""{"repository":{{TestFixtures.RepoJson("original/repo","https://github.com/original/repo")}},"forkee":{{TestFixtures.RepoJson("forker/repo","https://github.com/forker/repo")}},"sender":{{TestFixtures.UserJson("forker",1)}}}""",
         OctokitJsonOptions.Value)!;
 
+    /// <summary>A payload without the forkee object is skipped with a warning instead of throwing.</summary>
+    [Fact]
+    public async Task RunAsyncMissingForkeeSendsNothingAndWarns()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+
+        ForkAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<ForkAction>(logs).Object,
+            _webhookUri, "fork", MakeEvent() with { Forkee = null! });
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "fork payload is missing forkee; skipping notification.");
+    }
+
     /// <summary>The title contains the source and forkee repository names and the sender login.</summary>
     [Fact]
     public async Task RunAsyncTitleContainsSourceForkeeAndSender()

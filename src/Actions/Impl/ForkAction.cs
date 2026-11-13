@@ -30,6 +30,12 @@ public sealed class ForkAction(
             return;
         }
 
+        if (Event.Forkee is not { } forkee)
+        {
+            Logger.LogWarning("fork payload is missing forkee; skipping notification.");
+            return;
+        }
+
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
             Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
@@ -38,8 +44,8 @@ public sealed class ForkAction(
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: EmbedColors.Fork,
-            title: $"Forked {repo.FullName} by {sender.Login} to {Event.Forkee.FullName}",
-            url: Uri.TryCreate(Event.Forkee.HtmlUrl, UriKind.Absolute, out Uri? forkeeUrl) ? forkeeUrl : null,
+            title: $"Forked {repo.FullName} by {sender.Login} to {forkee.FullName}",
+            url: Uri.TryCreate(forkee.HtmlUrl, UriKind.Absolute, out Uri? forkeeUrl) ? forkeeUrl : null,
             author: author);
 
         var key = $"{repo.FullName}-fork-{sender.Login}";

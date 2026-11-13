@@ -6,8 +6,6 @@ using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Octokit.Webhooks;
 using Octokit.Webhooks.Events;
-using Octokit.Webhooks.Models;
-using OctokitReview = Octokit.Webhooks.Models.PullRequestReviewEvent.Review;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
@@ -27,12 +25,15 @@ public sealed class PullRequestReviewAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        OctokitReview review = Event.Review;
-        SimplePullRequest pr = Event.PullRequest;
-
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("pull_request_review payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.Review is not { } review || Event.PullRequest is not { } pr)
+        {
+            Logger.LogWarning("pull_request_review payload is missing review or pull_request; skipping notification.");
             return;
         }
 

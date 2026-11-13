@@ -28,12 +28,15 @@ public sealed class IssueCommentAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        Issue issue = Event.Issue;
-        IssueComment comment = Event.Comment;
-
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("issue_comment payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.Issue is not { } issue || Event.Comment is not { } comment)
+        {
+            Logger.LogWarning("issue_comment payload is missing issue or comment; skipping notification.");
             return;
         }
 
