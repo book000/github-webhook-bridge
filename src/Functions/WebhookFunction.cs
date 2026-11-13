@@ -120,7 +120,7 @@ public class WebhookFunction(
             : _config["DISABLED_EVENTS"];
         if (!string.IsNullOrEmpty(disabledEvents))
         {
-            var disabledEventNames = disabledEvents.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            var disabledEventNames = disabledEvents.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (disabledEventNames.Contains(eventName, StringComparer.OrdinalIgnoreCase))
                 return await JsonResponseHelper.CreateAsync(req, HttpStatusCode.Accepted, "Disabled event").ConfigureAwait(false);
         }

@@ -62,6 +62,45 @@ public class BaseActionTests
     }
 
     [Fact]
+    public async Task SendMessageAsync_CacheReadFails_StillSendsANewMessage()
+    {
+        (SendingAction action, Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache) = Create();
+        cache.Setup(c => c.GetAsync(_webhookUri, "key")).ThrowsAsync(new InvalidOperationException("Table Storage unavailable"));
+        discord.Setup(d => d.SendMessageAsync(_webhookUri, It.IsAny<DiscordMessage>())).ReturnsAsync("new-id");
+
+        await action.RunAsync();
+
+        discord.Verify(d => d.EditMessageAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<DiscordMessage>()), Times.Never);
+        discord.Verify(d => d.SendMessageAsync(_webhookUri, It.IsAny<DiscordMessage>()), Times.Once);
+        cache.Verify(c => c.SetAsync(_webhookUri, "key", "new-id"), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_SuccessfulEdit_RefreshesTheCacheEntryWithoutSending()
+    {
+        (SendingAction action, Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache) = Create();
+
+        await action.RunAsync();
+
+        discord.Verify(d => d.EditMessageAsync(_webhookUri, "existing-id", It.IsAny<DiscordMessage>()), Times.Once);
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+        cache.Verify(c => c.SetAsync(_webhookUri, "key", "existing-id"), Times.Once);
+        cache.Verify(c => c.DeleteAsync(It.IsAny<Uri>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_CacheRefreshFailsAfterEdit_DoesNotSendADuplicate()
+    {
+        (SendingAction action, Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache) = Create();
+        cache.Setup(c => c.SetAsync(_webhookUri, "key", "existing-id")).ThrowsAsync(new InvalidOperationException("Table Storage unavailable"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(action.RunAsync);
+
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+        cache.Verify(c => c.DeleteAsync(It.IsAny<Uri>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SendMessageAsync_OtherEditFailure_FallsBackToSendingANewMessage()
     {
         (SendingAction action, Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache) = Create();

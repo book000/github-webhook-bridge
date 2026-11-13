@@ -404,6 +404,41 @@ public class WebhookFunctionTests
         Assert.Equal(HttpStatusCode.Accepted, result.StatusCode);
     }
 
+    /// <summary>Whitespace and letter case around names in ?disabled-events= are ignored.</summary>
+    [Fact]
+    public async Task RunDisabledEventViaQueryIgnoresWhitespaceAndCase()
+    {
+        Mock<IWebhookQueue> queue = NewQueue();
+        WebhookFunction fn = CreateFunction(queueMock: queue);
+        HttpRequestData req = BuildRequest(
+            """{"sender":{"id":1,"login":"u"}}""",
+            TestSecret,
+            "issues",
+            disabledEvents: "push, Issues ");
+
+        HttpResponseData result = await fn.RunAsync(req);
+
+        Assert.Equal(HttpStatusCode.Accepted, result.StatusCode);
+        VerifyNothingEnqueued(queue);
+    }
+
+    /// <summary>Whitespace and letter case around names in DISABLED_EVENTS are ignored.</summary>
+    [Fact]
+    public async Task RunDisabledEventViaConfigIgnoresWhitespaceAndCase()
+    {
+        Mock<IWebhookQueue> queue = NewQueue();
+        WebhookFunction fn = CreateFunction(queueMock: queue, disabledEventsConfig: " push , Issues ");
+        HttpRequestData req = BuildRequest(
+            """{"sender":{"id":1,"login":"u"}}""",
+            TestSecret,
+            "issues");
+
+        HttpResponseData result = await fn.RunAsync(req);
+
+        Assert.Equal(HttpStatusCode.Accepted, result.StatusCode);
+        VerifyNothingEnqueued(queue);
+    }
+
     // ---- Mute tests ----
 
     /// <summary>A muted event on an unregistered event name still returns 406, not the muted acknowledgement.</summary>
