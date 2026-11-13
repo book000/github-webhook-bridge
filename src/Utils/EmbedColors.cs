@@ -185,6 +185,17 @@ public static class EmbedColors
     /// <summary>Color for a repository made public (green)</summary>
     public const int Public = 0x2ecc71;
 
+    // DiscussionComment
+
+    /// <summary>Color for a discussion comment created (blue)</summary>
+    public const int DiscussionCommentCreated = 0x3498db;
+
+    /// <summary>Color for a discussion comment edited (blue)</summary>
+    public const int DiscussionCommentEdited = 0x3498db;
+
+    /// <summary>Color for a discussion comment deleted (red)</summary>
+    public const int DiscussionCommentDeleted = 0xe74c3c;
+
     // Discussion
 
     /// <summary>Color for a discussion created (green)</summary>

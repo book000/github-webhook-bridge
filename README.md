@@ -81,7 +81,7 @@ Endpoint: `http://localhost:7071/`
 
 ## Supported events
 
-### Implemented (13 types)
+### Implemented (14 types)
 
 | Event | Description |
 |---------|------|
@@ -94,6 +94,7 @@ Endpoint: `http://localhost:7071/`
 | `issues` | Issue operations |
 | `issue_comment` | Issue / PR comment |
 | `discussion` | Discussion |
+| `discussion_comment` | Discussion comment |
 | `fork` | Fork |
 | `public` | Repository made public |
 | `star` | Star |
