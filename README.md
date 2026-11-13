@@ -38,7 +38,7 @@ Set these in `src/local.settings.json` (register them as application settings in
 | `GITHUB_WEBHOOK_SECRET` | ✅ | HMAC-SHA256 signature verification secret |
 | `AzureWebJobsStorage` | ✅ | Azure Storage connection string (use `UseDevelopmentStorage=true` locally) |
 | `DISCORD_WEBHOOK_URL` | ✅ unless every request sets `?url=` | Default destination Discord webhook URL, used when `?url=` is not specified (a request without `?url=` fails when this is unset) |
-| `DISABLED_EVENTS` | — | Comma-separated event names to disable; can also be overridden via the `?disabled-events=` query parameter |
+| `DISABLED_EVENTS` | — | Comma-separated event names to disable (case-insensitive, whitespace around names is ignored); can also be overridden via the `?disabled-events=` query parameter |
 | `MUTES_FILE_PATH` | — | Local file path for mute rules (default `data/mutes.json`, created as `[]` if missing) |
 | `MUTES_FILE_URL` | — | HTTPS URL for mute rules |
 | `MUTES_BLOB` | — | Blob path for mute rules, in the form `container/path/to/file.json` (read with `AzureWebJobsStorage`) |
@@ -77,7 +77,7 @@ Endpoint: `http://localhost:7071/`
 | Parameter | Description |
 |-----------|------|
 | `url` | Destination Discord webhook URL (only URLs starting with `https://discord.com/api/webhooks/` or `https://discordapp.com/api/webhooks/` are allowed) |
-| `disabled-events` | Event names to disable for this request only (comma-separated) |
+| `disabled-events` | Event names to disable for this request only (comma-separated, case-insensitive, whitespace around names is ignored) |
 
 ## Supported events
 
@@ -124,7 +124,18 @@ Notifications can be filtered per user. Rules are defined as a JSON array and sp
 | `exclude` | Mute everything except the events/actions listed in `events` |
 | `all` | Mute all notifications |
 
-If `actions` is omitted, all actions of that event are targeted.
+If `actions` is omitted, all actions of that event are targeted: for `include` the event is muted for every action, and for `exclude` the event is exempted from muting for every action.
+
+Event names and actions are matched case-insensitively, and whitespace around them is ignored.
+
+If several records share the same `userId`, only the first one is applied and a Warning is logged for each later one.
+
+Malformed records do not fail webhook handling.
+They are repaired or dropped when the rules are loaded, and a Warning is logged for each:
+
+- A `null` entry in the rule array, or an event entry without an event name, is dropped.
+- A record without `events` behaves like `"events": []`, so `include` mutes nothing and `exclude` mutes everything.
+- Blank entries in `actions` are dropped.
 
 ## GitHub→Discord user map
 
