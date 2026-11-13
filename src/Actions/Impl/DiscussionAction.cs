@@ -87,13 +87,11 @@ public sealed class DiscussionAction(
         if (Event.Action == "answered" && answer is not null)
         {
             var answerBody = answer.Body ?? string.Empty;
-            description = answerBody.Length > 500 ? $"{answerBody[..500]}..." : answerBody;
+            description = TextHelper.Truncate(answerBody, 500);
         }
         else if (!string.IsNullOrEmpty(discussion.Body) && Event.Action is "created" or "edited")
         {
-            description = discussion.Body.Length > 500
-                ? $"{discussion.Body[..500]}..."
-                : discussion.Body;
+            description = TextHelper.Truncate(discussion.Body, 500);
         }
 
         var author = new DiscordEmbedAuthor(

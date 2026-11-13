@@ -51,7 +51,7 @@ public sealed class PullRequestReviewAction(
         var title = $"{sender.Login} {titleVerb} PR #{pr.Number}: {pr.Title}";
 
         var body = review.Body is not null && review.Body.Length > 0
-            ? (review.Body.Length > 500 ? $"{review.Body[..500]}..." : review.Body)
+            ? TextHelper.Truncate(review.Body, 500)
             : null;
 
         // @mention the PR author (excluded when the sender is reviewing their own PR); dismissed reviews do not mention.

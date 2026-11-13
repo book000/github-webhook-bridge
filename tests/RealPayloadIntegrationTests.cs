@@ -61,7 +61,7 @@ public class RealPayloadIntegrationTests
         { "discussion", "discussion.category_changed.json", "discussion.category.name" },
         { "issues", "issues.labeled.json", "label.name" },
         { "pull_request", "pull_request.review_requested.json", "requested_reviewer.login" },
-        { "pull_request", "pull_request.edited.json", "changes.title.from" },
+        { "pull_request", "pull_request.edited.json", "changes.body.from" },
     };
 
     /// <summary>

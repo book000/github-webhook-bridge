@@ -116,6 +116,9 @@ public sealed class IssuesAction(
             new("State", issue.State?.StringValue ?? "unknown", true),
         };
 
+        if (action == "closed" && !string.IsNullOrEmpty(issue.StateReason))
+            fields.Add(new("Reason", issue.StateReason.Replace('_', ' '), true));
+
         if (label is not null)
             fields.Add(new("Label", label.Name, true));
 
@@ -158,7 +161,7 @@ public sealed class IssuesAction(
         }
 
         return issue.Body is not null && issue.Body.Length > 0
-            ? (issue.Body.Length > 500 ? $"{issue.Body[..500]}..." : issue.Body)
+            ? TextHelper.Truncate(issue.Body, 500)
             : null;
     }
 

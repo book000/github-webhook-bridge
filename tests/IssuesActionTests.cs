@@ -42,6 +42,7 @@ public class IssuesActionTests
         string? changedBodyFrom = null,
         string labelsJson = "[]",
         string assigneesJson = "[]",
+        string? stateReason = null,
         string? typeName = null)
     {
         var typeJson = typeName is not null
@@ -55,7 +56,7 @@ public class IssuesActionTests
         var changesJson = changeFields.Count > 0 ? ",\"changes\":{" + string.Join(",", changeFields) + "}" : string.Empty;
 
         return JsonSerializer.Deserialize<IssuesEvent>(
-            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7, "Fix bug", action == "closed" ? "closed" : "open", body: issueBody.Length > 0 ? issueBody : null, userLogin: "opener", userId: 1, labelsJson: labelsJson, assigneesJson: assigneesJson)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender", 2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin, 3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}{{changesJson}}{{typeJson}}}""",
+            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7, "Fix bug", action == "closed" ? "closed" : "open", body: issueBody.Length > 0 ? issueBody : null, userLogin: "opener", userId: 1, labelsJson: labelsJson, assigneesJson: assigneesJson, stateReason: stateReason)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender", 2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin, 3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}{{changesJson}}{{typeJson}}}""",
             OctokitJsonOptions.Value)!;
     }
 
@@ -195,6 +196,37 @@ public class IssuesActionTests
         Assert.Equal("bug", Assert.Single(fields, f => f.Name == "Label").Value);
     }
 
+    /// <summary>A closed event with a state_reason shows the reason with underscores replaced by spaces.</summary>
+    [Theory]
+    [InlineData("not_planned", "not planned")]
+    [InlineData("completed", "completed")]
+    [InlineData("duplicate", "duplicate")]
+    public async Task RunAsyncClosedWithStateReasonShowsReasonField(string stateReason, string expected)
+    {
+        IReadOnlyList<DiscordEmbedField> fields = await RunAndCaptureFieldsAsync(MakeEvent("closed", stateReason: stateReason));
+
+        Assert.Equal(expected, Assert.Single(fields, f => f.Name == "Reason").Value);
+        Assert.Equal("closed", Assert.Single(fields, f => f.Name == "State").Value);
+    }
+
+    /// <summary>A closed event without a state_reason has no Reason field.</summary>
+    [Fact]
+    public async Task RunAsyncClosedWithoutStateReasonHasNoReasonField()
+    {
+        IReadOnlyList<DiscordEmbedField> fields = await RunAndCaptureFieldsAsync(MakeEvent("closed"));
+
+        Assert.DoesNotContain(fields, f => f.Name == "Reason");
+    }
+
+    /// <summary>A non-closed action never shows a Reason field, even when the payload carries a state_reason.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithStateReasonHasNoReasonField()
+    {
+        IReadOnlyList<DiscordEmbedField> fields = await RunAndCaptureFieldsAsync(MakeEvent("edited", stateReason: "not_planned"));
+
+        Assert.DoesNotContain(fields, f => f.Name == "Reason");
+    }
+
     /// <summary>The labeled event includes the label name in an embed field.</summary>
     [Fact]
     public async Task RunAsyncLabeledIncludesLabelField()
@@ -267,6 +299,27 @@ public class IssuesActionTests
             d => d.SendMessageAsync(
                 It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m => m.Embeds![0].Description!.Contains("..."))),
+            Times.Once);
+    }
+
+    /// <summary>An emoji straddling the 500-unit boundary is dropped whole instead of leaving a lone surrogate.</summary>
+    [Fact]
+    public async Task RunAsyncBodyTruncationDoesNotSplitSurrogatePair()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        var body = new string('a', 499) + "😀" + new string('b', 50);
+
+        IssuesAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("opened", issueBody: body));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => m.Embeds![0].Description == new string('a', 499) + "...")),
             Times.Once);
     }
 

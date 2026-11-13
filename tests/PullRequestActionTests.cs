@@ -1,9 +1,11 @@
 using System.Text.Json;
+using GitHubWebhookBridge.Actions;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
 using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Octokit.Webhooks.Events;
@@ -14,42 +16,54 @@ public class PullRequestActionTests
 {
     private static readonly Uri _webhookUri = new("https://discord.test/webhook");
 
-    private static PullRequestEvent MakePrEvent(
+    private static string MakePrJson(
         string action,
         bool merged = false,
         bool draft = false,
         string? requestedReviewerLogin = null,
         long? requestedReviewerId = null,
+        string title = "Add awesome feature",
+        string body = "This PR adds an awesome feature.",
+        string baseRef = "main",
+        string? previousTitle = null,
+        string? changedBodyFrom = null,
+        string? changesJsonOverride = null,
         string? requestedTeamName = null,
         string labelsJson = "[]",
         string assigneesJson = "[]",
         string requestedReviewersJson = "[]",
         string requestedTeamsJson = "[]",
-        string? previousTitle = null,
-        (long Position, long Size)? stack = null) =>
-        JsonSerializer.Deserialize<PullRequestEvent>(
-            $$"""
+        (long Position, long Size)? stack = null)
+    {
+        var changeFields = new List<string>();
+        if (previousTitle is not null)
+            changeFields.Add($"\"title\":{{\"from\":{JsonSerializer.Serialize(previousTitle)}}}");
+        if (changedBodyFrom is not null)
+            changeFields.Add($"\"body\":{{\"from\":{JsonSerializer.Serialize(changedBodyFrom)}}}");
+        if (changesJsonOverride is not null)
+            changeFields.Add(changesJsonOverride);
+        var changesJson = changeFields.Count > 0 ? ",\"changes\":{" + string.Join(",", changeFields) + "}" : string.Empty;
+
+        return $$"""
             {
                 "action":"{{action}}",
                 "number":42,
                 "pull_request":{{TestFixtures.PullRequestJson(
-                    number: 42, title: "Add awesome feature",
+                    number: 42, title: JsonEscape(title),
                     htmlUrl: "https://github.com/test/repo/pull/42",
-                    body: "This PR adds an awesome feature.",
+                    body: JsonEscape(body),
                     userLogin: "pr-author", userId: 100,
                     draft: draft, merged: merged,
-                    headRef: "feature/my-branch", baseRef: "main",
+                    headRef: "feature/my-branch", baseRef: baseRef,
                     labelsJson: labelsJson, assigneesJson: assigneesJson,
                     requestedReviewersJson: requestedReviewersJson,
                     requestedTeamsJson: requestedTeamsJson)}},
                 "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
                 "sender":{{TestFixtures.UserJson("sender",200,"https://github.com/sender")}}
-                {{(previousTitle is not null
-                    ? $",\"changes\":{{\"title\":{{\"from\":\"{previousTitle}\"}}}}"
-                    : string.Empty)}}
                 {{(requestedReviewerLogin is not null
                     ? $",\"requested_reviewer\":{TestFixtures.UserJson(requestedReviewerLogin, requestedReviewerId ?? 300)}"
                     : string.Empty)}}
+                {{changesJson}}
                 {{(requestedTeamName is not null
                     ? $",\"requested_team\":{TestFixtures.TeamJson(requestedTeamName)}"
                     : string.Empty)}}
@@ -57,8 +71,75 @@ public class PullRequestActionTests
                     ? $",\"stack\":{{\"base\":{{\"ref\":\"main\",\"sha\":\"abc\"}},\"size\":{s.Size},\"position\":{s.Position},\"id\":1,\"number\":42}}"
                     : string.Empty)}}
             }
-            """,
+            """;
+    }
+
+    /// <summary>Escapes text for embedding inside a JSON string literal produced by TestFixtures.</summary>
+    private static string JsonEscape(string text) => JsonSerializer.Serialize(text)[1..^1];
+
+    private static PullRequestEvent MakePrEvent(
+        string action,
+        bool merged = false,
+        bool draft = false,
+        string? requestedReviewerLogin = null,
+        long? requestedReviewerId = null,
+        string title = "Add awesome feature",
+        string body = "This PR adds an awesome feature.",
+        string? previousTitle = null,
+        string? changedBodyFrom = null,
+        string? requestedTeamName = null,
+        string labelsJson = "[]",
+        string assigneesJson = "[]",
+        string requestedReviewersJson = "[]",
+        string requestedTeamsJson = "[]",
+        (long Position, long Size)? stack = null) =>
+        JsonSerializer.Deserialize<PullRequestEvent>(
+            MakePrJson(
+                action, merged, draft, requestedReviewerLogin, requestedReviewerId,
+                title: title, body: body,
+                previousTitle: previousTitle, changedBodyFrom: changedBodyFrom,
+                requestedTeamName: requestedTeamName, labelsJson: labelsJson,
+                assigneesJson: assigneesJson, requestedReviewersJson: requestedReviewersJson,
+                requestedTeamsJson: requestedTeamsJson, stack: stack),
             OctokitJsonOptions.Value)!;
+
+    private static async Task<DiscordEmbed> RunAndCaptureEmbedAsync(IAction action, Mock<IDiscordClient> discord)
+    {
+        DiscordEmbed? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg.Embeds![0])
+               .ReturnsAsync("msg-id");
+
+        await action.RunAsync();
+
+        return captured!;
+    }
+
+    private static async Task<DiscordEmbed> RunEditedAsync(PullRequestEvent prEvent)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        PullRequestAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestAction>>(),
+            _webhookUri, "pull_request", prEvent);
+
+        return await RunAndCaptureEmbedAsync(action, discord);
+    }
+
+    private static async Task<DiscordEmbed> RunThroughFactoryAsync(string rawJson)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(discord.Object);
+        services.AddSingleton(cache.Object);
+        services.AddSingleton(userMap.Object);
+        var factory = new ActionFactory(services.BuildServiceProvider());
+
+        IAction action = factory.GetAction("pull_request", rawJson, _webhookUri);
+
+        return await RunAndCaptureEmbedAsync(action, discord);
+    }
 
     private static (Mock<IDiscordClient>, Mock<IMessageCacheService>, Mock<IGitHubUserMapManager>) CreateMocks()
     {
@@ -408,6 +489,121 @@ public class PullRequestActionTests
                 It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m => m.Content == null || m.Content == string.Empty)),
             Times.Once);
+    }
+
+    /// <summary>An edited event with a body change shows a body diff.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithBodyChangeShowsBodyDiff()
+    {
+        DiscordEmbed embed = await RunEditedAsync(
+            MakePrEvent("edited", body: "new body line", changedBodyFrom: "old body line"));
+
+        Assert.StartsWith("```diff\n", embed.Description);
+        Assert.Contains("--- body", embed.Description);
+        Assert.Contains("- old body line", embed.Description);
+        Assert.Contains("+ new body line", embed.Description);
+    }
+
+    /// <summary>When body and title both change, the body diff wins, as for issues.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithBodyAndTitleChangeShowsBodyDiff()
+    {
+        DiscordEmbed embed = await RunEditedAsync(
+            MakePrEvent("edited", body: "new", changedBodyFrom: "old", previousTitle: "Old title"));
+
+        Assert.Contains("--- body", embed.Description);
+        Assert.DoesNotContain("--- title", embed.Description);
+    }
+
+    /// <summary>An edited event with only a title change shows a title diff.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithTitleChangeShowsTitleDiff()
+    {
+        DiscordEmbed embed = await RunEditedAsync(MakePrEvent("edited", previousTitle: "Old title"));
+
+        Assert.StartsWith("```diff\n", embed.Description);
+        Assert.Contains("--- title", embed.Description);
+        Assert.Contains("- Old title", embed.Description);
+        Assert.Contains("+ Add awesome feature", embed.Description);
+    }
+
+    /// <summary>A triple backtick in a title cannot close the diff code fence early.</summary>
+    [Fact]
+    public async Task RunAsyncEditedTitleWithBackticksStaysInsideFence()
+    {
+        DiscordEmbed embed = await RunEditedAsync(
+            MakePrEvent("edited", title: "new ``` title", previousTitle: "old ``` title"));
+
+        var description = embed.Description!;
+        Assert.StartsWith("```diff\n", description);
+        Assert.EndsWith("```", description);
+        var inner = description["```diff\n".Length..^3];
+        Assert.DoesNotContain("```", inner, StringComparison.Ordinal);
+    }
+
+    /// <summary>A very long title diff is truncated to fit the Discord embed description limit.</summary>
+    [Fact]
+    public async Task RunAsyncEditedLongTitleDiffIsTruncated()
+    {
+        DiscordEmbed embed = await RunEditedAsync(
+            MakePrEvent("edited", title: new string('n', 6000), previousTitle: new string('o', 6000)));
+
+        Assert.True(embed.Description!.Length <= 4096, $"Description length was {embed.Description.Length}");
+    }
+
+    /// <summary>A base branch change in the raw payload is shown as a Base changed field.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithBaseChangeShowsBaseChangedField()
+    {
+        DiscordEmbed embed = await RunThroughFactoryAsync(MakePrJson(
+            "edited",
+            baseRef: "develop",
+            changesJsonOverride: """
+                "base":{"ref":{"from":"main"},"sha":{"from":"x"}}
+                """));
+
+        DiscordEmbedField field = Assert.Single(embed.Fields!, f => f.Name == "Base changed");
+        Assert.Equal("`main` → `develop`", field.Value);
+    }
+
+    /// <summary>An edited event without changes.base has no Base changed field.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithoutBaseChangeHasNoBaseChangedField()
+    {
+        DiscordEmbed embed = await RunThroughFactoryAsync(MakePrJson("edited", previousTitle: "Old title"));
+
+        Assert.DoesNotContain(embed.Fields!, f => f.Name == "Base changed");
+    }
+
+    /// <summary>A malformed changes.base shape never throws and yields no Base changed field.</summary>
+    [Theory]
+    [InlineData("""
+        "base":null
+        """)]
+    [InlineData("""
+        "base":{"ref":null}
+        """)]
+    [InlineData("""
+        "base":{"ref":{"from":null}}
+        """)]
+    [InlineData("""
+        "base":{"ref":"x"}
+        """)]
+    [InlineData("""
+        "base":{"ref":{"from":1}}
+        """)]
+    [InlineData("""
+        "base":"x"
+        """)]
+    [InlineData("""
+        "base":{"ref":{"from":""}}
+        """)]
+    public async Task RunAsyncEditedWithMalformedBaseChangeHasNoBaseChangedField(string baseChangeJson)
+    {
+        DiscordEmbed embed = await RunThroughFactoryAsync(MakePrJson(
+            "edited", previousTitle: "Old title", changesJsonOverride: baseChangeJson));
+
+        Assert.DoesNotContain(embed.Fields!, f => f.Name == "Base changed");
     }
 
     /// <summary>The stacked event has the stacked title and color, and shows the stack position.</summary>

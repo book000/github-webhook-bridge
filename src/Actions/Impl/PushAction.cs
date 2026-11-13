@@ -75,11 +75,17 @@ public sealed class PushAction(
             Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
             IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
+        Uri? compareUrl = Uri.TryCreate(Event.Compare, UriKind.Absolute, out Uri? parsed)
+            && parsed.Scheme is "http" or "https"
+            ? parsed
+            : null;
+
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: EmbedColors.Push,
             title: $"[{repo.FullName}:{shortRef}] {notice.Summary}",
             description: notice.Description,
+            url: compareUrl,
             author: author);
 
         var key = $"{repo.FullName}:{Event.Ref}:{Event.After}{notice.KeySuffix}";
@@ -98,9 +104,7 @@ public sealed class PushAction(
             var firstLine = c.Message.Contains('\n')
                 ? c.Message.Split('\n', 2)[0]
                 : c.Message;
-            var shortMessage = firstLine.Length > 50
-                ? $"{firstLine[..50]}..."
-                : firstLine;
+            var shortMessage = TextHelper.Truncate(firstLine, 50);
             return $"[`{shortSha}`]({c.Url}) {shortMessage} - {c.Author.Name}";
         }).ToList();
 
