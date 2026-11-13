@@ -138,7 +138,9 @@ Mapping a GitHub user ID (numeric) to a Discord user ID lets notifications gener
 
 ### Retrieval failures
 
-If the mute rules or the user map cannot be retrieved (HTTP error such as 429 or 5xx, timeout, Blob or I/O error, malformed JSON), the service keeps handling webhooks with empty data: no mute rules are applied and no mentions are generated. The failure is logged as a Warning (`... could not load its configuration from ...`), and retrieval is not attempted again for 5 minutes. Once a retrieval succeeds, the loaded data is used for the lifetime of the process.
+The mute rules and the user map are re-read from their source (Blob, URL or file) at most every 5 minutes, checked when the next webhook arrives, so edits take effect within about 5 minutes without restarting the Function App. A webhook that arrives while a refresh is running does not wait and uses the previously loaded data. A file source that was deleted is re-created empty on the next refresh.
+
+If the mute rules or the user map cannot be retrieved (HTTP error such as 429 or 5xx, timeout, Blob or I/O error, malformed JSON or a `null` document), the failure is logged as a Warning (`... could not load its configuration from ...`) and retrieval is not attempted again for 5 minutes. Before the first successful retrieval the service keeps handling webhooks with empty data: no mute rules are applied and no mentions are generated. After a successful retrieval, a failed refresh keeps the previously loaded data.
 
 Misconfiguration still fails fast: a non-HTTPS URL, a Blob path without a container, or a missing `AzureWebJobsStorage` throws instead of degrading.
 
