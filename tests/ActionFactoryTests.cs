@@ -74,13 +74,13 @@ public class ActionFactoryTests
         Assert.Null(ex);
     }
 
-    /// <summary>Task 8 complete: verifies that all 12 actions are registered.</summary>
+    /// <summary>Task 8 complete: verifies that all 13 actions are registered.</summary>
     [Fact]
-    public void Registry_ContainsTwelveActions()
+    public void Registry_ContainsThirteenActions()
     {
         var factory = new ActionFactory(BuildServiceProvider());
 
-        Assert.Equal(12, factory.Registry.Count);
+        Assert.Equal(13, factory.Registry.Count);
     }
 
     /// <summary>Verifies that calling GetAction with a known event name returns the corresponding implementation class.</summary>
@@ -108,6 +108,12 @@ public class ActionFactoryTests
             "star",
             $$$"""{"action":"created","repository":{{{TestFixtures.RepoJson()}}},"sender":{{{TestFixtures.UserJson()}}}}""",
             typeof(StarAction)
+        ];
+        yield return
+        [
+            "secret_scanning_alert",
+            $$$"""{"action":"created","alert":{"number":1,"secret_type":"github_personal_access_token","resolution":null,"resolved_by":null,"resolved_at":null},"repository":{{{TestFixtures.RepoJson()}}},"sender":{{{TestFixtures.UserJson()}}}}""",
+            typeof(SecretScanningAlertAction)
         ];
     }
 
