@@ -116,10 +116,30 @@ public class PingActionTests
 
         await action.RunAsync();
 
-        // Verify the cache key is a composite of repository, sender, and hook type
+        // Verify the cache key is a composite of repository, sender, organization, hook type, and hook ID
         cache.Verify(
-            c => c.GetAsync(_webhookUri, "ping:owner/repo:user1:N/A:Repository"),
+            c => c.GetAsync(_webhookUri, "ping:owner/repo:user1:N/A:Repository:9999"),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsyncPingsFromDifferentHooksUseDifferentCacheKeys()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        foreach (var hookId in new long[] { 1, 2 })
+        {
+            PingAction action = new(
+                discord.Object, cache.Object, userMap.Object,
+                Mock.Of<ILogger<PingAction>>(),
+                _webhookUri, "ping",
+                MakePingEvent(hookId: hookId, repoFullName: "owner/repo", senderLogin: "user1", hookType: "Repository"));
+
+            await action.RunAsync();
+        }
+
+        cache.Verify(c => c.GetAsync(_webhookUri, "ping:owner/repo:user1:N/A:Repository:1"), Times.Once);
+        cache.Verify(c => c.GetAsync(_webhookUri, "ping:owner/repo:user1:N/A:Repository:2"), Times.Once);
     }
 
     [Fact]

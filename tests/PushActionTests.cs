@@ -17,13 +17,13 @@ public class PushActionTests
     private static string MakeCommitJson(string id, string message, string authorName = "octocat", string url = "https://github.com/test/repo/commit/abc") =>
         $$$"""{"id":"{{{id}}}","tree_id":"tree1","distinct":true,"message":"{{{message}}}","timestamp":"2024-01-01T00:00:00Z","url":"{{{url}}}","author":{"name":"{{{authorName}}}","email":"u@x.com","username":"{{{authorName}}}"},"committer":{"name":"{{{authorName}}}","email":"u@x.com","username":"{{{authorName}}}"},"added":[],"removed":[],"modified":[]}""";
 
-    private static PushEvent MakePushEvent(string[] commitJsons = null!)
+    private static PushEvent MakePushEvent(string[] commitJsons = null!, string after = "bbb")
     {
         var commitsJson = string.Join(",", commitJsons ?? [MakeCommitJson("abcdef1234567890", "feat: add new feature")]);
         var repoJson = TestFixtures.RepoJson("test/repo", "https://github.com/test/repo");
         var senderJson = TestFixtures.UserJson("octocat", 1, "https://github.com/octocat");
         return JsonSerializer.Deserialize<PushEvent>(
-            $$$"""{"ref":"refs/heads/main","before":"aaa","after":"bbb","compare":"https://github.com","commits":[{{{commitsJson}}}],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":"octocat@example.com"}}""",
+            $$$"""{"ref":"refs/heads/main","before":"aaa","after":"{{{after}}}","compare":"https://github.com","commits":[{{{commitsJson}}}],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":"octocat@example.com"}}""",
             OctokitJsonOptions.Value)!;
     }
 
@@ -41,6 +41,40 @@ public class PushActionTests
                .ReturnsAsync("msg-id");
 
         return (discord, cache, userMap);
+    }
+
+    [Fact]
+    public async Task RunAsyncCacheKeyContainsRefAndAfterSha()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        PushAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PushAction>>(),
+            _webhookUri, "push", MakePushEvent());
+
+        await action.RunAsync();
+
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo:refs/heads/main:bbb"), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsyncSeparatePushesToSameRefUseDifferentCacheKeys()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        foreach (var after in new[] { "bbb", "ccc" })
+        {
+            PushAction action = new(
+                discord.Object, cache.Object, userMap.Object,
+                Mock.Of<ILogger<PushAction>>(),
+                _webhookUri, "push", MakePushEvent(after: after));
+
+            await action.RunAsync();
+        }
+
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo:refs/heads/main:bbb"), Times.Once);
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo:refs/heads/main:ccc"), Times.Once);
     }
 
     [Fact]

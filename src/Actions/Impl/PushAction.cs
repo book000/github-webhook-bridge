@@ -56,7 +56,7 @@ public sealed class PushAction(
             description: description,
             author: author);
 
-        var key = $"{repo.FullName}:{Event.Ref}";
+        var key = $"{repo.FullName}:{Event.Ref}:{Event.After}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 

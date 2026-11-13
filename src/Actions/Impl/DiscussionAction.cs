@@ -99,7 +99,17 @@ public sealed class DiscussionAction(
             author: author,
             fields: fields);
 
-        var key = $"{repo.FullName}-discussion-{discussion.Number}";
+        var key = $"{repo.FullName}-discussion-{discussion.Number}-{GetKeySuffix(Event.Action ?? "unknown")}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
+
+    /// <summary>Maps an action to its cache key suffix; paired actions share one suffix so they edit the same message.</summary>
+    private static string GetKeySuffix(string action) => action switch
+    {
+        "pinned" or "unpinned" => "pinned",
+        "locked" or "unlocked" => "locked",
+        "answered" or "unanswered" => "answered",
+        "labeled" or "unlabeled" => "label",
+        _ => action,
+    };
 }

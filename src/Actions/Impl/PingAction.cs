@@ -40,7 +40,7 @@ public sealed class PingAction(
             ]);
 
         var hookType = Event.Hook?.Type.StringValue ?? "N/A";
-        var cacheKey = $"ping:{Event.Repository?.FullName ?? "N/A"}:{Event.Sender?.Login ?? "N/A"}:{Event.Organization?.Login ?? "N/A"}:{hookType}";
+        var cacheKey = $"ping:{Event.Repository?.FullName ?? "N/A"}:{Event.Sender?.Login ?? "N/A"}:{Event.Organization?.Login ?? "N/A"}:{hookType}:{Event.HookId.ToString(CultureInfo.InvariantCulture)}";
         await SendMessageAsync(cacheKey, new DiscordMessage(Embeds: [embed]));
     }
 }
