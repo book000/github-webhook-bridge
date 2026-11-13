@@ -78,7 +78,7 @@ public sealed class PushAction(
             description: notice.Description,
             author: author);
 
-        var key = $"{repo.FullName}:{Event.Ref}{notice.KeySuffix}";
+        var key = $"{repo.FullName}:{Event.Ref}:{Event.After}{notice.KeySuffix}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 

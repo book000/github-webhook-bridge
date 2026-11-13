@@ -53,6 +53,8 @@ public class DiscussionActionTests
                 {{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : string.Empty)}}
                 {{(answerBody is not null ? $",\"answer\":{AnswerJson(999, answerBody)}" : string.Empty)}}
                 {{(changedFromCategory is not null ? $",\"changes\":{{\"category\":{{\"from\":{CategoryJson(changedFromCategory)}}}}}" : string.Empty)}}
+                {{(action == "edited" ? ",\"changes\":{}" : string.Empty)}}
+                {{(action == "unanswered" ? $",\"old_answer\":{AnswerJson(999, "a")}" : string.Empty)}}
             }
             """,
             OctokitJsonOptions.Value)!;
@@ -123,7 +125,7 @@ public class DiscussionActionTests
             Times.Once);
     }
 
-    /// <summary>The cache key contains the discussion number.</summary>
+    /// <summary>The cache key contains the discussion number and the action suffix.</summary>
     [Fact]
     public async Task RunAsyncCacheKeyContainsDiscussionNumber()
     {
@@ -136,7 +138,53 @@ public class DiscussionActionTests
 
         await action.RunAsync();
 
-        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-discussion-5"), Times.Once);
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-discussion-5-created"), Times.Once);
+    }
+
+    private static async Task<string> RunAndCaptureKeyAsync(string action)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        string? captured = null;
+        cache.Setup(c => c.GetAsync(It.IsAny<Uri>(), It.IsAny<string>()))
+             .Callback<Uri, string>((_, key) => captured = key)
+             .ReturnsAsync((CachedMessage?)null);
+
+        DiscussionAction discussionAction = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionAction>>(),
+            _webhookUri, "discussion",
+            MakeEvent(action, labelName: "bug", answerBody: "a"));
+
+        await discussionAction.RunAsync();
+
+        return captured!;
+    }
+
+    /// <summary>Actions that carry different content use different cache keys.</summary>
+    [Theory]
+    [InlineData("created", "edited")]
+    [InlineData("created", "labeled")]
+    [InlineData("created", "pinned")]
+    [InlineData("created", "locked")]
+    public async Task RunAsyncUnrelatedActionsUseDifferentCacheKeys(string first, string second)
+    {
+        var firstKey = await RunAndCaptureKeyAsync(first);
+        var secondKey = await RunAndCaptureKeyAsync(second);
+
+        Assert.NotEqual(firstKey, secondKey);
+    }
+
+    /// <summary>Paired actions share one cache key and its exact value.</summary>
+    [Theory]
+    [InlineData("pinned", "unpinned", "test/repo-discussion-5-pinned")]
+    [InlineData("locked", "unlocked", "test/repo-discussion-5-locked")]
+    [InlineData("answered", "unanswered", "test/repo-discussion-5-answered")]
+    [InlineData("labeled", "unlabeled", "test/repo-discussion-5-label")]
+    public async Task RunAsyncPairedActionsShareCacheKey(string first, string second, string expectedKey)
+    {
+        Assert.Equal(expectedKey, await RunAndCaptureKeyAsync(first));
+        Assert.Equal(expectedKey, await RunAndCaptureKeyAsync(second));
     }
 
     /// <summary>The category_changed event shows the previous category (Changes.Category.From) as "From Category" and the current one (Discussion.Category) as "To Category", without a separate "Category" field.</summary>
