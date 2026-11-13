@@ -26,8 +26,13 @@ public sealed class PullRequestReviewThreadAction(
     public override async Task RunAsync()
     {
         // Event.Review maps to a "review" field that does not exist in the actual payload and is always null,
-        // so use AdditionalProperties["thread"].node_id, which holds the real data, as the thread identifier.
-        var threadNodeId = GetThreadNodeId();
+        // so read the real data from AdditionalProperties["thread"].
+        JsonElement? thread = GetThread();
+        var threadNodeId = GetThreadNodeId(thread);
+        JsonElement? firstComment = GetFirstComment(thread);
+        var path = GetString(firstComment, "path");
+        var body = GetString(firstComment, "body");
+        var commentHtmlUrl = GetString(firstComment, "html_url");
 
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
@@ -54,9 +59,13 @@ public sealed class PullRequestReviewThreadAction(
 
         var fields = new List<DiscordEmbedField>
         {
-            new("Thread ID", threadNodeId, false),
             new("Resolved", resolved ? "Yes" : "No", true),
         };
+
+        if (path is { Length: > 0 })
+        {
+            fields.Insert(0, new("File", path.Length > MaxPathLength ? $"{path[..MaxPathLength]}..." : path, false));
+        }
 
         // @mention the PR author (excluded when the sender is the PR author).
         var mentions = await GetUsersMentionsAsync(
@@ -69,11 +78,16 @@ public sealed class PullRequestReviewThreadAction(
             Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
             IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
+        Uri? embedUrl = Uri.TryCreate(commentHtmlUrl, UriKind.Absolute, out Uri? commentUrl)
+            ? commentUrl
+            : Uri.TryCreate(pr.HtmlUrl, UriKind.Absolute, out Uri? prUrl) ? prUrl : null;
+
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,
             color: color,
             title: title,
-            url: Uri.TryCreate(pr.HtmlUrl, UriKind.Absolute, out Uri? prUrl) ? prUrl : null,
+            description: body is { Length: > 0 } ? (body.Length > MaxBodyLength ? $"{body[..MaxBodyLength]}..." : body) : null,
+            url: embedUrl,
             author: author,
             fields: fields);
 
@@ -82,18 +96,24 @@ public sealed class PullRequestReviewThreadAction(
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 
+    private const int MaxBodyLength = 500;
+    private const int MaxPathLength = 1000;
+
+    /// <summary>Returns the "thread" object from AdditionalProperties, or null when absent or not an object.</summary>
+    private JsonElement? GetThread() =>
+        Event.AdditionalProperties is { } props
+        && props.TryGetValue("thread", out JsonElement thread)
+        && thread.ValueKind == JsonValueKind.Object
+            ? thread
+            : null;
+
     /// <summary>
-    /// Retrieves "thread.node_id" from AdditionalProperties.
+    /// Retrieves "thread.node_id".
     /// Rather than throwing on an unexpected payload shape, it logs a warning and returns a fallback value.
     /// </summary>
-    private string GetThreadNodeId()
+    private string GetThreadNodeId(JsonElement? thread)
     {
-        if (Event.AdditionalProperties is { } props
-            && props.TryGetValue("thread", out JsonElement thread)
-            && thread.ValueKind == JsonValueKind.Object
-            && thread.TryGetProperty("node_id", out JsonElement nodeId)
-            && nodeId.ValueKind == JsonValueKind.String
-            && nodeId.GetString() is { Length: > 0 } value)
+        if (GetString(thread, "node_id") is { Length: > 0 } value)
         {
             return value;
         }
@@ -101,4 +121,22 @@ public sealed class PullRequestReviewThreadAction(
         Logger.LogWarning("pull_request_review_thread payload is missing thread.node_id; falling back to \"unknown\".");
         return "unknown";
     }
+
+    /// <summary>Returns "thread.comments[0]", or null when absent.</summary>
+    private static JsonElement? GetFirstComment(JsonElement? thread) =>
+        thread is { } t
+        && t.TryGetProperty("comments", out JsonElement comments)
+        && comments.ValueKind == JsonValueKind.Array
+        && comments.GetArrayLength() > 0
+        && comments[0].ValueKind == JsonValueKind.Object
+            ? comments[0]
+            : null;
+
+    /// <summary>Returns a string property of <paramref name="element"/>, or null when absent or not a string.</summary>
+    private static string? GetString(JsonElement? element, string name) =>
+        element is { } e
+        && e.TryGetProperty(name, out JsonElement value)
+        && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
 }
