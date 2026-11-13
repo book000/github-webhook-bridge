@@ -118,6 +118,15 @@ public sealed class IssuesAction(
         if (milestone is not null)
             fields.Add(new("Milestone", milestone.Title, true));
 
+        if (action == "opened")
+        {
+            if (FormatList(issue.Labels?.Select(l => l.Name)) is { } labels)
+                fields.Add(new("Labels", labels, true));
+
+            if (FormatList(issue.Assignees?.Select(u => u.Login)) is { } assignees)
+                fields.Add(new("Assignees", assignees, true));
+        }
+
         return fields;
     }
 

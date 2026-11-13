@@ -28,7 +28,10 @@ public class RealPayloadIntegrationTests
         Path.GetDirectoryName(typeof(RealPayloadIntegrationTests).Assembly.Location)!,
         "RealPayloads");
 
-    /// <summary>X-GitHub-Event names and their corresponding real payload file names (for the 14 implemented events).</summary>
+    /// <summary>
+    /// X-GitHub-Event names and their corresponding real payload file names: one base action per implemented event (14)
+    /// plus action-specific subtypes that carry extra fields.
+    /// </summary>
     public static TheoryData<string, string> Fixtures => new()
     {
         { "discussion", "discussion.created.json" },
@@ -45,6 +48,20 @@ public class RealPayloadIntegrationTests
         { "push", "push.json" },
         { "secret_scanning_alert", "secret_scanning_alert.reopened.json" },
         { "star", "star.created.json" },
+        { "discussion_comment", "discussion_comment.edited.json" },
+        { "discussion", "discussion.category_changed.json" },
+        { "issues", "issues.labeled.json" },
+        { "pull_request", "pull_request.review_requested.json" },
+        { "pull_request", "pull_request.edited.json" },
+    };
+
+    /// <summary>Real payload fixtures with a dotted JSON path to a subtype-specific value that must reach the Discord message.</summary>
+    public static TheoryData<string, string, string> SubtypeFixtures => new()
+    {
+        { "discussion", "discussion.category_changed.json", "discussion.category.name" },
+        { "issues", "issues.labeled.json", "label.name" },
+        { "pull_request", "pull_request.review_requested.json", "requested_reviewer.login" },
+        { "pull_request", "pull_request.edited.json", "changes.body.from" },
     };
 
     /// <summary>
@@ -59,6 +76,58 @@ public class RealPayloadIntegrationTests
         using var doc = JsonDocument.Parse(rawJson);
         var expectedSender = doc.RootElement.GetProperty("sender").GetProperty("login").GetString()!;
 
+        DiscordMessage captured = await RunRealPayloadAsync(eventName, rawJson);
+
+        // sender.login is always emitted by every Action, either in the title or as the Embed Author name
+        // (repository.full_name may not be included in the Embed depending on the Action, so
+        // sender.login is used as a value that can be verified across all Actions).
+        var dump = Dump(captured);
+        Assert.Contains(expectedSender, dump, StringComparison.Ordinal);
+    }
+
+    /// <summary>Verifies that a value only present in the action-specific part of the real payload reaches the Discord message.</summary>
+    [Theory]
+    [MemberData(nameof(SubtypeFixtures))]
+    public async Task RunAsyncReflectsSubtypeSpecificFields(string eventName, string fileName, string jsonPath)
+    {
+        var rawJson = await File.ReadAllTextAsync(Path.Combine(PayloadsDir, fileName));
+        ArgumentNullException.ThrowIfNull(jsonPath);
+        using var doc = JsonDocument.Parse(rawJson);
+        var expected = ReadString(doc.RootElement, jsonPath);
+
+        DiscordMessage captured = await RunRealPayloadAsync(eventName, rawJson);
+
+        Assert.Contains(expected, Dump(captured), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A real discussion_comment edited payload reaches the action as a diff built from changes.body.from.
+    /// The upstream example has the same text before and after, so the exact added/removed lines are covered by DiscussionCommentActionTests.
+    /// </summary>
+    [Fact]
+    public async Task DiscussionCommentEditedRealPayloadShowsDiff()
+    {
+        var rawJson = await File.ReadAllTextAsync(Path.Combine(PayloadsDir, "discussion_comment.edited.json"));
+        using var doc = JsonDocument.Parse(rawJson);
+        var previousBody = ReadString(doc.RootElement, "changes.body.from");
+
+        DiscordMessage captured = await RunRealPayloadAsync("discussion_comment", rawJson);
+
+        var description = captured.Embeds![0].Description;
+        Assert.StartsWith("```diff\n", description, StringComparison.Ordinal);
+        Assert.Contains(previousBody, description, StringComparison.Ordinal);
+    }
+
+    private static string ReadString(JsonElement root, string dottedPath)
+    {
+        JsonElement current = root;
+        foreach (var segment in dottedPath.Split('.'))
+            current = current.GetProperty(segment);
+        return current.GetString()!;
+    }
+
+    private static async Task<DiscordMessage> RunRealPayloadAsync(string eventName, string rawJson)
+    {
         DiscordMessage? captured = null;
 
         Mock<IDiscordClient> discord = new();
@@ -90,12 +159,7 @@ public class RealPayloadIntegrationTests
         await action.RunAsync();
 
         Assert.NotNull(captured);
-
-        // sender.login is always emitted by every Action, either in the title or as the Embed Author name
-        // (repository.full_name may not be included in the Embed depending on the Action, so
-        // sender.login is used as a value that can be verified across all Actions).
-        var dump = Dump(captured!);
-        Assert.Contains(expectedSender, dump, StringComparison.Ordinal);
+        return captured!;
     }
 
     /// <summary>Concatenates all text elements of the DiscordMessage into a single string for verification.</summary>

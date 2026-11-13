@@ -27,7 +27,12 @@ public class PullRequestActionTests
         string baseRef = "main",
         string? changedTitleFrom = null,
         string? changedBodyFrom = null,
-        string? changesJsonOverride = null)
+        string? changesJsonOverride = null,
+        string? requestedTeamName = null,
+        string labelsJson = "[]",
+        string assigneesJson = "[]",
+        string requestedReviewersJson = "[]",
+        string requestedTeamsJson = "[]")
     {
         var changeFields = new List<string>();
         if (changedTitleFrom is not null)
@@ -48,13 +53,19 @@ public class PullRequestActionTests
                     body: JsonEscape(body),
                     userLogin: "pr-author", userId: 100,
                     draft: draft, merged: merged,
-                    headRef: "feature/my-branch", baseRef: baseRef)}},
+                    headRef: "feature/my-branch", baseRef: baseRef,
+                    labelsJson: labelsJson, assigneesJson: assigneesJson,
+                    requestedReviewersJson: requestedReviewersJson,
+                    requestedTeamsJson: requestedTeamsJson)}},
                 "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
                 "sender":{{TestFixtures.UserJson("sender",200,"https://github.com/sender")}}
                 {{(requestedReviewerLogin is not null
                     ? $",\"requested_reviewer\":{TestFixtures.UserJson(requestedReviewerLogin, requestedReviewerId ?? 300)}"
                     : string.Empty)}}
                 {{changesJson}}
+                {{(requestedTeamName is not null
+                    ? $",\"requested_team\":{TestFixtures.TeamJson(requestedTeamName)}"
+                    : string.Empty)}}
             }
             """;
     }
@@ -71,12 +82,20 @@ public class PullRequestActionTests
         string title = "Add awesome feature",
         string body = "This PR adds an awesome feature.",
         string? changedTitleFrom = null,
-        string? changedBodyFrom = null) =>
+        string? changedBodyFrom = null,
+        string? requestedTeamName = null,
+        string labelsJson = "[]",
+        string assigneesJson = "[]",
+        string requestedReviewersJson = "[]",
+        string requestedTeamsJson = "[]") =>
         JsonSerializer.Deserialize<PullRequestEvent>(
             MakePrJson(
                 action, merged, draft, requestedReviewerLogin, requestedReviewerId,
                 title: title, body: body,
-                changedTitleFrom: changedTitleFrom, changedBodyFrom: changedBodyFrom),
+                changedTitleFrom: changedTitleFrom, changedBodyFrom: changedBodyFrom,
+                requestedTeamName: requestedTeamName, labelsJson: labelsJson,
+                assigneesJson: assigneesJson, requestedReviewersJson: requestedReviewersJson,
+                requestedTeamsJson: requestedTeamsJson),
             OctokitJsonOptions.Value)!;
 
     private static async Task<DiscordEmbed> RunAndCaptureEmbedAsync(IAction action, Mock<IDiscordClient> discord)
@@ -260,6 +279,107 @@ public class PullRequestActionTests
                     m.Content != null &&
                     m.Content.Contains("<@discord-user-id-300>"))),
             Times.Once);
+    }
+
+    private static async Task<DiscordMessage> RunAndCaptureMessageAsync(PullRequestEvent prEvent)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        DiscordMessage? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg)
+               .ReturnsAsync("msg-id");
+
+        PullRequestAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestAction>>(),
+            _webhookUri, "pull_request", prEvent);
+
+        await action.RunAsync();
+
+        return captured!;
+    }
+
+    private static IReadOnlyList<DiscordEmbedField> FieldsOf(DiscordMessage message) => [.. message.Embeds![0].Fields ?? []];
+
+    private static readonly string _twoLabelsJson = $"[{TestFixtures.LabelJson("bug")},{TestFixtures.LabelJson("docs")}]";
+
+    private static readonly string _twoAssigneesJson = $"[{TestFixtures.UserJson("alice", 11)},{TestFixtures.UserJson("bob", 12)}]";
+
+    private static readonly string _reviewersJson = $"[{TestFixtures.UserJson("carol", 13)}]";
+
+    private static readonly string _teamsJson = $"[{TestFixtures.TeamJson("core-team", 21)},{TestFixtures.TeamJson("infra", 22)}]";
+
+    /// <summary>A team review request shows the team name and mentions nobody.</summary>
+    [Fact]
+    public async Task RunAsyncReviewRequestedWithTeamShowsRequestedTeamField()
+    {
+        DiscordMessage message = await RunAndCaptureMessageAsync(
+            MakePrEvent("review_requested", requestedTeamName: "core-team"));
+
+        Assert.Equal("core-team", Assert.Single(FieldsOf(message), f => f.Name == "Requested Team").Value);
+        Assert.Null(message.Content);
+    }
+
+    /// <summary>A removed team review request shows the team name.</summary>
+    [Fact]
+    public async Task RunAsyncReviewRequestRemovedWithTeamShowsRequestedTeamField()
+    {
+        DiscordMessage message = await RunAndCaptureMessageAsync(
+            MakePrEvent("review_request_removed", requestedTeamName: "core-team"));
+
+        Assert.Equal("core-team", Assert.Single(FieldsOf(message), f => f.Name == "Requested Team").Value);
+    }
+
+    /// <summary>A removed user review request shows the reviewer, as the requested event does.</summary>
+    [Fact]
+    public async Task RunAsyncReviewRequestRemovedWithReviewerShowsRequestedReviewerField()
+    {
+        DiscordMessage message = await RunAndCaptureMessageAsync(
+            MakePrEvent("review_request_removed", requestedReviewerLogin: "reviewer-user", requestedReviewerId: 300));
+
+        Assert.Equal("reviewer-user", Assert.Single(FieldsOf(message), f => f.Name == "Requested Reviewer").Value);
+    }
+
+    /// <summary>The opened event renders labels, assignees, requested reviewers and requested teams.</summary>
+    [Fact]
+    public async Task RunAsyncOpenedWithListsIncludesListFields()
+    {
+        DiscordMessage message = await RunAndCaptureMessageAsync(MakePrEvent(
+            "opened",
+            labelsJson: _twoLabelsJson,
+            assigneesJson: _twoAssigneesJson,
+            requestedReviewersJson: _reviewersJson,
+            requestedTeamsJson: _teamsJson));
+
+        IReadOnlyList<DiscordEmbedField> fields = FieldsOf(message);
+        Assert.Equal("bug, docs", Assert.Single(fields, f => f.Name == "Labels").Value);
+        Assert.Equal("alice, bob", Assert.Single(fields, f => f.Name == "Assignees").Value);
+        Assert.Equal("carol", Assert.Single(fields, f => f.Name == "Requested Reviewers").Value);
+        Assert.Equal("core-team, infra", Assert.Single(fields, f => f.Name == "Requested Teams").Value);
+    }
+
+    /// <summary>The opened event adds no list fields when the lists are empty.</summary>
+    [Fact]
+    public async Task RunAsyncOpenedWithoutListsOmitsListFields()
+    {
+        DiscordMessage message = await RunAndCaptureMessageAsync(MakePrEvent("opened"));
+
+        Assert.DoesNotContain(FieldsOf(message), f => f.Name is "Labels" or "Assignees" or "Requested Reviewers" or "Requested Teams");
+    }
+
+    /// <summary>Only the opened event renders the lists, even when the PR object carries them.</summary>
+    [Fact]
+    public async Task RunAsyncClosedWithListsOmitsListFields()
+    {
+        DiscordMessage message = await RunAndCaptureMessageAsync(MakePrEvent(
+            "closed",
+            labelsJson: _twoLabelsJson,
+            assigneesJson: _twoAssigneesJson,
+            requestedReviewersJson: _reviewersJson,
+            requestedTeamsJson: _teamsJson));
+
+        Assert.DoesNotContain(FieldsOf(message), f => f.Name is "Labels" or "Assignees" or "Requested Reviewers" or "Requested Teams");
     }
 
     /// <summary>review_requested and review_request_removed share the common key suffix "review_requested".</summary>

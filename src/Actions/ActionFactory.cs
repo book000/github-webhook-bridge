@@ -73,13 +73,21 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
                       ?? throw new InvalidOperationException(
                           $"Deserialization returned null for event '{eventName}' ({entry.Payload.Name}).");
 
-        var action = (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, webhookUrl, eventName, payload);
+        // ActivatorUtilities rejects arguments that no constructor consumes, so RawPayload is passed only to actions that declare it.
+        object[] args = AcceptsRawPayload(entry.Action)
+            ? [webhookUrl, eventName, payload, new RawPayload(rawJson)]
+            : [webhookUrl, eventName, payload];
+
+        var action = (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, args);
 
         if (action is PullRequestAction pullRequestAction && payload is PullRequestEditedEvent)
             pullRequestAction.PreviousBaseRef = ReadPreviousBaseRef(rawJson);
 
         return action;
     }
+
+    private static bool AcceptsRawPayload(Type actionType) =>
+        actionType.GetConstructors().Any(c => c.GetParameters().Any(p => p.ParameterType == typeof(RawPayload)));
 
     /// <summary>
     /// Reads <c>changes.base.ref.from</c> from a pull_request edited payload.

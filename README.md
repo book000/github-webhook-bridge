@@ -13,7 +13,7 @@ Receiving a webhook and delivering it to Discord are decoupled, so a Discord out
 1. `POST /` validates the request (size, signature, event, `?url=`, disabled events, mute rules) and writes the event to the Azure Storage queue `webhook-events`. Payloads over 32 KiB are stored in the blob container `webhook-payloads` and the queue message carries a reference. It then returns `202 Accepted`. If the queue write fails it returns `500`, so GitHub can redeliver.
 2. A queue-triggered function (`ProcessWebhookEvent`) builds the Discord message and sends it. Only an explicit `?url=` destination is stored in the queue; the default `DISCORD_WEBHOOK_URL` is read from configuration at processing time.
 3. When Discord answers `429 Too Many Requests`, the event is re-enqueued with a delay taken from `Retry-After` (clamped to 1 second–15 minutes, plus up to 5 seconds of jitter). An event that is still rate-limited 6 hours after receipt is moved to the poison queue.
-4. Any other failure is retried by the Functions queue host (up to 10 attempts, at least 30 seconds apart; a persistently failing event reached the poison queue after about 8 minutes in a local run) and then moved to the poison queue `webhook-events-poison`.
+4. Any other failure is retried by the Functions queue host (up to 10 attempts, at least 30 seconds apart; a persistently failing event reached the poison queue after about 8 minutes in a local run) and then moved to the poison queue `webhook-events-poison`. The `visibilityTimeout` in `host.json` is this delay before a failed message is retried, not a processing lease: while a delivery is running, the Functions host keeps its message invisible by renewing a lease, so a slow delivery is normally not redelivered concurrently (delivery remains at-least-once).
 
 Delivery is at-least-once. Duplicate posts are controlled by the existing 5-minute message cache: a replay of an event whose Discord message already exists edits that message instead of posting a new one. There is no per-delivery dedupe store, to avoid a storage read and write for every event.
 
@@ -38,7 +38,7 @@ Set these in `src/local.settings.json` (register them as application settings in
 | `GITHUB_WEBHOOK_SECRET` | ✅ | HMAC-SHA256 signature verification secret |
 | `AzureWebJobsStorage` | ✅ | Azure Storage connection string (use `UseDevelopmentStorage=true` locally) |
 | `DISCORD_WEBHOOK_URL` | ✅ unless every request sets `?url=` | Default destination Discord webhook URL, used when `?url=` is not specified (a request without `?url=` fails when this is unset) |
-| `DISABLED_EVENTS` | — | Comma-separated event names to disable; can also be overridden via the `?disabled-events=` query parameter |
+| `DISABLED_EVENTS` | — | Comma-separated event names to disable (case-insensitive, whitespace around names is ignored); can also be overridden via the `?disabled-events=` query parameter |
 | `MUTES_FILE_PATH` | — | Local file path for mute rules (default `data/mutes.json`, created as `[]` if missing) |
 | `MUTES_FILE_URL` | — | HTTPS URL for mute rules |
 | `MUTES_BLOB` | — | Blob path for mute rules, in the form `container/path/to/file.json` (read with `AzureWebJobsStorage`) |
@@ -77,7 +77,7 @@ Endpoint: `http://localhost:7071/`
 | Parameter | Description |
 |-----------|------|
 | `url` | Destination Discord webhook URL (only URLs starting with `https://discord.com/api/webhooks/` or `https://discordapp.com/api/webhooks/` are allowed) |
-| `disabled-events` | Event names to disable for this request only (comma-separated) |
+| `disabled-events` | Event names to disable for this request only (comma-separated, case-insensitive, whitespace around names is ignored) |
 
 ## Supported events
 
@@ -86,7 +86,7 @@ Endpoint: `http://localhost:7071/`
 | Event | Description |
 |---------|------|
 | `ping` | Webhook registration check |
-| `push` | Code push |
+| `push` | Code push, including branch/tag creation and deletion and force pushes |
 | `pull_request` | Pull request operations |
 | `pull_request_review` | Pull request review |
 | `pull_request_review_comment` | Review comment |
@@ -124,7 +124,18 @@ Notifications can be filtered per user. Rules are defined as a JSON array and sp
 | `exclude` | Mute everything except the events/actions listed in `events` |
 | `all` | Mute all notifications |
 
-If `actions` is omitted, all actions of that event are targeted.
+If `actions` is omitted, all actions of that event are targeted: for `include` the event is muted for every action, and for `exclude` the event is exempted from muting for every action.
+
+Event names and actions are matched case-insensitively, and whitespace around them is ignored.
+
+If several records share the same `userId`, only the first one is applied and a Warning is logged for each later one.
+
+Malformed records do not fail webhook handling.
+They are repaired or dropped when the rules are loaded, and a Warning is logged for each:
+
+- A `null` entry in the rule array, or an event entry without an event name, is dropped.
+- A record without `events` behaves like `"events": []`, so `include` mutes nothing and `exclude` mutes everything.
+- Blank entries in `actions` are dropped.
 
 ## GitHub→Discord user map
 
@@ -138,7 +149,9 @@ Mapping a GitHub user ID (numeric) to a Discord user ID lets notifications gener
 
 ### Retrieval failures
 
-If the mute rules or the user map cannot be retrieved (HTTP error such as 429 or 5xx, timeout, Blob or I/O error, malformed JSON), the service keeps handling webhooks with empty data: no mute rules are applied and no mentions are generated. The failure is logged as a Warning (`... could not load its configuration from ...`), and retrieval is not attempted again for 5 minutes. Once a retrieval succeeds, the loaded data is used for the lifetime of the process.
+The mute rules and the user map are re-read from their source (Blob, URL or file) at most every 5 minutes, checked when the next webhook arrives, so edits take effect within about 5 minutes without restarting the Function App. A webhook that arrives while a refresh is running does not wait and uses the previously loaded data. A file source that was deleted is re-created empty on the next refresh.
+
+If the mute rules or the user map cannot be retrieved (HTTP error such as 429 or 5xx, timeout, Blob or I/O error, malformed JSON or a `null` document), the failure is logged as a Warning (`... could not load its configuration from ...`) and retrieval is not attempted again for 5 minutes. Before the first successful retrieval the service keeps handling webhooks with empty data: no mute rules are applied and no mentions are generated. After a successful retrieval, a failed refresh keeps the previously loaded data.
 
 Misconfiguration still fails fast: a non-HTTPS URL, a Blob path without a container, or a missing `AzureWebJobsStorage` throws instead of degrading.
 
@@ -158,7 +171,7 @@ Each message body is the Base64 text of a JSON envelope. Decode it (`base64 -d`)
 
 1. Check the cause in Application Insights (search for `Webhook event dead-lettered` and the `DeliveryId`).
 2. Add the message body, unchanged, to the queue `webhook-events` (do not decode or re-encode it), for example with Azure Storage Explorer or the portal, and delete it from the poison queue.
-3. A replay posts a new Discord message if the original was already delivered more than 5 minutes ago; replay only events whose Discord message is missing.
+3. A replay posts a new Discord message if the message was last sent or edited more than 5 minutes ago (each successful edit restarts the window); replay only events whose Discord message is missing.
 
 ### Comparing with GitHub deliveries
 
