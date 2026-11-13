@@ -30,8 +30,14 @@ public sealed class StarAction(
             return;
         }
 
-        var titlePrefix = Event.Action == "created" ? "Starred" : "Unstarred";
-        var color = Event.Action == "created" ? EmbedColors.Star : EmbedColors.Unstar;
+        // Unknown (future) actions get a neutral wording instead of being mislabeled as "Unstarred".
+        (string titlePrefix, int color) = Event.Action switch
+        {
+            "created" => ("Starred", EmbedColors.Star),
+            "deleted" => ("Unstarred", EmbedColors.Unstar),
+            { } other => ($"Star {(other.Length > 50 ? other[..50] : other)}", EmbedColors.Ping),
+            null => ("Star", EmbedColors.Ping),
+        };
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,

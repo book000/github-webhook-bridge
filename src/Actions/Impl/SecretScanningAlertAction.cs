@@ -55,7 +55,12 @@ public sealed class SecretScanningAlertAction(
             return;
         }
 
-        Octokit.Webhooks.Models.SecretScanningAlertEvent.Alert alert = Event.Alert;
+        if (Event.Alert is not { SecretType: not null } alert)
+        {
+            Logger.LogWarning("secret_scanning_alert payload is missing alert or alert.secret_type; skipping notification.");
+            return;
+        }
+
         var secretType = Truncate(alert.SecretType, MaxFieldValueLength);
         var title = Truncate($"Secret scanning alert {verb}: #{alert.Number} ({secretType}) in {repo.FullName}", MaxTitleLength);
 
@@ -90,7 +95,8 @@ public sealed class SecretScanningAlertAction(
             author: author,
             fields: fields);
 
-        var key = $"{repo.FullName}-secret-scanning-alert-{alert.Number}";
+        // Open-state actions share one message; resolution posts a separate one so it does not edit the creation notice away.
+        var key = $"{repo.FullName}-secret-scanning-alert-{alert.Number}-{state}";
         await SendMessageAsync(key, new DiscordMessage(Embeds: [embed]));
     }
 

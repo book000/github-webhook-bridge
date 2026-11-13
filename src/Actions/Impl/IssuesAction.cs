@@ -27,11 +27,15 @@ public sealed class IssuesAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        Issue issue = Event.Issue;
-
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("issues payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.Issue is not { } issue)
+        {
+            Logger.LogWarning("issues payload is missing issue; skipping notification.");
             return;
         }
 

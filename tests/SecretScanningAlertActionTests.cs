@@ -160,6 +160,40 @@ public class SecretScanningAlertActionTests
         discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingAlertOrSecretTypeSendsNothingAndWarns(bool dropAlert)
+    {
+        SecretScanningAlertEvent valid = MakeEvent("created");
+        SecretScanningAlertEvent evt = dropAlert
+            ? valid with { Alert = null! }
+            : valid with { Alert = valid.Alert with { SecretType = null! } };
+        (Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache, Mock<IGitHubUserMapManager> userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        SecretScanningAlertAction act = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<SecretScanningAlertAction>(logs).Object,
+            _webhookUri, "secret_scanning_alert", evt);
+
+        await act.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "secret_scanning_alert payload is missing alert or alert.secret_type; skipping notification.");
+    }
+
+    [Fact]
+    public async Task RunAsyncUnsupportedActionWithMissingAlertOnlyLogsTheSkip()
+    {
+        (SecretScanningAlertAction act, Mock<IDiscordClient> discord, _, List<string> logs) =
+            CreateAction(MakeEvent("assigned") with { Alert = null! });
+
+        await act.RunAsync();
+
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+        Assert.Equal(["Skipping secret_scanning_alert action assigned for test/repo."], logs);
+    }
+
     [Fact]
     public async Task RunAsyncMissingSenderSendsEmbedWithoutAuthor()
     {
@@ -214,14 +248,21 @@ public class SecretScanningAlertActionTests
         Assert.DoesNotContain(logs, l => l.Contains(FakeSecret, StringComparison.Ordinal));
     }
 
-    [Fact]
-    public async Task RunAsyncUsesPerAlertCacheKey()
+    [Theory]
+    [InlineData("created", "open")]
+    [InlineData("publicly_leaked", "open")]
+    [InlineData("validated", "open")]
+    [InlineData("reopened", "open")]
+    [InlineData("resolved", "resolved")]
+    [InlineData("revoked", "resolved")]
+    public async Task RunAsyncUsesPerAlertAndStateCacheKey(string action, string expectedState)
     {
-        (SecretScanningAlertAction act, _, Mock<IMessageCacheService> cache, _) = CreateAction(MakeEvent("created", number: 42));
+        (SecretScanningAlertAction act, _, Mock<IMessageCacheService> cache, _) = CreateAction(MakeEvent(action, number: 42));
 
         await act.RunAsync();
 
-        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-secret-scanning-alert-42"), Times.Once);
-        cache.Verify(c => c.SetAsync(_webhookUri, "test/repo-secret-scanning-alert-42", "msg-id"), Times.Once);
+        var expectedKey = $"test/repo-secret-scanning-alert-42-{expectedState}";
+        cache.Verify(c => c.GetAsync(_webhookUri, expectedKey), Times.Once);
+        cache.Verify(c => c.SetAsync(_webhookUri, expectedKey, "msg-id"), Times.Once);
     }
 }

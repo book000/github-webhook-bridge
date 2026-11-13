@@ -10,7 +10,7 @@ An Azure Functions application that receives GitHub Webhooks and forwards them t
 
 Receiving a webhook and delivering it to Discord are decoupled, so a Discord outage or rate limit never makes GitHub see an error for an event the bridge has already accepted.
 
-1. `POST /` validates the request (size, signature, event, `?url=`, disabled events, mute rules) and writes the event to the Azure Storage queue `webhook-events`. Payloads over 32 KiB are stored in the blob container `webhook-payloads` and the queue message carries a reference. It then returns `202 Accepted`. If the queue write fails it returns `500`, so GitHub can redeliver.
+1. `POST /` validates the request (size, signature, event, `?url=`, disabled events, mute rules) and writes the event to the Azure Storage queue `webhook-events`. Payloads over 32 KiB are stored in the blob container `webhook-payloads` and the queue message carries a reference. It then returns `202 Accepted`. If the queue write fails it returns `500`, so GitHub can redeliver. A request body over 10 MB is rejected with `400 Bad Request: Body too large`; this limit is intentional and stricter than GitHub's own 25 MB payload cap, so an unusually large push can be rejected. Events from a muted sender and events listed in `DISABLED_EVENTS` / `?disabled-events=` are acknowledged with `202 Accepted` without being delivered, while an unregistered event returns `406` even when its sender is muted.
 2. A queue-triggered function (`ProcessWebhookEvent`) builds the Discord message and sends it. Only an explicit `?url=` destination is stored in the queue; the default `DISCORD_WEBHOOK_URL` is read from configuration at processing time.
 3. When Discord answers `429 Too Many Requests`, the event is re-enqueued with a delay taken from `Retry-After` (clamped to 1 second–15 minutes, plus up to 5 seconds of jitter). An event that is still rate-limited 6 hours after receipt is moved to the poison queue.
 4. Any other failure is retried by the Functions queue host (up to 10 attempts, at least 30 seconds apart; a persistently failing event reached the poison queue after about 8 minutes in a local run) and then moved to the poison queue `webhook-events-poison`. The `visibilityTimeout` in `host.json` is this delay before a failed message is retried, not a processing lease: while a delivery is running, the Functions host keeps its message invisible by renewing a lease, so a slow delivery is normally not redelivered concurrently (delivery remains at-least-once).
@@ -76,7 +76,7 @@ Endpoint: `http://localhost:7071/`
 
 | Parameter | Description |
 |-----------|------|
-| `url` | Destination Discord webhook URL (only URLs starting with `https://discord.com/api/webhooks/` or `https://discordapp.com/api/webhooks/` are allowed) |
+| `url` | Destination Discord webhook URL. Only `https` URLs on `discord.com` or `discordapp.com` (including the `canary.` and `ptb.` subdomains) with a `/api/webhooks/{id}/{token}` path (an optional `/api/vN/webhooks/...` version and a query string such as `thread_id` are allowed) are accepted; any other value returns `400` |
 | `disabled-events` | Event names to disable for this request only (comma-separated, case-insensitive, whitespace around names is ignored) |
 
 ## Supported events
@@ -98,7 +98,7 @@ Endpoint: `http://localhost:7071/`
 | `fork` | Fork |
 | `public` | Repository made public |
 | `star` | Star |
-| `secret_scanning_alert` | Secret scanning alert (created / publicly leaked / reopened / validated / resolved / revoked; assigned / unassigned are ignored) |
+| `secret_scanning_alert` | Secret scanning alert (created / publicly leaked / reopened / validated / resolved / revoked; assigned / unassigned are ignored; resolved / revoked notifications are always posted as a new message instead of editing the open-state one) |
 
 Any other event returns HTTP 406.
 

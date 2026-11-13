@@ -61,6 +61,29 @@ public class PullRequestReviewCommentActionTests
             OctokitJsonOptions.Value)!;
     }
 
+    /// <summary>A payload missing the comment or the pull request is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingCommentOrPullRequestSendsNothingAndWarns(bool dropComment)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        PullRequestReviewCommentEvent evt = dropComment
+            ? MakeEvent() with { Comment = null! }
+            : MakeEvent() with { PullRequest = null! };
+
+        PullRequestReviewCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PullRequestReviewCommentAction>(logs).Object,
+            _webhookUri, "pull_request_review_comment", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "pull_request_review_comment payload is missing comment or pull_request; skipping notification.");
+    }
+
     /// <summary>The title of the created event contains "commented on" and the PR number.</summary>
     [Fact]
     public async Task RunAsyncCreatedTitleContainsCommentedOnAndPrNumber()
@@ -262,6 +285,28 @@ public class PullRequestReviewCommentActionTests
                 It.Is<DiscordMessage>(m =>
                     m.Embeds![0].Description!.Length <= 4096 &&
                     m.Embeds![0].Description!.Contains("..."))),
+            Times.Once);
+    }
+
+    /// <summary>A deleted comment does not mention the PR author even when mapped.</summary>
+    [Fact]
+    public async Task RunAsyncDeletedDoesNotMentionPrAuthor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        userMap.Setup(u => u.GetById(20L)).Returns("discord-pr-author-id");
+
+        PullRequestReviewCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewCommentAction>>(),
+            _webhookUri, "pull_request_review_comment", MakeEvent("deleted"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => m.Content == null)),
             Times.Once);
     }
 
