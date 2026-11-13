@@ -196,6 +196,31 @@ public class PullRequestReviewActionTests
         Assert.Contains("changes", capturedTitle, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>A dismissed review does not mention the PR author even when mapped.</summary>
+    [Fact]
+    public async Task RunAsyncDismissedDoesNotMentionPrAuthor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        userMap.Setup(u => u.GetById(2L)).Returns("discord-pr-author-id");
+
+        PullRequestReviewAction action = new(
+            discord.Object,
+            cache.Object,
+            userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewAction>>(),
+            _webhookUri,
+            "pull_request_review",
+            MakePrReviewEvent("dismissed", "APPROVED"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => m.Content == null)),
+            Times.Once);
+    }
+
     /// <summary>The title of the dismissed action contains "dismissed".</summary>
     [Fact]
     public async Task RunAsyncDismissedTitleContainsDismissed()

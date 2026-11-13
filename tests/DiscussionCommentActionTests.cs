@@ -109,6 +109,28 @@ public class DiscussionCommentActionTests
         Assert.Equal(new string('x', 500) + "...", message.Embeds![0].Description);
     }
 
+    /// <summary>A deleted comment does not mention the discussion author even when mapped.</summary>
+    [Fact]
+    public async Task RunAsyncDeletedDoesNotMentionDiscussionAuthor()
+    {
+        (Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache, Mock<IGitHubUserMapManager> userMap) = CreateMocks();
+        userMap.Setup(u => u.GetById(10L)).Returns("123");
+
+        DiscordMessage? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg)
+               .ReturnsAsync("msg-id");
+
+        DiscussionCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<DiscussionCommentAction>>(),
+            _webhookUri, "discussion_comment", MakeEvent("deleted"));
+
+        await action.RunAsync();
+
+        Assert.Null(captured!.Content);
+    }
+
     /// <summary>The discussion author is @mentioned when mapped and not the sender.</summary>
     [Fact]
     public async Task RunAsyncMentionsDiscussionAuthorWhenMapped()

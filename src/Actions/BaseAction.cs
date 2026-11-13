@@ -88,7 +88,8 @@ public abstract class BaseAction<TEvent>(
 
     /// <summary>
     /// Builds a Discord mention string from a list of GitHub user IDs.
-    /// The sender is excluded. Filter out Team objects beforehand if present.
+    /// The sender is excluded, and users resolving to the same Discord ID are mentioned once.
+    /// Filter out Team objects beforehand if present.
     /// </summary>
     /// <param name="senderId">The sender's GitHub user ID (excluded from mentions).</param>
     /// <param name="users">Collection of GitHub user IDs and login names to mention.</param>
@@ -102,9 +103,18 @@ public abstract class BaseAction<TEvent>(
             .Where(u => u.Id != senderId)
             .Select(u => UserMapManager.GetById(u.Id))
             .Where(discordId => discordId is not null)
+            .Distinct()
             .Select(discordId => $"<@{discordId}>");
         return string.Join(" ", mentions);
     }
+
+    /// <summary>
+    /// Returns whether the action removes content (a deleted comment or a dismissed review),
+    /// for which pinging the author is not actionable.
+    /// </summary>
+    /// <param name="action">The GitHub Webhook action value.</param>
+    /// <returns><see langword="true"/> when mentions must be suppressed.</returns>
+    protected static bool SuppressesMentions(string? action) => action is "deleted" or "dismissed";
 
     /// <summary>
     /// Generates a unified diff between two texts (using DiffPlex InlineDiffBuilder).

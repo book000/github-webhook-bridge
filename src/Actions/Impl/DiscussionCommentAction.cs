@@ -53,9 +53,11 @@ public sealed class DiscussionCommentAction(
             ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
             : null;
 
-        var mentions = await GetUsersMentionsAsync(
-            sender.Id,
-            [(discussion.User.Id, discussion.User.Login)]);
+        var mentions = SuppressesMentions(action)
+            ? string.Empty
+            : await GetUsersMentionsAsync(
+                sender.Id,
+                [(discussion.User.Id, discussion.User.Login)]);
 
         var content = mentions.Length > 0 ? mentions : null;
 

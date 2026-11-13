@@ -247,6 +247,28 @@ public class IssueCommentActionTests
             Times.Once);
     }
 
+    /// <summary>A deleted comment does not mention the Issue author even when mapped.</summary>
+    [Fact]
+    public async Task RunAsyncDeletedDoesNotMentionIssueAuthor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        userMap.Setup(u => u.GetById(10L)).Returns("discord-id-of-author");
+
+        IssueCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssueCommentAction>>(),
+            _webhookUri, "issue_comment", MakeEvent("deleted"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => m.Content == null)),
+            Times.Once);
+    }
+
     /// <summary>When the Issue author is mapped to Discord, the message is sent with a mention.</summary>
     [Fact]
     public async Task RunAsyncMentionsIssueAuthorWhenMapped()
