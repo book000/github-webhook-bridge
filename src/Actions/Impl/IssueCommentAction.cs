@@ -96,7 +96,7 @@ public sealed class IssueCommentAction(
         }
 
         return comment.Body is not null && comment.Body.Length > 0
-            ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
+            ? TextHelper.Truncate(comment.Body, 500)
             : null;
     }
 }

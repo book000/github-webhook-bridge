@@ -266,6 +266,27 @@ public class IssuesActionTests
             Times.Once);
     }
 
+    /// <summary>An emoji straddling the 500-unit boundary is dropped whole instead of leaving a lone surrogate.</summary>
+    [Fact]
+    public async Task RunAsyncBodyTruncationDoesNotSplitSurrogatePair()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        var body = new string('a', 499) + "😀" + new string('b', 50);
+
+        IssuesAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("opened", issueBody: body));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => m.Embeds![0].Description == new string('a', 499) + "...")),
+            Times.Once);
+    }
+
     /// <summary>The milestoned event includes the milestone title in an embed field.</summary>
     [Fact]
     public async Task RunAsyncMilestonedIncludesMilestoneField()

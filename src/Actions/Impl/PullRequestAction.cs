@@ -260,7 +260,7 @@ public sealed class PullRequestAction(
 
         // PR body (truncated if long).
         if (!string.IsNullOrEmpty(pr.Body))
-            return pr.Body.Length > 500 ? $"{pr.Body[..500]}..." : pr.Body;
+            return TextHelper.Truncate(pr.Body, 500);
 
         return null;
     }

@@ -62,7 +62,7 @@ public sealed class DiscussionCommentAction(
                 Logger.LogWarning("discussion_comment edited payload is missing changes.body.from; falling back to the current body.");
 
             body = comment.Body is { Length: > 0 }
-                ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
+                ? TextHelper.Truncate(comment.Body, 500)
                 : null;
         }
 
