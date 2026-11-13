@@ -13,7 +13,7 @@ Receiving a webhook and delivering it to Discord are decoupled, so a Discord out
 1. `POST /` validates the request (size, signature, event, `?url=`, disabled events, mute rules) and writes the event to the Azure Storage queue `webhook-events`. Payloads over 32 KiB are stored in the blob container `webhook-payloads` and the queue message carries a reference. It then returns `202 Accepted`. If the queue write fails it returns `500`, so GitHub can redeliver.
 2. A queue-triggered function (`ProcessWebhookEvent`) builds the Discord message and sends it. Only an explicit `?url=` destination is stored in the queue; the default `DISCORD_WEBHOOK_URL` is read from configuration at processing time.
 3. When Discord answers `429 Too Many Requests`, the event is re-enqueued with a delay taken from `Retry-After` (clamped to 1 second–15 minutes, plus up to 5 seconds of jitter). An event that is still rate-limited 6 hours after receipt is moved to the poison queue.
-4. Any other failure is retried by the Functions queue host (up to 10 attempts, at least 30 seconds apart; a persistently failing event reached the poison queue after about 8 minutes in a local run) and then moved to the poison queue `webhook-events-poison`. When Discord rejects a request, the exception message includes Discord's response body (truncated to 1000 characters, with the webhook path and token redacted), which names the field and limit at fault.
+4. Any other failure is retried by the Functions queue host (up to 10 attempts, at least 30 seconds apart; a persistently failing event reached the poison queue after about 8 minutes in a local run) and then moved to the poison queue `webhook-events-poison`. The `visibilityTimeout` in `host.json` is this delay before a failed message is retried, not a processing lease: while a delivery is running, the Functions host keeps its message invisible by renewing a lease, so a slow delivery is normally not redelivered concurrently (delivery remains at-least-once). When Discord rejects a request, the exception message includes Discord's response body (truncated to 1000 characters, with the webhook path and token redacted), which names the field and limit at fault.
 5. Embed text is truncated to Discord's limits before sending (title 256, description 4096, field name 256, field value 1024, author name 256, footer 2048, at most 25 fields, 6000 characters in total). Truncated text ends with `…`; when the total is exceeded, the description is shortened first and then trailing fields are dropped.
 
 Delivery is at-least-once. Duplicate posts are controlled by the existing 5-minute message cache: a replay of an event whose Discord message already exists edits that message instead of posting a new one. There is no per-delivery dedupe store, to avoid a storage read and write for every event.
@@ -87,7 +87,7 @@ Endpoint: `http://localhost:7071/`
 | Event | Description |
 |---------|------|
 | `ping` | Webhook registration check |
-| `push` | Code push |
+| `push` | Code push, including branch/tag creation and deletion and force pushes |
 | `pull_request` | Pull request operations |
 | `pull_request_review` | Pull request review |
 | `pull_request_review_comment` | Review comment |
@@ -159,7 +159,7 @@ Each message body is the Base64 text of a JSON envelope. Decode it (`base64 -d`)
 
 1. Check the cause in Application Insights (search for `Webhook event dead-lettered` and the `DeliveryId`).
 2. Add the message body, unchanged, to the queue `webhook-events` (do not decode or re-encode it), for example with Azure Storage Explorer or the portal, and delete it from the poison queue.
-3. A replay posts a new Discord message if the original was already delivered more than 5 minutes ago; replay only events whose Discord message is missing.
+3. A replay posts a new Discord message if the message was last sent or edited more than 5 minutes ago (each successful edit restarts the window); replay only events whose Discord message is missing.
 
 ### Comparing with GitHub deliveries
 
