@@ -127,6 +127,22 @@ public abstract class BaseAction<TEvent>(
     }
 
     /// <summary>
+    /// Joins items into a single embed field value separated by ", ".
+    /// The result is cut to Discord's 1024-character field value limit, ending with "..." when cut.
+    /// </summary>
+    /// <param name="items">The items to join; may be null.</param>
+    /// <returns>The joined value, or null when there are no items so the caller adds no field.</returns>
+    protected static string? FormatList(IEnumerable<string>? items)
+    {
+        const int maxLength = 1024;
+
+        var joined = string.Join(", ", items ?? []);
+        if (joined.Length == 0) return null;
+
+        return joined.Length > maxLength ? $"{joined[..(maxLength - 3)]}..." : joined;
+    }
+
+    /// <summary>
     /// Generates a unified diff between two texts (using DiffPlex InlineDiffBuilder).
     /// Uses +/-/space line prefixes. The caller should wrap it in a ```diff code block.
     /// </summary>

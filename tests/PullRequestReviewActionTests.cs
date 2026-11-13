@@ -32,6 +32,29 @@ public class PullRequestReviewActionTests
         return (discord, cache, userMap);
     }
 
+    /// <summary>A payload missing the review or the pull request is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingReviewOrPullRequestSendsNothingAndWarns(bool dropReview)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        PullRequestReviewEvent evt = dropReview
+            ? MakePrReviewEvent("submitted", "approved") with { Review = null! }
+            : MakePrReviewEvent("submitted", "approved") with { PullRequest = null! };
+
+        PullRequestReviewAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PullRequestReviewAction>(logs).Object,
+            _webhookUri, "pull_request_review", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "pull_request_review payload is missing review or pull_request; skipping notification.");
+    }
+
     /// <summary>Creates a test PullRequestReviewEvent from TestFixtures.</summary>
     private static PullRequestReviewEvent MakePrReviewEvent(string action, string reviewState) =>
         JsonSerializer.Deserialize<PullRequestReviewEvent>(

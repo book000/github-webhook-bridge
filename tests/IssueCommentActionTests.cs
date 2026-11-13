@@ -47,6 +47,29 @@ public class IssueCommentActionTests
             OctokitJsonOptions.Value)!;
     }
 
+    /// <summary>A payload missing the issue or the comment object is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingIssueOrCommentSendsNothingAndWarns(bool dropIssue)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        IssueCommentEvent evt = dropIssue
+            ? MakeEvent() with { Issue = null! }
+            : MakeEvent() with { Comment = null! };
+
+        IssueCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<IssueCommentAction>(logs).Object,
+            _webhookUri, "issue_comment", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "issue_comment payload is missing issue or comment; skipping notification.");
+    }
+
     /// <summary>For created + a regular Issue, the title contains "Issue" and "commented on".</summary>
     [Fact]
     public async Task RunAsyncCreatedOnIssueTitleContainsIssue()

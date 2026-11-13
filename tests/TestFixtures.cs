@@ -1,5 +1,9 @@
 using System.Text.Json;
+using GitHubWebhookBridge.Models.Discord;
+using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -29,13 +33,14 @@ internal static class TestFixtures
     public static string IssueJson(
         long number = 1, string title = "Test Issue", string state = "open",
         string? htmlUrl = null, string? body = null, bool isPr = false,
-        string userLogin = "octocat", long userId = 1)
+        string userLogin = "octocat", long userId = 1,
+        string labelsJson = "[]", string assigneesJson = "[]")
     {
         var userJson = UserJson(userLogin, userId);
         var prPart = isPr ? ",\"pull_request\":{\"url\":\"\",\"html_url\":\"https://github.com/owner/repo/pull/1\",\"diff_url\":\"\",\"patch_url\":\"\"}" : string.Empty;
         var bodyPart = body is null ? "null" : $"\"{body}\"";
         var url = htmlUrl ?? $"https://github.com/owner/repo/issues/{number}";
-        return $$$"""{"url":"","repository_url":"","labels_url":"","comments_url":"","events_url":"","html_url":"{{{url}}}","id":{{{number}}},"node_id":"I_{{{number}}}","number":{{{number}}},"title":"{{{title}}}","user":{{{userJson}}},"labels":[],"state":"{{{state}}}","locked":false,"assignees":[],"comments":0,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","author_association":"NONE","body":{{{bodyPart}}}{{{prPart}}}}""";
+        return $$$"""{"url":"","repository_url":"","labels_url":"","comments_url":"","events_url":"","html_url":"{{{url}}}","id":{{{number}}},"node_id":"I_{{{number}}}","number":{{{number}}},"title":"{{{title}}}","user":{{{userJson}}},"labels":{{{labelsJson}}},"state":"{{{state}}}","locked":false,"assignees":{{{assigneesJson}}},"comments":0,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","author_association":"NONE","body":{{{bodyPart}}}{{{prPart}}}}""";
     }
 
     /// <summary>Minimal JSON for a SimplePullRequest.</summary>
@@ -55,7 +60,9 @@ internal static class TestFixtures
         string? htmlUrl = null, string? body = null,
         string userLogin = "prauthor", long userId = 100,
         bool draft = false, bool merged = false,
-        string headRef = "feature", string baseRef = "main")
+        string headRef = "feature", string baseRef = "main",
+        string labelsJson = "[]", string assigneesJson = "[]",
+        string requestedReviewersJson = "[]", string requestedTeamsJson = "[]")
     {
         var userJson = UserJson(userLogin, userId);
         var defaultUserJson = UserJson();
@@ -64,7 +71,7 @@ internal static class TestFixtures
         var bodyPart = body is null ? "null" : $"\"{body}\"";
         var draftStr = draft ? "true" : "false";
         var mergedStr = merged ? "true" : "false";
-        return $$$"""{"url":"","id":{{{number}}},"node_id":"PR_{{{number}}}","html_url":"{{{url}}}","diff_url":"","patch_url":"","issue_url":"","number":{{{number}}},"state":"open","locked":false,"title":"{{{title}}}","user":{{{userJson}}},"body":{{{bodyPart}}},"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","assignees":[],"requested_reviewers":[],"requested_teams":[],"labels":[],"commits_url":"","review_comments_url":"","review_comment_url":"","comments_url":"","statuses_url":"","head":{"label":"{{{headRef}}}","ref":"{{{headRef}}}","sha":"abc","user":{{{userJson}}},"repo":{{{repoJson}}}},"base":{"label":"{{{baseRef}}}","ref":"{{{baseRef}}}","sha":"def","user":{{{defaultUserJson}}},"repo":{{{repoJson}}}},"_links":{"self":{"href":""},"html":{"href":""},"issue":{"href":""},"comments":{"href":""},"review_comments":{"href":""},"review_comment":{"href":""},"commits":{"href":""},"statuses":{"href":""}},"author_association":"OWNER","active_lock_reason":null,"draft":{{{draftStr}}},"merged":{{{mergedStr}}},"mergeable":null,"rebaseable":null,"mergeable_state":"","merged_by":null,"comments":0,"review_comments":0,"maintainer_can_modify":false,"commits":1,"additions":10,"deletions":5,"changed_files":2}""";
+        return $$$"""{"url":"","id":{{{number}}},"node_id":"PR_{{{number}}}","html_url":"{{{url}}}","diff_url":"","patch_url":"","issue_url":"","number":{{{number}}},"state":"open","locked":false,"title":"{{{title}}}","user":{{{userJson}}},"body":{{{bodyPart}}},"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","assignees":{{{assigneesJson}}},"requested_reviewers":{{{requestedReviewersJson}}},"requested_teams":{{{requestedTeamsJson}}},"labels":{{{labelsJson}}},"commits_url":"","review_comments_url":"","review_comment_url":"","comments_url":"","statuses_url":"","head":{"label":"{{{headRef}}}","ref":"{{{headRef}}}","sha":"abc","user":{{{userJson}}},"repo":{{{repoJson}}}},"base":{"label":"{{{baseRef}}}","ref":"{{{baseRef}}}","sha":"def","user":{{{defaultUserJson}}},"repo":{{{repoJson}}}},"_links":{"self":{"href":""},"html":{"href":""},"issue":{"href":""},"comments":{"href":""},"review_comments":{"href":""},"review_comment":{"href":""},"commits":{"href":""},"statuses":{"href":""}},"author_association":"OWNER","active_lock_reason":null,"draft":{{{draftStr}}},"merged":{{{mergedStr}}},"mergeable":null,"rebaseable":null,"mergeable_state":"","merged_by":null,"comments":0,"review_comments":0,"maintainer_can_modify":false,"commits":1,"additions":10,"deletions":5,"changed_files":2}""";
     }
 
     /// <summary>Minimal JSON for a Discussion.</summary>
@@ -82,6 +89,10 @@ internal static class TestFixtures
     /// <summary>Minimal JSON for a Label.</summary>
     public static string LabelJson(string name = "bug") =>
         $$$"""{"id":1,"node_id":"L_1","url":"","name":"{{{name}}}","description":"","color":"ee0701","default":false}""";
+
+    /// <summary>Minimal JSON for a Team.</summary>
+    public static string TeamJson(string name = "core-team", long id = 1) =>
+        $$$"""{"name":"{{{name}}}","id":{{{id}}},"node_id":"T_{{{id}}}","slug":"{{{name}}}","description":"","privacy":"closed","url":"","html_url":"https://github.com/orgs/test/teams/{{{name}}}","members_url":"","repositories_url":"","permission":"pull"}""";
 
     /// <summary>Minimal JSON for a Milestone.</summary>
     public static string MilestoneJson(string title = "v1.0")
@@ -147,4 +158,31 @@ internal static class TestFixtures
 
     public static T Deserialize<T>(string json) =>
         JsonSerializer.Deserialize<T>(json, Opts)!;
+
+    /// <summary>Asserts that nothing was sent to Discord and exactly one warning with the given text was logged.</summary>
+    public static void AssertSkippedWithWarning(
+        Mock<IDiscordClient> discord, List<(LogLevel Level, string Message)> logs, string message)
+    {
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+        Assert.Equal([(LogLevel.Warning, message)], logs);
+    }
+
+    /// <summary>Creates a logger mock that records every formatted message together with its level.</summary>
+    public static Mock<ILogger<T>> CaptureLogger<T>(List<(LogLevel Level, string Message)> logs)
+    {
+        Mock<ILogger<T>> logger = new();
+        logger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        logger.Setup(l => l.Log(
+                It.IsAny<LogLevel>(),
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
+            .Callback(new InvocationAction(i =>
+            {
+                var formatter = Assert.IsAssignableFrom<Delegate>(i.Arguments[4]);
+                logs.Add((Assert.IsType<LogLevel>(i.Arguments[0]),Assert.IsType<string>(formatter.DynamicInvoke(i.Arguments[2], i.Arguments[3]))));
+            }));
+        return logger;
+    }
 }

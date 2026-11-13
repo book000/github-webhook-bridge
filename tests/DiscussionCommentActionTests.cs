@@ -1,4 +1,5 @@
 using System.Text.Json;
+using GitHubWebhookBridge.Actions;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Models.Discord;
@@ -35,15 +36,58 @@ public class DiscussionCommentActionTests
     private static string CommentJson(long id, string body) =>
         $$$"""{"id":{{{id}}},"node_id":"DC_{{{id}}}","html_url":"https://github.com/test/repo/discussions/5#discussioncomment-{{{id}}}","parent_id":null,"child_comment_count":0,"repository_url":"","discussion_id":5,"author_association":"NONE","user":{{{TestFixtures.UserJson("commenter", 20)}}},"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","body":"{{{body}}}","reactions":{"url":"","total_count":0,"+1":0,"-1":0,"laugh":0,"hooray":0,"confused":0,"heart":0,"rocket":0,"eyes":0}}""";
 
+    private const string DefaultEditedChanges = """{"body":{"from":"before"}}""";
+
+    private sealed class ListLogger : ILogger<DiscussionCommentAction>
+    {
+        public List<(LogLevel Level, string Text)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => Entries.Add((logLevel, formatter(state, exception)));
+    }
+
+    /// <summary>
+    /// Builds the webhook JSON; <paramref name="changesJson"/> is the raw value of the top-level "changes" key
+    /// (edited defaults to a previous body of "before"; other actions send none).
+    /// </summary>
+    private static string MakeJson(
+        string action,
+        string commentBody = "A reply",
+        long commentId = 9001,
+        string? changesJson = null)
+    {
+        var changes = changesJson ?? (action == "edited" ? DefaultEditedChanges : null);
+        var changesMember = changes is null ? string.Empty : $$""","changes":{{changes}}""";
+
+        return $$"""{"action":"{{action}}","discussion":{{TestFixtures.DiscussionJson(5, "Great discussion", "https://github.com/test/repo/discussions/5", "body", "author", 10)}},"comment":{{CommentJson(commentId, commentBody)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("commenter", 20)}}{{changesMember}}}""";
+    }
+
     private static DiscussionCommentEvent MakeEvent(
         string action,
         string commentBody = "A reply",
-        long commentId = 9001) =>
+        long commentId = 9001,
+        string? changesJson = null) =>
         JsonSerializer.Deserialize<DiscussionCommentEvent>(
-            $$"""{"action":"{{action}}","discussion":{{TestFixtures.DiscussionJson(5, "Great discussion", "https://github.com/test/repo/discussions/5", "body", "author", 10)}},"comment":{{CommentJson(commentId, commentBody)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("commenter", 20)}}{{(action == "edited" ? ""","changes":{"body":{"from":"before"}}""" : string.Empty)}}}""",
+            MakeJson(action, commentBody, commentId, changesJson),
             OctokitJsonOptions.Value)!;
 
-    private static async Task<DiscordMessage> RunAsync(DiscussionCommentEvent evt, Mock<IMessageCacheService>? cacheOverride = null)
+    /// <summary>Runs the action the way ActionFactory does: the event is deserialized from the raw JSON, which is also handed over as RawPayload.</summary>
+    private static Task<DiscordMessage> RunRawAsync(string json, ILogger<DiscussionCommentAction> logger) =>
+        RunAsync(
+            JsonSerializer.Deserialize<DiscussionCommentEvent>(json, OctokitJsonOptions.Value)!,
+            logger: logger,
+            rawPayload: new RawPayload(json));
+
+    private static async Task<DiscordMessage> RunAsync(
+        DiscussionCommentEvent evt,
+        Mock<IMessageCacheService>? cacheOverride = null,
+        ILogger<DiscussionCommentAction>? logger = null,
+        RawPayload? rawPayload = null)
     {
         (Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache, Mock<IGitHubUserMapManager> userMap) = CreateMocks();
 
@@ -54,13 +98,36 @@ public class DiscussionCommentActionTests
 
         DiscussionCommentAction action = new(
             discord.Object, (cacheOverride ?? cache).Object, userMap.Object,
-            Mock.Of<ILogger<DiscussionCommentAction>>(),
-            _webhookUri, "discussion_comment", evt);
+            logger ?? Mock.Of<ILogger<DiscussionCommentAction>>(),
+            _webhookUri, "discussion_comment", evt, rawPayload);
 
         await action.RunAsync();
 
         Assert.NotNull(captured);
         return captured!;
+    }
+
+    /// <summary>A payload missing the discussion or the comment object is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingDiscussionOrCommentSendsNothingAndWarns(bool dropDiscussion)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        DiscussionCommentEvent evt = dropDiscussion
+            ? MakeEvent("created") with { Discussion = null! }
+            : MakeEvent("created") with { Comment = null! };
+
+        DiscussionCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<DiscussionCommentAction>(logs).Object,
+            _webhookUri, "discussion_comment", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "discussion_comment payload is missing discussion or comment; skipping notification.");
     }
 
     /// <summary>created shows the commenter, discussion number/title, comment body, comment URL, and the created color.</summary>
@@ -77,16 +144,85 @@ public class DiscussionCommentActionTests
         Assert.Equal(EmbedColors.DiscussionCommentCreated, embed.Color);
     }
 
-    /// <summary>edited shows the current body (no diff) with the edited verb and color.</summary>
+    /// <summary>edited shows a body diff built from the raw changes.body.from, with the edited verb and color.</summary>
     [Fact]
-    public async Task RunAsyncEditedShowsCurrentBody()
+    public async Task RunAsyncEditedShowsBodyDiff()
     {
-        DiscordMessage message = await RunAsync(MakeEvent("edited", commentBody: "LGTM"));
+        ListLogger logger = new();
+
+        DiscordMessage message = await RunRawAsync(MakeJson("edited", commentBody: "LGTM"), logger);
 
         DiscordEmbed embed = message.Embeds![0];
         Assert.Equal("commenter edited comment on Discussion #5: Great discussion", embed.Title);
-        Assert.Equal("LGTM", embed.Description);
+        Assert.StartsWith("```diff\n", embed.Description, StringComparison.Ordinal);
+        Assert.Contains("- before", embed.Description, StringComparison.Ordinal);
+        Assert.Contains("+ LGTM", embed.Description, StringComparison.Ordinal);
         Assert.Equal(EmbedColors.DiscussionCommentEdited, embed.Color);
+        Assert.Empty(logger.Entries);
+    }
+
+    /// <summary>An empty previous body is a valid previous body and still produces a diff.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithEmptyPreviousBodyShowsDiff()
+    {
+        ListLogger logger = new();
+
+        DiscordMessage message = await RunRawAsync(
+            MakeJson("edited", commentBody: "LGTM", changesJson: """{"body":{"from":""}}"""),
+            logger);
+
+        DiscordEmbed embed = message.Embeds![0];
+        Assert.StartsWith("```diff\n", embed.Description, StringComparison.Ordinal);
+        Assert.Contains("+ LGTM", embed.Description, StringComparison.Ordinal);
+        Assert.Empty(logger.Entries);
+    }
+
+    /// <summary>edited whose raw changes.body.from is unusable falls back to the current body and logs one warning.</summary>
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"body":null}""")]
+    [InlineData("""{"body":{}}""")]
+    [InlineData("""{"body":{"from":null}}""")]
+    [InlineData("""{"body":{"from":5}}""")]
+    public async Task RunAsyncEditedWithUnusablePreviousBodyFallsBackToCurrentBody(string changesJson)
+    {
+        ListLogger logger = new();
+
+        DiscordMessage message = await RunRawAsync(MakeJson("edited", commentBody: "LGTM", changesJson: changesJson), logger);
+
+        AssertFallback(message, logger);
+    }
+
+    /// <summary>edited without the raw payload (nothing to read the previous body from) falls back the same way.</summary>
+    [Fact]
+    public async Task RunAsyncEditedWithoutRawPayloadFallsBackToCurrentBody()
+    {
+        ListLogger logger = new();
+
+        DiscordMessage message = await RunAsync(MakeEvent("edited", commentBody: "LGTM"), logger: logger);
+
+        AssertFallback(message, logger);
+    }
+
+    private static void AssertFallback(DiscordMessage message, ListLogger logger)
+    {
+        Assert.Equal("LGTM", message.Embeds![0].Description);
+        (LogLevel level, var text) = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Warning, level);
+        Assert.Equal("discussion_comment edited payload is missing changes.body.from; falling back to the current body.", text);
+    }
+
+    /// <summary>created and deleted never look at changes, so a missing changes object logs nothing.</summary>
+    [Theory]
+    [InlineData("created")]
+    [InlineData("deleted")]
+    public async Task RunAsyncNonEditedWithoutChangesLogsNothing(string action)
+    {
+        ListLogger logger = new();
+
+        await RunAsync(MakeEvent(action), logger: logger);
+
+        Assert.Empty(logger.Entries);
     }
 
     /// <summary>deleted uses the deleted verb and color.</summary>

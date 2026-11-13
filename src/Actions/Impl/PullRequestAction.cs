@@ -93,7 +93,12 @@ public sealed class PullRequestAction(
             return;
         }
 
-        OctokitPR pr = Event.PullRequest;
+        if (Event.PullRequest is not { Head: not null, Base: not null } pr)
+        {
+            Logger.LogWarning("pull_request payload is missing pull_request or pull_request.head or pull_request.base; skipping notification.");
+            return;
+        }
+
         // Use an explicit default rather than an empty string when missing, to keep the notification title and cache key unique.
         var action = Event.Action ?? "unknown";
 
@@ -102,14 +107,17 @@ public sealed class PullRequestAction(
                        ?? (Event as PullRequestUnlabeledEvent)?.Label;
         User? assignee = (Event as PullRequestAssignedEvent)?.Assignee
                          ?? (Event as PullRequestUnassignedEvent)?.Assignee;
-        User? requestedReviewer = (Event as PullRequestReviewRequestedEvent)?.RequestedReviewer;
+        User? requestedReviewer = (Event as PullRequestReviewRequestedEvent)?.RequestedReviewer
+                                  ?? (Event as PullRequestReviewRequestRemovedEvent)?.RequestedReviewer;
+        Team? requestedTeam = (Event as PullRequestReviewRequestedEvent)?.RequestedTeam
+                              ?? (Event as PullRequestReviewRequestRemovedEvent)?.RequestedTeam;
         PullRequestEditedEventChanges? changes =
             (Event as PullRequestEditedEvent)?.Changes;
 
         (var titleVerb, var color) = GetTitleVerbAndColor(action, pr.Merged == true);
 
         var title = $"PR {titleVerb}: #{pr.Number} {pr.Title}";
-        List<DiscordEmbedField> fields = BuildFields(pr, label, assignee, requestedReviewer);
+        List<DiscordEmbedField> fields = BuildFields(action, pr, label, assignee, requestedReviewer, requestedTeam);
         var content = await BuildContentAsync(pr, sender, assignee, requestedReviewer, changes);
         var description = BuildDescription(pr, changes);
 
@@ -133,10 +141,12 @@ public sealed class PullRequestAction(
 
     /// <summary>Builds the various PR details into a list of embed fields.</summary>
     private static List<DiscordEmbedField> BuildFields(
+        string action,
         OctokitPR pr,
         Label? label,
         User? assignee,
-        User? requestedReviewer)
+        User? requestedReviewer,
+        Team? requestedTeam)
     {
         var fields = new List<DiscordEmbedField>
         {
@@ -156,6 +166,24 @@ public sealed class PullRequestAction(
 
         if (requestedReviewer is not null)
             fields.Add(new("Requested Reviewer", requestedReviewer.Login, true));
+
+        if (requestedTeam is not null && FormatList([requestedTeam.Name]) is { } teamName)
+            fields.Add(new("Requested Team", teamName, true));
+
+        if (action == "opened")
+        {
+            if (FormatList(pr.Labels?.Select(l => l.Name)) is { } labels)
+                fields.Add(new("Labels", labels, true));
+
+            if (FormatList(pr.Assignees?.Select(u => u.Login)) is { } assignees)
+                fields.Add(new("Assignees", assignees, true));
+
+            if (FormatList(pr.RequestedReviewers?.Select(u => u.Login)) is { } reviewers)
+                fields.Add(new("Requested Reviewers", reviewers, true));
+
+            if (FormatList(pr.RequestedTeams?.Select(t => t.Name)) is { } teams)
+                fields.Add(new("Requested Teams", teams, true));
+        }
 
         return fields;
     }

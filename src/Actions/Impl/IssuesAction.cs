@@ -27,11 +27,15 @@ public sealed class IssuesAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        Issue issue = Event.Issue;
-
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("issues payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.Issue is not { } issue)
+        {
+            Logger.LogWarning("issues payload is missing issue; skipping notification.");
             return;
         }
 
@@ -48,7 +52,7 @@ public sealed class IssuesAction(
                                ?? (Event as IssuesDemilestonedEvent)?.Milestone;
         IssuesEventChanges? changes = (Event as IssuesEditedEvent)?.Changes;
 
-        List<DiscordEmbedField> fields = BuildFields(issue, label, assignee, milestone);
+        List<DiscordEmbedField> fields = BuildFields(action, issue, label, assignee, milestone);
         var description = BuildDescription(action, issue, changes);
 
         var author = new DiscordEmbedAuthor(
@@ -95,6 +99,7 @@ public sealed class IssuesAction(
 
     /// <summary>Builds the list of embed fields.</summary>
     private static List<DiscordEmbedField> BuildFields(
+        string action,
         Issue issue,
         Label? label,
         User? assignee,
@@ -113,6 +118,15 @@ public sealed class IssuesAction(
 
         if (milestone is not null)
             fields.Add(new("Milestone", milestone.Title, true));
+
+        if (action == "opened")
+        {
+            if (FormatList(issue.Labels?.Select(l => l.Name)) is { } labels)
+                fields.Add(new("Labels", labels, true));
+
+            if (FormatList(issue.Assignees?.Select(u => u.Login)) is { } assignees)
+                fields.Add(new("Assignees", assignees, true));
+        }
 
         return fields;
     }
