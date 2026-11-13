@@ -158,7 +158,7 @@ Each message body is the Base64 text of a JSON envelope. Decode it (`base64 -d`)
 
 1. Check the cause in Application Insights (search for `Webhook event dead-lettered` and the `DeliveryId`).
 2. Add the message body, unchanged, to the queue `webhook-events` (do not decode or re-encode it), for example with Azure Storage Explorer or the portal, and delete it from the poison queue.
-3. A replay posts a new Discord message if the original was already delivered more than 5 minutes ago; replay only events whose Discord message is missing.
+3. A replay posts a new Discord message if the message was last sent or edited more than 5 minutes ago (each successful edit restarts the window); replay only events whose Discord message is missing.
 
 ### Comparing with GitHub deliveries
 
