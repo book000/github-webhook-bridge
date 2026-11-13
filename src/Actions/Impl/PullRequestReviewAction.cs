@@ -54,10 +54,12 @@ public sealed class PullRequestReviewAction(
             ? (review.Body.Length > 500 ? $"{review.Body[..500]}..." : review.Body)
             : null;
 
-        // @mention the PR author (excluded when the sender is reviewing their own PR).
-        var mentions = await GetUsersMentionsAsync(
-            sender.Id,
-            [(pr.User.Id, pr.User.Login)]);
+        // @mention the PR author (excluded when the sender is reviewing their own PR); dismissed reviews do not mention.
+        var mentions = SuppressesMentions(Event.Action)
+            ? string.Empty
+            : await GetUsersMentionsAsync(
+                sender.Id,
+                [(pr.User.Id, pr.User.Login)]);
         var content = mentions.Length > 0 ? mentions : null;
 
         var author = new DiscordEmbedAuthor(

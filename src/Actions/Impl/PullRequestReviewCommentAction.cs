@@ -69,9 +69,11 @@ public sealed class PullRequestReviewCommentAction(
         }
 
         // @mention the PR author.
-        var mentions = await GetUsersMentionsAsync(
-            sender.Id,
-            [(pr.User.Id, pr.User.Login)]);
+        var mentions = SuppressesMentions(action)
+            ? string.Empty
+            : await GetUsersMentionsAsync(
+                sender.Id,
+                [(pr.User.Id, pr.User.Login)]);
         var content = mentions.Length > 0 ? mentions : null;
 
         var author = new DiscordEmbedAuthor(

@@ -66,9 +66,11 @@ public sealed class DiscussionCommentAction(
                 : null;
         }
 
-        var mentions = await GetUsersMentionsAsync(
-            sender.Id,
-            [(discussion.User.Id, discussion.User.Login)]);
+        var mentions = SuppressesMentions(action)
+            ? string.Empty
+            : await GetUsersMentionsAsync(
+                sender.Id,
+                [(discussion.User.Id, discussion.User.Login)]);
 
         var content = mentions.Length > 0 ? mentions : null;
 

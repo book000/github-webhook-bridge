@@ -59,10 +59,12 @@ public sealed class IssueCommentAction(
         IssueCommentEventChanges? changes = (Event as IssueCommentEditedEvent)?.Changes;
         var body = BuildDescription(action, comment, changes);
 
-        // @mention the issue author (excluding the sender).
-        var mentions = await GetUsersMentionsAsync(
-            sender.Id,
-            [(issue.User.Id, issue.User.Login)]);
+        // @mention the issue author (excluding the sender); deleted comments do not mention.
+        var mentions = SuppressesMentions(action)
+            ? string.Empty
+            : await GetUsersMentionsAsync(
+                sender.Id,
+                [(issue.User.Id, issue.User.Login)]);
 
         var content = mentions.Length > 0 ? mentions : null;
 

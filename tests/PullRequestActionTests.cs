@@ -24,7 +24,8 @@ public class PullRequestActionTests
         string labelsJson = "[]",
         string assigneesJson = "[]",
         string requestedReviewersJson = "[]",
-        string requestedTeamsJson = "[]") =>
+        string requestedTeamsJson = "[]",
+        string? previousTitle = null) =>
         JsonSerializer.Deserialize<PullRequestEvent>(
             $$"""
             {
@@ -42,6 +43,9 @@ public class PullRequestActionTests
                     requestedTeamsJson: requestedTeamsJson)}},
                 "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
                 "sender":{{TestFixtures.UserJson("sender",200,"https://github.com/sender")}}
+                {{(previousTitle is not null
+                    ? $",\"changes\":{{\"title\":{{\"from\":\"{previousTitle}\"}}}}"
+                    : string.Empty)}}
                 {{(requestedReviewerLogin is not null
                     ? $",\"requested_reviewer\":{TestFixtures.UserJson(requestedReviewerLogin, requestedReviewerId ?? 300)}"
                     : string.Empty)}}
@@ -222,6 +226,31 @@ public class PullRequestActionTests
                 It.Is<DiscordMessage>(m =>
                     m.Content != null &&
                     m.Content.Contains("<@discord-user-id-300>"))),
+            Times.Once);
+    }
+
+    /// <summary>Two GitHub reviewers mapped to the same Discord ID produce a single mention when the WIP title is cleared.</summary>
+    [Fact]
+    public async Task RunAsyncDeduplicatesMentionsResolvingToSameDiscordId()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        userMap.Setup(u => u.GetById(301L)).Returns("shared-discord-id");
+        userMap.Setup(u => u.GetById(302L)).Returns("shared-discord-id");
+
+        var reviewers = $"[{TestFixtures.UserJson("reviewer-a", 301)},{TestFixtures.UserJson("reviewer-b", 302)}]";
+        PullRequestAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestAction>>(),
+            _webhookUri, "pull_request",
+            MakePrEvent("edited", previousTitle: "WIP: Add awesome feature", requestedReviewersJson: reviewers));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m => m.Content == "<@shared-discord-id>")),
             Times.Once);
     }
 
