@@ -29,6 +29,8 @@ public class BaseActionTests
         public override Task RunAsync() => Task.CompletedTask;
 
         public static string Patch(string oldText, string newText, string fileName) => CreatePatch(oldText, newText, fileName);
+
+        public static string? List(IEnumerable<string>? items) => FormatList(items);
     }
 
     private static (SendingAction Action, Mock<IDiscordClient> Discord, Mock<IMessageCacheService> Cache) Create()
@@ -45,6 +47,42 @@ public class BaseActionTests
         var patch = PatchingAction.Patch("keep\nold\nend", "keep\nnew\nend", "body");
 
         Assert.Equal("--- body\n+++ body\n  keep\n- old\n+ new\n  end\n".ReplaceLineEndings(), patch.ReplaceLineEndings());
+    }
+
+    [Fact]
+    public void FormatList_NullOrEmpty_ReturnsNull()
+    {
+        Assert.Null(PatchingAction.List(null));
+        Assert.Null(PatchingAction.List([]));
+    }
+
+    [Fact]
+    public void FormatList_SingleItem_ReturnsItem()
+    {
+        Assert.Equal("a", PatchingAction.List(["a"]));
+    }
+
+    [Fact]
+    public void FormatList_SeveralItems_JoinsWithCommaAndSpace()
+    {
+        Assert.Equal("a, b", PatchingAction.List(["a", "b"]));
+    }
+
+    [Fact]
+    public void FormatList_JoinedValueOver1024Characters_TruncatesToExactly1024EndingWithEllipsis()
+    {
+        var result = PatchingAction.List([new string('x', 1100)]);
+
+        Assert.Equal(new string('x', 1021) + "...", result);
+        Assert.Equal(1024, result!.Length);
+    }
+
+    [Fact]
+    public void FormatList_JoinedValueOfExactly1024Characters_IsNotTruncated()
+    {
+        var value = new string('x', 1024);
+
+        Assert.Equal(value, PatchingAction.List([value]));
     }
 
     [Fact]
