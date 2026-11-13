@@ -114,11 +114,15 @@ public class PullRequestReviewThreadActionTests
         Assert.Equal(EmbedColors.PullRequestReviewThreadUnresolved, capturedColor);
     }
 
-    /// <summary>The Embed field contains the thread's NodeId "RT_node_abc".</summary>
+    /// <summary>The embed shows the first comment's path, body, and links to the comment URL, without the raw node_id.</summary>
     [Fact]
-    public async Task RunAsyncEmbedFieldContainsThreadNodeId()
+    public async Task RunAsyncEmbedShowsFirstCommentPathBodyAndLink()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        DiscordMessage? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg)
+               .ReturnsAsync("msg-id");
 
         PullRequestReviewThreadAction action = new(
             discord.Object, cache.Object, userMap.Object,
@@ -127,13 +131,107 @@ public class PullRequestReviewThreadActionTests
 
         await action.RunAsync();
 
-        discord.Verify(
-            d => d.SendMessageAsync(
-                It.IsAny<Uri>(),
-                It.Is<DiscordMessage>(m =>
-                    m.Embeds![0].Fields != null &&
-                    m.Embeds![0].Fields!.Any(f => f.Value.Contains("RT_node_abc")))),
-            Times.Once);
+        DiscordEmbed embed = captured!.Embeds![0];
+        Assert.Equal("src/file.cs", embed.Fields!.Single(f => f.Name == "File").Value);
+        Assert.Equal("Great!", embed.Description);
+        Assert.Equal("https://github.com/owner/repo/pull/1#discussion_r1", embed.Url!.ToString());
+        Assert.DoesNotContain(embed.Fields!, f => f.Value.Contains("RT_node_abc"));
+    }
+
+    /// <summary>A comment body longer than 500 characters is truncated with an ellipsis.</summary>
+    [Fact]
+    public async Task RunAsyncTruncatesLongCommentBody()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        DiscordMessage? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg)
+               .ReturnsAsync("msg-id");
+
+        PullRequestReviewThreadEvent evt = JsonSerializer.Deserialize<PullRequestReviewThreadEvent>(
+            $$"""
+            {
+                "action":"resolved",
+                "thread":{{TestFixtures.ThreadJson(commentJson: TestFixtures.ReviewCommentJson(body: new string('a', 600)))}},
+                "pull_request":{{TestFixtures.SimplePrJson(12, "Feature branch", "https://github.com/test/repo/pull/12", "pr-author", 50)}},
+                "repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer", 60)}}
+            }
+            """,
+            OctokitJsonOptions.Value)!;
+
+        PullRequestReviewThreadAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", evt);
+
+        await action.RunAsync();
+
+        Assert.Equal(new string('a', 500) + "...", captured!.Embeds![0].Description);
+    }
+
+    /// <summary>The vendored real payload yields the README.md path and the #discussion_r URL.</summary>
+    [Fact]
+    public async Task RunAsyncRealPayloadShowsPathAndDiscussionUrl()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        DiscordMessage? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg)
+               .ReturnsAsync("msg-id");
+
+        var json = await File.ReadAllTextAsync(Path.Combine(
+            Path.GetDirectoryName(typeof(PullRequestReviewThreadActionTests).Assembly.Location)!,
+            "RealPayloads",
+            "pull_request_review_thread.resolved.json"));
+        PullRequestReviewThreadEvent evt = JsonSerializer.Deserialize<PullRequestReviewThreadEvent>(json, OctokitJsonOptions.Value)!;
+
+        PullRequestReviewThreadAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", evt);
+
+        await action.RunAsync();
+
+        DiscordEmbed embed = captured!.Embeds![0];
+        Assert.Equal("README.md", embed.Fields!.Single(f => f.Name == "File").Value);
+        Assert.Equal("https://github.com/Codertocat/Hello-World/pull/2#discussion_r284312630", embed.Url!.ToString());
+        Assert.Equal("Maybe you should use more emoji on this line.", embed.Description);
+    }
+
+    /// <summary>Without any comments in the thread, the embed omits the file and links to the PR page.</summary>
+    [Fact]
+    public async Task RunAsyncFallsBackToPrUrlWhenThreadHasNoComments()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        DiscordMessage? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg)
+               .ReturnsAsync("msg-id");
+
+        PullRequestReviewThreadEvent evt = JsonSerializer.Deserialize<PullRequestReviewThreadEvent>(
+            $$"""
+            {
+                "action":"resolved",
+                "thread":{"node_id":"RT_node_abc","comments":[]},
+                "pull_request":{{TestFixtures.SimplePrJson(12, "Feature branch", "https://github.com/test/repo/pull/12", "pr-author", 50)}},
+                "repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer", 60)}}
+            }
+            """,
+            OctokitJsonOptions.Value)!;
+
+        PullRequestReviewThreadAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestReviewThreadAction>>(),
+            _webhookUri, "pull_request_review_thread", evt);
+
+        await action.RunAsync();
+
+        DiscordEmbed embed = captured!.Embeds![0];
+        Assert.DoesNotContain(embed.Fields!, f => f.Name == "File");
+        Assert.Null(embed.Description);
+        Assert.Equal("https://github.com/test/repo/pull/12", embed.Url!.ToString());
     }
 
     /// <summary>The cache key contains the thread's NodeId.</summary>
@@ -183,13 +281,8 @@ public class PullRequestReviewThreadActionTests
 
         await action.RunAsync();
 
-        discord.Verify(
-            d => d.SendMessageAsync(
-                It.IsAny<Uri>(),
-                It.Is<DiscordMessage>(m =>
-                    m.Embeds![0].Fields != null &&
-                    m.Embeds![0].Fields!.Any(f => f.Value.Contains("unknown")))),
-            Times.Once);
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Once);
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-pr-review-thread-12-unknown"), Times.Once);
     }
 
     /// <summary>
@@ -224,13 +317,8 @@ public class PullRequestReviewThreadActionTests
 
         await action.RunAsync();
 
-        discord.Verify(
-            d => d.SendMessageAsync(
-                It.IsAny<Uri>(),
-                It.Is<DiscordMessage>(m =>
-                    m.Embeds![0].Fields != null &&
-                    m.Embeds![0].Fields!.Any(f => f.Value.Contains("unknown")))),
-            Times.Once);
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Once);
+        cache.Verify(c => c.GetAsync(_webhookUri, "test/repo-pr-review-thread-12-unknown"), Times.Once);
     }
 
     /// <summary>When the PR author is mapped to Discord, the message is sent with a mention.</summary>

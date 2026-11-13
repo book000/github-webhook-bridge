@@ -49,7 +49,9 @@ public abstract class BaseAction<TEvent>(
 
     /// <summary>
     /// Sends a message to Discord.
-    /// If a message with the same key exists within the last 5 minutes, it is edited instead.
+    /// If a message with the same key was sent or edited within the last 5 minutes, it is edited instead,
+    /// and each successful edit restarts that window.
+    /// If the cache cannot be read, a new message is sent.
     /// The SuppressNotifications flag is applied to every message.
     /// </summary>
     /// <param name="key">Key string used to look up and store the cache entry.</param>
@@ -61,13 +63,24 @@ public abstract class BaseAction<TEvent>(
         // Add the SuppressNotifications flag (preserving existing flags).
         message = message with { Flags = message.Flags | DiscordMessageFlags.SuppressNotifications };
 
-        CachedMessage? cached = await _cache.GetAsync(WebhookUrl, key);
+        CachedMessage? cached = null;
+        try
+        {
+            cached = await _cache.GetAsync(WebhookUrl, key);
+        }
+        catch (Exception ex)
+        {
+            // The cache is only a deduplication aid; a read failure must not block delivery.
+            Logger.LogWarning(ex, "Failed to read message cache for key {Key}, sending a new message.", key);
+        }
+
         if (cached is not null)
         {
+            var edited = false;
             try
             {
                 await Discord.EditMessageAsync(WebhookUrl, cached.MessageId, message);
-                return;
+                edited = true;
             }
             catch (DiscordRateLimitException)
             {
@@ -79,6 +92,13 @@ public abstract class BaseAction<TEvent>(
                 // On edit failure (e.g. the message was deleted), discard the cache entry and fall back to sending a new message.
                 Logger.LogWarning(ex, "Failed to edit message {MessageId}, falling back to send.", cached.MessageId);
                 await _cache.DeleteAsync(WebhookUrl, key);
+            }
+
+            if (edited)
+            {
+                // Re-storing the entry refreshes its server-side timestamp so the edit window slides.
+                await _cache.SetAsync(WebhookUrl, key, cached.MessageId);
+                return;
             }
         }
 
@@ -115,6 +135,22 @@ public abstract class BaseAction<TEvent>(
     /// <param name="action">The GitHub Webhook action value.</param>
     /// <returns><see langword="true"/> when mentions must be suppressed.</returns>
     protected static bool SuppressesMentions(string? action) => action is "deleted" or "dismissed";
+
+    /// <summary>
+    /// Joins items into a single embed field value separated by ", ".
+    /// The result is cut to Discord's 1024-character field value limit, ending with "..." when cut.
+    /// </summary>
+    /// <param name="items">The items to join; may be null.</param>
+    /// <returns>The joined value, or null when there are no items so the caller adds no field.</returns>
+    protected static string? FormatList(IEnumerable<string>? items)
+    {
+        const int maxLength = 1024;
+
+        var joined = string.Join(", ", items ?? []);
+        if (joined.Length == 0) return null;
+
+        return joined.Length > maxLength ? $"{joined[..(maxLength - 3)]}..." : joined;
+    }
 
     /// <summary>
     /// Generates a unified diff between two texts (using DiffPlex InlineDiffBuilder).

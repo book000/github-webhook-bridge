@@ -114,26 +114,16 @@ public class PullRequestReviewActionTests
         Assert.Equal(EmbedColors.PullRequestReviewDismissed, color);
     }
 
-    /// <summary>
-    /// Known bug (B2): submitted + COMMENTED is displayed with the Approved color (green).
-    /// It should use a dedicated color (e.g. PullRequestReviewCommented), but currently
-    /// <see cref="EmbedColors.PullRequestReviewApproved"/> is used.
-    /// This test documents the current (buggy) behavior.
-    /// </summary>
+    /// <summary>submitted + COMMENTED uses the PullRequestReviewCommented color, distinct from approval.</summary>
     [Fact]
-    public async Task RunAsyncSubmittedCommentedUsesApprovedColorIncorrectlyKnownBug()
+    public async Task RunAsyncSubmittedCommentedUsesCommentedColor()
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        // NOTE: This is a known bug (B2).
-        // A COMMENTED review is displayed with PullRequestReviewApproved (green).
-        // It should use a dedicated color (e.g. EmbedColors.PullRequestReviewCommented).
-        // TODO (when fixing B2): remove this test and replace it with a new test that
-        // verifies the EmbedColors.PullRequestReviewCommented color.
         var color = await RunAndCaptureColor(discord, cache, userMap, "submitted", "COMMENTED");
 
-        // Document the current buggy behavior: COMMENTED also uses the Approved color
-        Assert.Equal(EmbedColors.PullRequestReviewApproved, color);
+        Assert.Equal(EmbedColors.PullRequestReviewCommented, color);
+        Assert.NotEqual(EmbedColors.PullRequestReviewApproved, color);
     }
 
     /// <summary>The title of the approved action contains "approved".</summary>

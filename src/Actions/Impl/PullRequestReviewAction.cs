@@ -41,7 +41,7 @@ public sealed class PullRequestReviewAction(
         {
             ("submitted", "APPROVED") => ("approved", EmbedColors.PullRequestReviewApproved),
             ("submitted", "CHANGES_REQUESTED") => ("requested changes", EmbedColors.PullRequestReviewChangesRequested),
-            ("submitted", _) => ("commented on", EmbedColors.PullRequestReviewApproved),
+            ("submitted", _) => ("commented on", EmbedColors.PullRequestReviewCommented),
             ("edited", _) => ("edited review on", EmbedColors.PullRequestReviewEdited),
             ("dismissed", _) => ("dismissed review on", EmbedColors.PullRequestReviewDismissed),
             _ => (Event.Action, EmbedColors.Unknown),
