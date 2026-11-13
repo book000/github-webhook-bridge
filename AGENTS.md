@@ -22,7 +22,7 @@ dotnet test -c Release            # run all tests (mirrors CI)
 cd src && func start              # run Azure Functions locally (needs Core Tools v4 and src/local.settings.json)
 ```
 
-- CI (`.github/workflows/dotnet-ci.yml`, windows-latest, .NET 10.0.x) runs build, tests with coverage (`tests/coverlet.runsettings`, line coverage must be at least 80%), and on PRs to `master` a Stryker mutation run (`stryker-config.json`).
+- CI (`.github/workflows/dotnet-ci.yml`, windows-latest and ubuntu-latest for build/tests, windows-latest for mutation, .NET 10.0.x) runs build, tests with coverage (`tests/coverlet.runsettings`, line coverage must be at least 80%), and on PRs to `master` a Stryker mutation run (`stryker-config.json`).
 - Deploy (`.github/workflows/azure-functions-deploy.yml`): push to `master` publishes with OIDC login and `Azure/functions-action`; the infrastructure is `infra/main.bicep`.
 - Snapshot tests: after a deliberate Octokit.Webhooks change, refresh with `UPDATE_SNAPSHOTS=1 dotnet test --filter OctokitPayloadSchemaSnapshotTests` and `UPDATE_KNOWN_EVENTS=1 dotnet test --filter OctokitWebhooksCompatibilityTests`, then review the diff. `tests/RealPayloads/README.md` explains the vendored real payloads.
 
