@@ -10,6 +10,7 @@ using Octokit.Webhooks.Events.PullRequest;
 using Octokit.Webhooks.Models;
 using OctokitPR = Octokit.Webhooks.Models.PullRequestEvent.PullRequest;
 using PullRequestEditedEventChanges = Octokit.Webhooks.Models.PullRequestEvent.PullRequestEditedEventChanges;
+using PullRequestStack = Octokit.Webhooks.Models.PullRequestEvent.PullRequestStack;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
@@ -78,6 +79,7 @@ public sealed class PullRequestAction(
             "demilestoned" => ("demilestoned", EmbedColors.PullRequestDemilestoned),
             "enqueued" => ("enqueued", EmbedColors.PullRequestEnqueued),
             "dequeued" => ("dequeued", EmbedColors.PullRequestDequeued),
+            "stacked" => ("stacked", EmbedColors.PullRequestStacked),
             _ => (action, EmbedColors.Unknown),
         };
 
@@ -109,7 +111,9 @@ public sealed class PullRequestAction(
         (var titleVerb, var color) = GetTitleVerbAndColor(action, pr.Merged == true);
 
         var title = $"PR {titleVerb}: #{pr.Number} {pr.Title}";
-        List<DiscordEmbedField> fields = BuildFields(pr, label, assignee, requestedReviewer);
+        PullRequestStack? stack = (Event as PullRequestStackedEvent)?.Stack;
+
+        List<DiscordEmbedField> fields = BuildFields(pr, label, assignee, requestedReviewer, stack);
         var content = await BuildContentAsync(pr, sender, assignee, requestedReviewer, changes);
         var description = BuildDescription(pr, changes);
 
@@ -136,7 +140,8 @@ public sealed class PullRequestAction(
         OctokitPR pr,
         Label? label,
         User? assignee,
-        User? requestedReviewer)
+        User? requestedReviewer,
+        PullRequestStack? stack)
     {
         var fields = new List<DiscordEmbedField>
         {
@@ -156,6 +161,9 @@ public sealed class PullRequestAction(
 
         if (requestedReviewer is not null)
             fields.Add(new("Requested Reviewer", requestedReviewer.Login, true));
+
+        if (stack is not null)
+            fields.Add(new("Stack", $"{stack.Position} / {stack.Size}", true));
 
         return fields;
     }

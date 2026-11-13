@@ -19,7 +19,8 @@ public class PullRequestActionTests
         bool merged = false,
         bool draft = false,
         string? requestedReviewerLogin = null,
-        long? requestedReviewerId = null) =>
+        long? requestedReviewerId = null,
+        (long Position, long Size)? stack = null) =>
         JsonSerializer.Deserialize<PullRequestEvent>(
             $$"""
             {
@@ -36,6 +37,9 @@ public class PullRequestActionTests
                 "sender":{{TestFixtures.UserJson("sender",200,"https://github.com/sender")}}
                 {{(requestedReviewerLogin is not null
                     ? $",\"requested_reviewer\":{TestFixtures.UserJson(requestedReviewerLogin, requestedReviewerId ?? 300)}"
+                    : string.Empty)}}
+                {{(stack is { } s
+                    ? $",\"stack\":{{\"base\":{{\"ref\":\"main\",\"sha\":\"abc\"}},\"size\":{s.Size},\"position\":{s.Position},\"id\":1,\"number\":42}}"
                     : string.Empty)}}
             }
             """,
@@ -234,6 +238,29 @@ public class PullRequestActionTests
             d => d.SendMessageAsync(
                 It.IsAny<Uri>(),
                 It.Is<DiscordMessage>(m => m.Content == null || m.Content == string.Empty)),
+            Times.Once);
+    }
+
+    /// <summary>The stacked event has the stacked title and color, and shows the stack position.</summary>
+    [Fact]
+    public async Task RunAsyncStackedShowsStackFieldWithStackedTitleAndColor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        PullRequestAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PullRequestAction>>(),
+            _webhookUri, "pull_request", MakePrEvent("stacked", stack: (2, 3)));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Title == "PR stacked: #42 Add awesome feature" &&
+                    m.Embeds![0].Color == EmbedColors.PullRequestStacked &&
+                    m.Embeds![0].Fields!.Any(f => f.Name == "Stack" && f.Value == "2 / 3"))),
             Times.Once);
     }
 }

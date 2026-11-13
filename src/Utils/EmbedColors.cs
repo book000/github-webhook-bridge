@@ -71,6 +71,9 @@ public static class EmbedColors
     /// <summary>Color for a pull request removed from the merge queue (blue)</summary>
     public const int PullRequestDequeued = 0x3498db;
 
+    /// <summary>Color for a pull request added to a stack (blue)</summary>
+    public const int PullRequestStacked = 0x3498db;
+
     // PullRequestReview
 
     /// <summary>Color for a pull request review approved (green)</summary>
@@ -154,6 +157,12 @@ public static class EmbedColors
     /// <summary>Color for an issue deleted (red)</summary>
     public const int IssueDeleted = 0xe74c3c;
 
+    /// <summary>Color for an issue type set (blue)</summary>
+    public const int IssueTyped = 0x3498db;
+
+    /// <summary>Color for an issue type removed (blue)</summary>
+    public const int IssueUntyped = 0x3498db;
+
     // IssueComment
 
     /// <summary>Color for an issue comment created (blue)</summary>
@@ -164,6 +173,12 @@ public static class EmbedColors
 
     /// <summary>Color for an issue comment deleted (red)</summary>
     public const int IssueCommentDeleted = 0xe74c3c;
+
+    /// <summary>Color for an issue comment pinned (green)</summary>
+    public const int IssueCommentPinned = 0x2ecc71;
+
+    /// <summary>Color for an issue comment unpinned (red)</summary>
+    public const int IssueCommentUnpinned = 0xe74c3c;
 
     // Repository
 
@@ -236,6 +251,12 @@ public static class EmbedColors
 
     /// <summary>Color for a discussion unlocked (dark gray)</summary>
     public const int DiscussionUnlocked = 0x7f8c8d;
+
+    /// <summary>Color for a discussion closed (gray)</summary>
+    public const int DiscussionClosed = 0x95a5a6;
+
+    /// <summary>Color for a discussion reopened (blue)</summary>
+    public const int DiscussionReopened = 0x3498db;
 
     /// <summary>Color for a secret scanning alert that is open (created, publicly leaked, validated) (red)</summary>
     public const int SecretScanningAlertOpen = 0xe74c3c;

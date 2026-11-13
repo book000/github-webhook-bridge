@@ -39,8 +39,12 @@ public class IssuesActionTests
         string? milestoneTitle = null,
         string issueBody = "",
         string? changedTitleFrom = null,
-        string? changedBodyFrom = null)
+        string? changedBodyFrom = null,
+        string? typeName = null)
     {
+        var typeJson = typeName is not null
+            ? $$""","type":{"id":1,"node_id":"IT_1","name":"{{typeName}}","description":"","color":"blue","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","is_enabled":true}"""
+            : string.Empty;
         var changeFields = new List<string>();
         if (changedTitleFrom is not null)
             changeFields.Add("\"title\":{\"from\":\"" + changedTitleFrom + "\"}");
@@ -49,7 +53,7 @@ public class IssuesActionTests
         var changesJson = changeFields.Count > 0 ? ",\"changes\":{" + string.Join(",", changeFields) + "}" : string.Empty;
 
         return JsonSerializer.Deserialize<IssuesEvent>(
-            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7, "Fix bug", action == "closed" ? "closed" : "open", body: issueBody.Length > 0 ? issueBody : null, userLogin: "opener", userId: 1)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender", 2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin, 3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}{{changesJson}}}""",
+            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7, "Fix bug", action == "closed" ? "closed" : "open", body: issueBody.Length > 0 ? issueBody : null, userLogin: "opener", userId: 1)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender", 2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin, 3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}{{changesJson}}{{typeJson}}}""",
             OctokitJsonOptions.Value)!;
     }
 
@@ -283,6 +287,75 @@ public class IssuesActionTests
                 It.Is<DiscordMessage>(m =>
                     m.Embeds![0].Description!.Contains("- Old body") &&
                     !m.Embeds![0].Description!.Contains("- Old title"))),
+            Times.Once);
+    }
+
+    /// <summary>The typed event has the typed title and color, and shows the issue type name.</summary>
+    [Fact]
+    public async Task RunAsyncTypedShowsTypeFieldWithTypedTitleAndColor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IssuesAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("typed", typeName: "Bug"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Title == "Issue typed: #7 Fix bug" &&
+                    m.Embeds![0].Color == EmbedColors.IssueTyped &&
+                    m.Embeds![0].Fields!.Any(f => f.Name == "Type" && f.Value == "Bug"))),
+            Times.Once);
+    }
+
+    /// <summary>The untyped event has the untyped title and color, and shows the removed issue type name.</summary>
+    [Fact]
+    public async Task RunAsyncUntypedShowsTypeFieldWithUntypedTitleAndColor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IssuesAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("untyped", typeName: "Feature"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Title == "Issue untyped: #7 Fix bug" &&
+                    m.Embeds![0].Color == EmbedColors.IssueUntyped &&
+                    m.Embeds![0].Fields!.Any(f => f.Name == "Type" && f.Value == "Feature"))),
+            Times.Once);
+    }
+
+    /// <summary>A typed payload without a type value omits the Type field instead of failing.</summary>
+    [Fact]
+    public async Task RunAsyncTypedWithoutTypeOmitsTypeField()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IssuesAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", MakeEvent("typed"));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                It.IsAny<Uri>(),
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Title == "Issue typed: #7 Fix bug" &&
+                    m.Embeds![0].Color == EmbedColors.IssueTyped &&
+                    !m.Embeds![0].Fields!.Any(f => f.Name == "Type"))),
             Times.Once);
     }
 }

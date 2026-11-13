@@ -48,20 +48,26 @@ public sealed class IssueCommentAction(
             "created" => ("commented on", EmbedColors.IssueCommentCreated),
             "edited" => ("edited comment on", EmbedColors.IssueCommentEdited),
             "deleted" => ("deleted comment on", EmbedColors.IssueCommentDeleted),
+            "pinned" => ("pinned comment on", EmbedColors.IssueCommentPinned),
+            "unpinned" => ("unpinned comment on", EmbedColors.IssueCommentUnpinned),
             _ => (action, EmbedColors.Unknown),
         };
 
         var title = $"{sender.Login} {titleVerb} {issueType} #{issue.Number}: {issue.Title}";
 
         IssueCommentEventChanges? changes = (Event as IssueCommentEditedEvent)?.Changes;
-        var body = BuildDescription(action, comment, changes);
+        var isPinChange = action is "pinned" or "unpinned";
+        var body = isPinChange ? null : BuildDescription(action, comment, changes);
 
-        // @mention the issue author (excluding the sender).
-        var mentions = await GetUsersMentionsAsync(
-            sender.Id,
-            [(issue.User.Id, issue.User.Login)]);
-
-        var content = mentions.Length > 0 ? mentions : null;
+        // @mention the issue author (excluding the sender); a pin change is not new content, so it does not ping.
+        string? content = null;
+        if (!isPinChange)
+        {
+            var mentions = await GetUsersMentionsAsync(
+                sender.Id,
+                [(issue.User.Id, issue.User.Login)]);
+            content = mentions.Length > 0 ? mentions : null;
+        }
 
         var author = new DiscordEmbedAuthor(
             Name: sender.Login,
@@ -76,7 +82,7 @@ public sealed class IssueCommentAction(
             url: Uri.TryCreate(comment.HtmlUrl, UriKind.Absolute, out Uri? commentUrl) ? commentUrl : null,
             author: author);
 
-        var key = $"{repo.FullName}-issue-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}";
+        var key = $"{repo.FullName}-issue-comment-{comment.Id.ToString(CultureInfo.InvariantCulture)}{(isPinChange ? "-pin" : string.Empty)}";
         await SendMessageAsync(key, new DiscordMessage(Content: content, Embeds: [embed]));
     }
 

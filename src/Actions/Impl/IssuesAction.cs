@@ -48,7 +48,10 @@ public sealed class IssuesAction(
                                ?? (Event as IssuesDemilestonedEvent)?.Milestone;
         IssuesEventChanges? changes = (Event as IssuesEditedEvent)?.Changes;
 
-        List<DiscordEmbedField> fields = BuildFields(issue, label, assignee, milestone);
+        IssueType? issueType = (Event as IssuesTypedEvent)?.Type
+                               ?? (Event as IssuesUntypedEvent)?.Type;
+
+        List<DiscordEmbedField> fields = BuildFields(issue, label, assignee, milestone, issueType);
         var description = BuildDescription(action, issue, changes);
 
         var author = new DiscordEmbedAuthor(
@@ -90,6 +93,8 @@ public sealed class IssuesAction(
         "pinned" => ($"Issue pinned: #{issue.Number} {issue.Title}", EmbedColors.IssuePinned),
         "unpinned" => ($"Issue unpinned: #{issue.Number} {issue.Title}", EmbedColors.IssueUnpinned),
         "deleted" => ($"Issue deleted: #{issue.Number} {issue.Title}", EmbedColors.IssueDeleted),
+        "typed" => ($"Issue typed: #{issue.Number} {issue.Title}", EmbedColors.IssueTyped),
+        "untyped" => ($"Issue untyped: #{issue.Number} {issue.Title}", EmbedColors.IssueUntyped),
         _ => ($"Issue {action}: #{issue.Number} {issue.Title}", EmbedColors.Unknown),
     };
 
@@ -98,7 +103,8 @@ public sealed class IssuesAction(
         Issue issue,
         Label? label,
         User? assignee,
-        Milestone? milestone)
+        Milestone? milestone,
+        IssueType? issueType)
     {
         var fields = new List<DiscordEmbedField>
         {
@@ -113,6 +119,9 @@ public sealed class IssuesAction(
 
         if (milestone is not null)
             fields.Add(new("Milestone", milestone.Title, true));
+
+        if (issueType is not null)
+            fields.Add(new("Type", issueType.Name, true));
 
         return fields;
     }
@@ -146,6 +155,7 @@ public sealed class IssuesAction(
         "labeled" or "unlabeled" => "label",
         "locked" or "unlocked" => "locked",
         "milestoned" or "demilestoned" => "milestoned",
+        "typed" or "untyped" => "type",
         _ => action,
     };
 }

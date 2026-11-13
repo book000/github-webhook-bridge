@@ -48,6 +48,8 @@ public sealed class DiscussionAction(
             "unanswered" => ("unanswered", EmbedColors.DiscussionUnanswered),
             "labeled" => ("labeled", EmbedColors.DiscussionLabeled),
             "unlabeled" => ("unlabeled", EmbedColors.DiscussionUnlabeled),
+            "closed" => ("closed", EmbedColors.DiscussionClosed),
+            "reopened" => ("reopened", EmbedColors.DiscussionReopened),
             "category_changed" => ("changed category", EmbedColors.DiscussionCategoryChanged),
             _ => (Event.Action, EmbedColors.Unknown),
         };
