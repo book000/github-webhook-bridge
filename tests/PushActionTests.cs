@@ -17,14 +17,63 @@ public class PushActionTests
     private static string MakeCommitJson(string id, string message, string authorName = "octocat", string url = "https://github.com/test/repo/commit/abc") =>
         $$$"""{"id":"{{{id}}}","tree_id":"tree1","distinct":true,"message":"{{{message}}}","timestamp":"2024-01-01T00:00:00Z","url":"{{{url}}}","author":{"name":"{{{authorName}}}","email":"u@x.com","username":"{{{authorName}}}"},"committer":{"name":"{{{authorName}}}","email":"u@x.com","username":"{{{authorName}}}"},"added":[],"removed":[],"modified":[]}""";
 
-    private static PushEvent MakePushEvent(string[] commitJsons = null!)
+    private static PushEvent MakePushEvent(string[] commitJsons = null!, string compare = "https://github.com")
     {
         var commitsJson = string.Join(",", commitJsons ?? [MakeCommitJson("abcdef1234567890", "feat: add new feature")]);
         var repoJson = TestFixtures.RepoJson("test/repo", "https://github.com/test/repo");
         var senderJson = TestFixtures.UserJson("octocat", 1, "https://github.com/octocat");
         return JsonSerializer.Deserialize<PushEvent>(
-            $$$"""{"ref":"refs/heads/main","before":"aaa","after":"bbb","compare":"https://github.com","commits":[{{{commitsJson}}}],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":"octocat@example.com"}}""",
+            $$$"""{"ref":"refs/heads/main","before":"aaa","after":"bbb","compare":"{{{compare}}}","commits":[{{{commitsJson}}}],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":"octocat@example.com"}}""",
             OctokitJsonOptions.Value)!;
+    }
+
+    private static async Task<DiscordEmbed> RunAndCaptureEmbedAsync(PushEvent pushEvent)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        DiscordEmbed? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, m) => captured = m.Embeds![0])
+               .ReturnsAsync("msg-id");
+
+        PushAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PushAction>>(),
+            _webhookUri, "push", pushEvent);
+
+        await action.RunAsync();
+
+        return captured!;
+    }
+
+    [Fact]
+    public async Task RunAsyncLinksCompareUrlFromPayload()
+    {
+        DiscordEmbed embed = await RunAndCaptureEmbedAsync(
+            MakePushEvent(compare: "https://github.com/test/repo/compare/aaa...bbb"));
+
+        Assert.Equal(new Uri("https://github.com/test/repo/compare/aaa...bbb"), embed.Url);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not a url")]
+    [InlineData("javascript:alert(1)")]
+    public async Task RunAsyncOmitsEmbedUrlWhenCompareIsNotHttpUrl(string compare)
+    {
+        DiscordEmbed embed = await RunAndCaptureEmbedAsync(MakePushEvent(compare: compare));
+
+        Assert.Null(embed.Url);
+    }
+
+    [Fact]
+    public async Task RunAsyncCommitMessageTruncationDoesNotSplitSurrogatePair()
+    {
+        var message = new string('a', 49) + "😀" + "tail";
+
+        DiscordEmbed embed = await RunAndCaptureEmbedAsync(
+            MakePushEvent([MakeCommitJson("abc1234", message)]));
+
+        Assert.Contains($" {new string('a', 49)}... - octocat", embed.Description);
     }
 
     private static (Mock<IDiscordClient>, Mock<IMessageCacheService>, Mock<IGitHubUserMapManager>) CreateMocks()

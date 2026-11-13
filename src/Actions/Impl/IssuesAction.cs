@@ -135,7 +135,7 @@ public sealed class IssuesAction(
         }
 
         return issue.Body is not null && issue.Body.Length > 0
-            ? (issue.Body.Length > 500 ? $"{issue.Body[..500]}..." : issue.Body)
+            ? TextHelper.Truncate(issue.Body, 500)
             : null;
     }
 

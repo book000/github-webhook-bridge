@@ -50,7 +50,7 @@ public sealed class DiscussionCommentAction(
 
         // Octokit.Webhooks models Changes.Body as Changes itself, so the previous body is unreachable and no diff is shown for edits.
         var body = comment.Body is { Length: > 0 }
-            ? (comment.Body.Length > 500 ? $"{comment.Body[..500]}..." : comment.Body)
+            ? TextHelper.Truncate(comment.Body, 500)
             : null;
 
         var mentions = await GetUsersMentionsAsync(

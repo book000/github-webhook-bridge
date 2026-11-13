@@ -86,7 +86,7 @@ Endpoint: `http://localhost:7071/`
 | Event | Description |
 |---------|------|
 | `ping` | Webhook registration check |
-| `push` | Code push |
+| `push` | Code push (the embed title links to the push's compare URL) |
 | `pull_request` | Pull request operations |
 | `pull_request_review` | Pull request review |
 | `pull_request_review_comment` | Review comment |
@@ -101,6 +101,10 @@ Endpoint: `http://localhost:7071/`
 | `secret_scanning_alert` | Secret scanning alert (created / publicly leaked / reopened / validated / resolved / revoked; assigned / unassigned are ignored) |
 
 Any other event returns HTTP 406.
+
+### Embedded text
+
+Issue, pull request, discussion, comment and review bodies are truncated to 500 UTF-16 code units followed by `...`. The cut never leaves a lone surrogate (an emoji at the boundary is dropped whole), and a code fence left open by the cut is closed. Markdown links in user-authored bodies and commit messages are passed through unchanged on purpose, so Discord renders them as the author wrote them.
 
 ## Mute rules
 
