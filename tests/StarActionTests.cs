@@ -36,6 +36,18 @@ public class StarActionTests
         $$"""{"action":"{{action}}","repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("stargazer",1)}}}""",
         OctokitJsonOptions.Value)!;
 
+    /// <summary>Octokit only deserializes known actions, so an unknown action is simulated with a derived event.</summary>
+    private sealed record UnknownActionStarEvent(string ActionValue) : StarEvent
+    {
+        public override string Action => ActionValue;
+    }
+
+    private static UnknownActionStarEvent MakeUnknownActionEvent(string action)
+    {
+        StarEvent created = MakeEvent("created");
+        return new UnknownActionStarEvent(action) { Repository = created.Repository, Sender = created.Sender };
+    }
+
     /// <summary>created produces a title of "Starred".</summary>
     [Fact]
     public async Task RunAsyncCreatedTitleContainsStarred()
@@ -116,6 +128,51 @@ public class StarActionTests
         await action.RunAsync();
 
         Assert.Equal(EmbedColors.Unstar, capturedColor);
+    }
+
+    /// <summary>An unknown action gets a neutral title and the neutral color instead of being labeled "Unstarred".</summary>
+    [Fact]
+    public async Task RunAsyncUnknownActionUsesNeutralTitleAndColor()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        DiscordEmbed? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg.Embeds?.FirstOrDefault())
+               .ReturnsAsync("msg-id");
+
+        StarAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<StarAction>>(),
+            _webhookUri, "star", MakeUnknownActionEvent("foo"));
+
+        await action.RunAsync();
+
+        Assert.NotNull(captured);
+        Assert.Equal("Star foo test/repo by stargazer", captured.Title);
+        Assert.Equal(EmbedColors.Ping, captured.Color);
+    }
+
+    /// <summary>An overlong unknown action is truncated so the title stays within Discord's limit.</summary>
+    [Fact]
+    public async Task RunAsyncUnknownActionIsTruncatedInTitle()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        DiscordEmbed? captured = null;
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = msg.Embeds?.FirstOrDefault())
+               .ReturnsAsync("msg-id");
+
+        StarAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<StarAction>>(),
+            _webhookUri, "star", MakeUnknownActionEvent(new string('x', 500)));
+
+        await action.RunAsync();
+
+        Assert.NotNull(captured);
+        Assert.Equal($"Star {new string('x', 50)} test/repo by stargazer", captured.Title);
     }
 
     /// <summary>The cache key contains the sender login.</summary>

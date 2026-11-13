@@ -145,17 +145,27 @@ public class MessageCacheService : IMessageCacheService, IDisposable
     /// <summary>
     /// Escapes characters that cannot be used in an Azure Table Storage RowKey.
     /// Forbidden characters: /, \, #, ? and control characters.
-    /// When truncating at 512 characters, adjusts so as not to split a %XX encoded triplet
+    /// A key whose escaped form exceeds 512 characters is shortened to a prefix (never splitting a %XX encoded triplet),
+    /// the marker <c>!</c> and 32 hex characters of the SHA-256 of the full key, so distinct long keys do not collide.
+    /// <c>Uri.EscapeDataString</c> escapes <c>!</c> to <c>%21</c>, so the marker never appears in an unhashed key,
+    /// and every <c>%</c> in the result still starts a complete %XX triplet.
     /// </summary>
-    private static string SanitizeRowKey(string key)
+    [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "Azure Table Storage row keys are standardized to lowercase hex")]
+    internal static string SanitizeRowKey(string key)
     {
-        var escaped = Uri.EscapeDataString(key);
-        if (escaped.Length <= 512) return escaped;
+        const int MaxLength = 512;
+        const string HashMarker = "!";
+        const int HashLength = 32;
 
-        var cut = 512;
+        var escaped = Uri.EscapeDataString(key);
+        if (escaped.Length <= MaxLength) return escaped;
+
+        var cut = MaxLength - HashMarker.Length - HashLength;
         if (escaped[cut - 1] == '%') cut -= 1;
-        else if (cut >= 2 && escaped[cut - 2] == '%') cut -= 2;
-        return escaped[..cut];
+        else if (escaped[cut - 2] == '%') cut -= 2;
+
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)))[..HashLength].ToLowerInvariant();
+        return string.Concat(escaped.AsSpan(0, cut), HashMarker, hash);
     }
 
     [SuppressMessage("Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "Azure Table Storage partition keys are standardized to lowercase hex")]
