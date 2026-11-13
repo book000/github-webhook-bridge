@@ -76,10 +76,16 @@ public class BaseManagerResilienceTests
             clock,
             logger);
 
-    private static GitHubUserMapManager CreateUserMapManager(QueueHttpMessageHandler handler)
+    private static GitHubUserMapManager CreateUserMapManager(
+        QueueHttpMessageHandler handler,
+        TimeProvider? clock = null)
         => new(
             CreateConfig(("GITHUB_USER_MAP_FILE_URL", UserMapUrl)).Object,
-            CreateFactory(handler).Object);
+            CreateFactory(handler).Object,
+            clock);
+
+    private static AdjustableTimeProvider NewClock()
+        => new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
 
     [Fact]
     public async Task MuteManagerTooManyRequestsDegradesToNotMuted()
@@ -165,9 +171,9 @@ public class BaseManagerResilienceTests
     }
 
     [Fact]
-    public async Task SuccessfulRetryAfterFailureLoadsDataAndStopsFetching()
+    public async Task SuccessfulRetryAfterFailureLoadsDataAndWaitsForTheNextInterval()
     {
-        var clock = new AdjustableTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        AdjustableTimeProvider clock = NewClock();
         var handler = new QueueHttpMessageHandler(
             _ => Status(HttpStatusCode.InternalServerError),
             _ => Json(ValidMuteJson));
@@ -180,11 +186,145 @@ public class BaseManagerResilienceTests
         await mgr.EnsureLoadedAsync();
         Assert.True(mgr.IsMuted(1, "push", null));
 
-        clock.Advance(TimeSpan.FromHours(1));
+        clock.Advance(TimeSpan.FromMinutes(5) - TimeSpan.FromSeconds(1));
         await mgr.EnsureLoadedAsync();
         await mgr.EnsureLoadedAsync();
         Assert.Equal(2, handler.CallCount);
         Assert.True(mgr.IsMuted(1, "push", null));
+    }
+
+    [Fact]
+    public async Task ReloadAfterTheRefreshIntervalReplacesTheData()
+    {
+        AdjustableTimeProvider clock = NewClock();
+        var handler = new QueueHttpMessageHandler(_ => Json(ValidMuteJson), _ => Json("[]"));
+        MuteManager mgr = CreateMuteManager(handler, clock);
+
+        await mgr.EnsureLoadedAsync();
+        Assert.True(mgr.IsMuted(1, "push", null));
+
+        clock.Advance(TimeSpan.FromMinutes(5) - TimeSpan.FromSeconds(1));
+        await mgr.EnsureLoadedAsync();
+        Assert.Equal(1, handler.CallCount);
+        Assert.True(mgr.IsMuted(1, "push", null));
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+        await mgr.EnsureLoadedAsync();
+        Assert.Equal(2, handler.CallCount);
+        Assert.False(mgr.IsMuted(1, "push", null));
+    }
+
+    [Fact]
+    public async Task FailedReloadKeepsThePreviousDataAndWaitsForTheNextInterval()
+    {
+        AdjustableTimeProvider clock = NewClock();
+        var logger = new CapturingLogger<MuteManager>();
+        var handler = new QueueHttpMessageHandler(
+            _ => Json(ValidMuteJson),
+            _ => Status(HttpStatusCode.InternalServerError),
+            _ => Json("[]"));
+        MuteManager mgr = CreateMuteManager(handler, clock, logger);
+
+        await mgr.EnsureLoadedAsync();
+        clock.Advance(TimeSpan.FromMinutes(5));
+        await mgr.EnsureLoadedAsync();
+
+        Assert.Equal(2, handler.CallCount);
+        Assert.True(mgr.IsMuted(1, "push", null));
+        (LogLevel level, string message) = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Warning, level);
+        Assert.Contains("keeping the previously loaded data", message, StringComparison.Ordinal);
+
+        clock.Advance(TimeSpan.FromMinutes(5) - TimeSpan.FromSeconds(1));
+        await mgr.EnsureLoadedAsync();
+        Assert.Equal(2, handler.CallCount);
+        Assert.True(mgr.IsMuted(1, "push", null));
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+        await mgr.EnsureLoadedAsync();
+        Assert.Equal(3, handler.CallCount);
+        Assert.False(mgr.IsMuted(1, "push", null));
+    }
+
+    [Fact]
+    public async Task NullContentOnTheFirstLoadDegradesToNotMuted()
+    {
+        var handler = new QueueHttpMessageHandler(_ => Json("null"));
+        MuteManager mgr = CreateMuteManager(handler);
+
+        await mgr.EnsureLoadedAsync();
+
+        Assert.False(mgr.IsMuted(1, "push", null));
+    }
+
+    [Fact]
+    public async Task NullContentOnAReloadKeepsThePreviousData()
+    {
+        AdjustableTimeProvider clock = NewClock();
+        var handler = new QueueHttpMessageHandler(_ => Json(ValidMuteJson), _ => Json("null"));
+        MuteManager mgr = CreateMuteManager(handler, clock);
+
+        await mgr.EnsureLoadedAsync();
+        clock.Advance(TimeSpan.FromMinutes(5));
+        await mgr.EnsureLoadedAsync();
+
+        Assert.Equal(2, handler.CallCount);
+        Assert.True(mgr.IsMuted(1, "push", null));
+    }
+
+    [Fact]
+    public async Task UserMapReloadReplacesTheMappingAndFailedReloadKeepsIt()
+    {
+        AdjustableTimeProvider clock = NewClock();
+        var handler = new QueueHttpMessageHandler(
+            _ => Json(ValidUserMapJson),
+            _ => Json("""{"1":"200"}"""),
+            _ => Status(HttpStatusCode.InternalServerError));
+        GitHubUserMapManager mgr = CreateUserMapManager(handler, clock);
+
+        await mgr.EnsureLoadedAsync();
+        Assert.Equal("100", mgr.GetById(1));
+
+        clock.Advance(TimeSpan.FromMinutes(5));
+        await mgr.EnsureLoadedAsync();
+        Assert.Equal("200", mgr.GetById(1));
+
+        clock.Advance(TimeSpan.FromMinutes(5));
+        await mgr.EnsureLoadedAsync();
+        Assert.Equal(3, handler.CallCount);
+        Assert.Equal("200", mgr.GetById(1));
+    }
+
+    [Fact]
+    public async Task ConcurrentCallDuringAReloadServesThePreviousDataWithoutWaiting()
+    {
+        AdjustableTimeProvider clock = NewClock();
+        using var entered = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        var handler = new QueueHttpMessageHandler(
+            _ => Json(ValidMuteJson),
+            _ =>
+            {
+                entered.Set();
+                release.Wait(TimeSpan.FromSeconds(10));
+                return Json("[]");
+            });
+        MuteManager mgr = CreateMuteManager(handler, clock);
+
+        await mgr.EnsureLoadedAsync();
+        clock.Advance(TimeSpan.FromMinutes(5));
+        Task reload = Task.Run(mgr.EnsureLoadedAsync);
+        Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+
+        await mgr.EnsureLoadedAsync().WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.False(reload.IsCompleted);
+        Assert.True(mgr.IsMuted(1, "push", null));
+
+        release.Set();
+        await reload;
+        Assert.Equal(2, handler.CallCount);
+        Assert.False(mgr.IsMuted(1, "push", null));
     }
 
     [Fact]
