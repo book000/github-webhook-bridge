@@ -58,6 +58,34 @@ public class PullRequestActionTests
         return (discord, cache, userMap);
     }
 
+    /// <summary>A payload missing the pull request, its head, or its base is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData("pull_request")]
+    [InlineData("head")]
+    [InlineData("base")]
+    public async Task RunAsyncMissingPullRequestObjectSendsNothingAndWarns(string missing)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        PullRequestEvent valid = MakePrEvent("opened");
+        PullRequestEvent evt = missing switch
+        {
+            "pull_request" => valid with { PullRequest = null! },
+            "head" => valid with { PullRequest = valid.PullRequest with { Head = null! } },
+            _ => valid with { PullRequest = valid.PullRequest with { Base = null! } },
+        };
+
+        PullRequestAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PullRequestAction>(logs).Object,
+            _webhookUri, "pull_request", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "pull_request payload is missing pull_request or pull_request.head or pull_request.base; skipping notification.");
+    }
+
     [Fact]
     public async Task RunAsyncSendsMessageForOpenedEvent()
     {

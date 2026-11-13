@@ -52,6 +52,31 @@ public class PullRequestReviewThreadActionTests
             """,
             OctokitJsonOptions.Value)!;
 
+    /// <summary>A payload missing the pull request or its user is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingPullRequestOrUserSendsNothingAndWarns(bool dropPullRequest)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        PullRequestReviewThreadEvent valid = MakeEvent("resolved");
+        PullRequestReviewThreadEvent evt = dropPullRequest
+            ? valid with { PullRequest = null! }
+            : valid with { PullRequest = valid.PullRequest with { User = null! } };
+
+        PullRequestReviewThreadAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PullRequestReviewThreadAction>(logs).Object,
+            _webhookUri, "pull_request_review_thread", evt);
+
+        await action.RunAsync();
+
+        // The thread node id is present, so only the payload guard logs.
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "pull_request_review_thread payload is missing pull_request or pull_request.user; skipping notification.");
+    }
+
     /// <summary>The title of the resolved event contains "resolved".</summary>
     [Fact]
     public async Task RunAsyncResolvedTitleContainsResolved()

@@ -66,6 +66,47 @@ public class PushActionTests
             Times.Once);
     }
 
+    /// <summary>A payload missing the commits or the ref is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingCommitsOrRefSendsNothingAndWarns(bool dropCommits)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        PushEvent evt = dropCommits
+            ? MakePushEvent() with { Commits = null! }
+            : MakePushEvent() with { Ref = null! };
+
+        PushAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PushAction>(logs).Object,
+            _webhookUri, "push", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "push payload is missing commits or ref; skipping notification.");
+    }
+
+    /// <summary>An empty commit list is still skipped silently.</summary>
+    [Fact]
+    public async Task RunAsyncEmptyCommitsSendsNothingAndLogsNothing()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+
+        PushAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<PushAction>(logs).Object,
+            _webhookUri, "push", MakePushEvent() with { Commits = [] });
+
+        await action.RunAsync();
+
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+        Assert.Empty(logs);
+    }
+
     [Fact]
     public async Task RunAsyncDoesNotSendWhenNoCommits()
     {

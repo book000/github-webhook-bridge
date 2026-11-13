@@ -26,11 +26,15 @@ public sealed class DiscussionAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        Discussion discussion = Event.Discussion;
-
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("discussion payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.Discussion is not { } discussion)
+        {
+            Logger.LogWarning("discussion payload is missing discussion; skipping notification.");
             return;
         }
 

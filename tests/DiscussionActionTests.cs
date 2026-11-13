@@ -57,6 +57,24 @@ public class DiscussionActionTests
             """,
             OctokitJsonOptions.Value)!;
 
+    /// <summary>A payload without the discussion object is skipped with a warning instead of throwing.</summary>
+    [Fact]
+    public async Task RunAsyncMissingDiscussionSendsNothingAndWarns()
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+
+        DiscussionAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<DiscussionAction>(logs).Object,
+            _webhookUri, "discussion", MakeEvent("created") with { Discussion = null! });
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "discussion payload is missing discussion; skipping notification.");
+    }
+
     /// <summary>The title of a created event contains "created" and the discussion number.</summary>
     [Fact]
     public async Task RunAsyncCreatedTitleContainsCreatedAndNumber()

@@ -6,7 +6,6 @@ using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.Logging;
 using Octokit.Webhooks;
 using Octokit.Webhooks.Events;
-using Octokit.Webhooks.Models;
 
 namespace GitHubWebhookBridge.Actions.Impl;
 
@@ -29,11 +28,16 @@ public sealed class PullRequestReviewThreadAction(
         // Event.Review maps to a "review" field that does not exist in the actual payload and is always null,
         // so use AdditionalProperties["thread"].node_id, which holds the real data, as the thread identifier.
         var threadNodeId = GetThreadNodeId();
-        SimplePullRequest pr = Event.PullRequest;
 
         if (Event.Repository is not { } repo || Event.Sender is not { } sender)
         {
             Logger.LogWarning("pull_request_review_thread payload is missing repository or sender; skipping notification.");
+            return;
+        }
+
+        if (Event.PullRequest is not { User: not null } pr)
+        {
+            Logger.LogWarning("pull_request_review_thread payload is missing pull_request or pull_request.user; skipping notification.");
             return;
         }
 

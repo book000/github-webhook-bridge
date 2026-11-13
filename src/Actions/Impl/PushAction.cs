@@ -25,11 +25,16 @@ public sealed class PushAction(
     /// <inheritdoc/>
     public override async Task RunAsync()
     {
-        IReadOnlyList<OctokitCommit> allCommits = Event.Commits;
+        if (Event.Commits is not { } allCommits || Event.Ref is not { } gitRef)
+        {
+            Logger.LogWarning("push payload is missing commits or ref; skipping notification.");
+            return;
+        }
+
         if (allCommits.Count == 0) return;
 
         // Strip refs/heads/ and refs/tags/ to get a short branch name.
-        var shortRef = Event.Ref
+        var shortRef = gitRef
             .Replace("refs/heads/", string.Empty)
             .Replace("refs/tags/", string.Empty);
 

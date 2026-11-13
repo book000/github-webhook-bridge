@@ -63,6 +63,29 @@ public class DiscussionCommentActionTests
         return captured!;
     }
 
+    /// <summary>A payload missing the discussion or the comment object is skipped with a warning instead of throwing.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RunAsyncMissingDiscussionOrCommentSendsNothingAndWarns(bool dropDiscussion)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+        List<(LogLevel Level, string Message)> logs = [];
+        DiscussionCommentEvent evt = dropDiscussion
+            ? MakeEvent("created") with { Discussion = null! }
+            : MakeEvent("created") with { Comment = null! };
+
+        DiscussionCommentAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            TestFixtures.CaptureLogger<DiscussionCommentAction>(logs).Object,
+            _webhookUri, "discussion_comment", evt);
+
+        await action.RunAsync();
+
+        TestFixtures.AssertSkippedWithWarning(
+            discord, logs, "discussion_comment payload is missing discussion or comment; skipping notification.");
+    }
+
     /// <summary>created shows the commenter, discussion number/title, comment body, comment URL, and the created color.</summary>
     [Fact]
     public async Task RunAsyncCreatedShowsCommentDetails()

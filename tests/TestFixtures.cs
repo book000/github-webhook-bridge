@@ -1,5 +1,9 @@
 using System.Text.Json;
+using GitHubWebhookBridge.Models.Discord;
+using GitHubWebhookBridge.Services;
 using GitHubWebhookBridge.Utils;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -147,4 +151,31 @@ internal static class TestFixtures
 
     public static T Deserialize<T>(string json) =>
         JsonSerializer.Deserialize<T>(json, Opts)!;
+
+    /// <summary>Asserts that nothing was sent to Discord and exactly one warning with the given text was logged.</summary>
+    public static void AssertSkippedWithWarning(
+        Mock<IDiscordClient> discord, List<(LogLevel Level, string Message)> logs, string message)
+    {
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+        Assert.Equal([(LogLevel.Warning, message)], logs);
+    }
+
+    /// <summary>Creates a logger mock that records every formatted message together with its level.</summary>
+    public static Mock<ILogger<T>> CaptureLogger<T>(List<(LogLevel Level, string Message)> logs)
+    {
+        Mock<ILogger<T>> logger = new();
+        logger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        logger.Setup(l => l.Log(
+                It.IsAny<LogLevel>(),
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
+            .Callback(new InvocationAction(i =>
+            {
+                var formatter = Assert.IsAssignableFrom<Delegate>(i.Arguments[4]);
+                logs.Add((Assert.IsType<LogLevel>(i.Arguments[0]),Assert.IsType<string>(formatter.DynamicInvoke(i.Arguments[2], i.Arguments[3]))));
+            }));
+        return logger;
+    }
 }
