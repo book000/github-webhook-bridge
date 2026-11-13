@@ -1,6 +1,6 @@
 # Real GitHub Webhook Payloads
 
-This directory vendors **real GitHub webhook example payloads** — one per implemented event type (12 total) — sourced from [octokit/webhooks `payload-examples/api.github.com`](https://github.com/octokit/webhooks/tree/main/payload-examples/api.github.com). These are the same machine-readable examples GitHub's own webhook documentation pages are generated from, so they reflect the actual field names GitHub sends on the wire.
+This directory vendors **real GitHub webhook example payloads** — one per implemented event type (13 total) — sourced from [octokit/webhooks `payload-examples/api.github.com`](https://github.com/octokit/webhooks/tree/main/payload-examples/api.github.com). These are the same machine-readable examples GitHub's own webhook documentation pages are generated from, so they reflect the actual field names GitHub sends on the wire.
 
 ## Why this exists
 
@@ -15,6 +15,7 @@ One example per implemented event, named `<event>.<action>.json` (or `<event>.js
 | File | GitHub event | Notes |
 |---|---|---|
 | `discussion.created.json` | `discussion` | `installation` key stripped (see below) |
+| `discussion_comment.created.json` | `discussion_comment` | `installation` key not present upstream |
 | `fork.json` | `fork` | |
 | `issue_comment.created.json` | `issue_comment` | |
 | `issues.opened.json` | `issues` | |
@@ -31,7 +32,7 @@ Some upstream examples include an `installation` field (GitHub App context). Thi
 
 ## Updating
 
-Octokit.Webhooks version bumps (Renovate) do not change these files — they are independent ground truth. Only refresh them if GitHub changes the actual payload shape for one of these 12 events, or when adding support for a new event type:
+Octokit.Webhooks version bumps (Renovate) do not change these files — they are independent ground truth. Only refresh them if GitHub changes the actual payload shape for one of these 13 events, or when adding support for a new event type:
 
 ```bash
 gh api "repos/octokit/webhooks/contents/payload-examples/api.github.com/<event>/<action>.payload.json" \
@@ -50,6 +51,6 @@ Then update the file list in `tests/RealPayloadIntegrationTests.cs` if the event
 
 `OctokitPayloadSchemaSnapshotTests` / `OctokitWebhooksCompatibilityTests` catch *structural* changes in Octokit.Webhooks (renamed C# properties, added/removed event types, enum changes) but cannot catch Octokit shipping a `[JsonPropertyName]` that was wrong on day one for a property it didn't change. When reviewing a Renovate PR that bumps `Octokit.Webhooks`:
 
-1. Run `dotnet test -c Release` — `RealPayloadIntegrationTests` re-validates all 12 vendored real payloads against the new version; a mapping regression fails loudly here.
-2. If the changelog mentions new/renamed properties on any of the 12 implemented event types, cross-check the new `[JsonPropertyName]` against the corresponding file in this directory (or the GitHub webhook docs) before merging.
+1. Run `dotnet test -c Release` — `RealPayloadIntegrationTests` re-validates all 13 vendored real payloads against the new version; a mapping regression fails loudly here.
+2. If the changelog mentions new/renamed properties on any of the 13 implemented event types, cross-check the new `[JsonPropertyName]` against the corresponding file in this directory (or the GitHub webhook docs) before merging.
 3. If a new event type is added upstream, `OctokitWebhooksCompatibilityTests` will fail first — decide whether to implement it (add a fixture here) or record it as intentionally unimplemented.
