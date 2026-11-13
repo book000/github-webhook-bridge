@@ -1,6 +1,6 @@
 # Real GitHub Webhook Payloads
 
-This directory vendors **real GitHub webhook example payloads** — one per implemented event type (14 total) — sourced from [octokit/webhooks `payload-examples/api.github.com`](https://github.com/octokit/webhooks/tree/main/payload-examples/api.github.com). These are the same machine-readable examples GitHub's own webhook documentation pages are generated from, so they reflect the actual field names GitHub sends on the wire.
+This directory vendors **real GitHub webhook example payloads** — covering every implemented event type (14 event types in 19 files: one base action per event plus five action-specific subtypes) — sourced from [octokit/webhooks `payload-examples/api.github.com`](https://github.com/octokit/webhooks/tree/main/payload-examples/api.github.com). These are the same machine-readable examples GitHub's own webhook documentation pages are generated from, so they reflect the actual field names GitHub sends on the wire.
 
 ## Why this exists
 
@@ -10,12 +10,17 @@ This directory vendors **real GitHub webhook example payloads** — one per impl
 
 ## Files
 
-One example per implemented event, named `<event>.<action>.json` (or `<event>.json` for events without an `action` field: `fork`, `ping`, `public`, `push`):
+One base example per implemented event, plus action-specific subtypes that carry extra fields, named `<event>.<action>.json` (or `<event>.json` for events without an `action` field: `fork`, `ping`, `public`, `push`):
 
 | File | GitHub event | Notes |
 |---|---|---|
 | `discussion.created.json` | `discussion` | `installation` key stripped (see below) |
 | `discussion_comment.created.json` | `discussion_comment` | `installation` key not present upstream |
+| `discussion_comment.edited.json` | `discussion_comment` | `installation` key stripped; carries `changes.body.from` |
+| `discussion.category_changed.json` | `discussion` | `installation` key stripped where present upstream; carries `changes.category.from` |
+| `issues.labeled.json` | `issues` | `installation` key stripped where present upstream; carries `label` |
+| `pull_request.review_requested.json` | `pull_request` | `installation` key stripped where present upstream; carries `requested_reviewer` |
+| `pull_request.edited.json` | `pull_request` | **Derived, not vendored verbatim**: upstream publishes no `edited` example, so this is `pull_request.opened.json` with `action` set to `edited` and a `changes` object (`title.from`, `body.from`) added per GitHub's documented schema |
 | `fork.json` | `fork` | |
 | `issue_comment.created.json` | `issue_comment` | |
 | `issues.opened.json` | `issues` | |
@@ -33,7 +38,7 @@ Some upstream examples include an `installation` field (GitHub App context). Thi
 
 ## Updating
 
-Octokit.Webhooks version bumps (Renovate) do not change these files — they are independent ground truth. Only refresh them if GitHub changes the actual payload shape for one of these 14 events, or when adding support for a new event type:
+Octokit.Webhooks version bumps (Renovate) do not change these files — they are independent ground truth. Only refresh them if GitHub changes the actual payload shape for one of these 14 event types, or when adding support for a new event type:
 
 ```bash
 gh api "repos/octokit/webhooks/contents/payload-examples/api.github.com/<event>/<action>.payload.json" \
@@ -46,12 +51,14 @@ print()
 " > tests/RealPayloads/<event>.<action>.json
 ```
 
+`pull_request.edited.json` has no upstream source, so regenerate it from the refreshed `pull_request.opened.json` instead (set `action` to `edited` and add the `changes` object).
+
 Then update the file list in `tests/RealPayloadIntegrationTests.cs` if the event/action changed, and run `dotnet test -c Release`.
 
 ## Renovate checklist (Octokit.Webhooks version bumps)
 
 `OctokitPayloadSchemaSnapshotTests` / `OctokitWebhooksCompatibilityTests` catch *structural* changes in Octokit.Webhooks (renamed C# properties, added/removed event types, enum changes) but cannot catch Octokit shipping a `[JsonPropertyName]` that was wrong on day one for a property it didn't change. When reviewing a Renovate PR that bumps `Octokit.Webhooks`:
 
-1. Run `dotnet test -c Release` — `RealPayloadIntegrationTests` re-validates all 14 vendored real payloads against the new version; a mapping regression fails loudly here.
+1. Run `dotnet test -c Release` — `RealPayloadIntegrationTests` re-validates all 19 vendored real payloads against the new version; a mapping regression fails loudly here.
 2. If the changelog mentions new/renamed properties on any of the 14 implemented event types, cross-check the new `[JsonPropertyName]` against the corresponding file in this directory (or the GitHub webhook docs) before merging.
 3. If a new event type is added upstream, `OctokitWebhooksCompatibilityTests` will fail first — decide whether to implement it (add a fixture here) or record it as intentionally unimplemented.
