@@ -21,7 +21,73 @@ public class MuteManager(
 
     /// <inheritdoc/>
     protected override List<MuteRecord>? Deserialize(string json)
-        => DeserializeJson<List<MuteRecord>>(json);
+        => Normalize(DeserializeJson<List<MuteRecord?>>(json));
+
+    private List<MuteRecord>? Normalize(List<MuteRecord?>? records)
+    {
+        if (records is null) return null;
+
+        List<MuteRecord> normalized = [];
+        HashSet<long> seenUserIds = [];
+        foreach (MuteRecord? record in records)
+        {
+            if (record is null)
+            {
+                logger?.LogWarning("Dropping a null entry in the mute rules");
+                continue;
+            }
+
+            if (!seenUserIds.Add(record.UserId))
+            {
+                logger?.LogWarning(
+                    "Dropping a duplicate mute record for userId {UserId}; the first record for that user is used",
+                    record.UserId);
+                continue;
+            }
+
+            normalized.Add(record with { Events = NormalizeEvents(record.UserId, record.Events) });
+        }
+
+        return normalized;
+    }
+
+    private List<MuteEvent> NormalizeEvents(long userId, IEnumerable<MuteEvent?>? events)
+    {
+        if (events is null)
+        {
+            logger?.LogWarning("The mute record for userId {UserId} has no events; treating it as an empty list", userId);
+            return [];
+        }
+
+        List<MuteEvent> normalized = [];
+        foreach (MuteEvent? muteEvent in events)
+        {
+            if (muteEvent is null || string.IsNullOrWhiteSpace(muteEvent.EventName))
+            {
+                logger?.LogWarning("Dropping an event entry without an event name in the mute record for userId {UserId}", userId);
+                continue;
+            }
+
+            normalized.Add(new MuteEvent(muteEvent.EventName.Trim(), NormalizeActions(userId, muteEvent.Actions)));
+        }
+
+        return normalized;
+    }
+
+    private List<string>? NormalizeActions(long userId, IList<string>? actions)
+    {
+        if (actions is null) return null;
+
+        List<string> normalized = [.. actions
+            .Where(action => !string.IsNullOrWhiteSpace(action))
+            .Select(action => action.Trim())];
+        if (normalized.Count != actions.Count)
+        {
+            logger?.LogWarning("Dropping blank action entries in the mute record for userId {UserId}", userId);
+        }
+
+        return normalized;
+    }
 
     /// <summary>Test-only: loads JSON directly.</summary>
     internal void LoadForTest(string json)
@@ -50,29 +116,42 @@ public class MuteManager(
 
         if (record.Type == MuteType.Include)
         {
-            // Mute when the specified event/action is present in the list.
             return record.Events.Any(muteEvent =>
-                muteEvent.EventName == eventName
+                IsSameName(muteEvent.EventName, eventName)
                 && (muteEvent.Actions is null
-                    || (action != null && muteEvent.Actions.Contains(action))));
+                    || (action != null && ContainsAction(muteEvent.Actions, action))));
         }
 
-        // Exclude mode: mute events that are not in the list.
-        // Entries with Actions == null do not count as an exemption condition.
         return !record.Events.Any(muteEvent =>
-            muteEvent.EventName == eventName
-            && muteEvent.Actions != null
-            && (action == null || muteEvent.Actions.Contains(action)));
+            IsSameName(muteEvent.EventName, eventName)
+            && (muteEvent.Actions is null
+                || action == null
+                || ContainsAction(muteEvent.Actions, action)));
     }
+
+    private static bool IsSameName(string configured, string actual)
+        => string.Equals(configured, actual, StringComparison.OrdinalIgnoreCase);
+
+    private static bool ContainsAction(IList<string> actions, string action)
+        => actions.Contains(action, StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>Record representing the per-user mute settings.</summary>
+/// <remarks>
+/// <see cref="Events"/> is never <see langword="null"/> once loaded by <see cref="MuteManager"/>:
+/// a record without <c>events</c> is treated as having an empty list.
+/// Only the first record for a given <see cref="UserId"/> is used.
+/// </remarks>
 public record MuteRecord(
     [property: JsonPropertyName("userId")] long UserId,
     [property: JsonPropertyName("type")] MuteType Type,
     [property: JsonPropertyName("events")] IList<MuteEvent> Events);
 
 /// <summary>Record representing the configuration of an event to mute.</summary>
+/// <remarks>
+/// Event names and actions are matched case-insensitively with surrounding whitespace ignored.
+/// A <see langword="null"/> <c>Actions</c> (property omitted) targets every action of the event, for both <c>include</c> and <c>exclude</c>.
+/// </remarks>
 public record MuteEvent(
     [property: JsonPropertyName("eventName")] string EventName,
     [property: JsonPropertyName("actions")] IList<string>? Actions);
