@@ -81,6 +81,28 @@ public class PingActionTests
             Times.Once);
     }
 
+    [Theory]
+    [InlineData("owner/repo", "owner/repo")]
+    [InlineData(null, "N/A")]
+    public async Task RunAsyncIncludesRepositoryField(string? repoFullName, string expected)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        PingAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<PingAction>>(),
+            _webhookUri, "ping", MakePingEvent(repoFullName: repoFullName));
+
+        await action.RunAsync();
+
+        discord.Verify(
+            d => d.SendMessageAsync(
+                _webhookUri,
+                It.Is<DiscordMessage>(m =>
+                    m.Embeds![0].Fields!.Any(f => f.Name == "Repository" && f.Value == expected))),
+            Times.Once);
+    }
+
     [Fact]
     public async Task RunAsyncUsesCompositeKeyForCache()
     {
