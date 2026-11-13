@@ -29,6 +29,8 @@ public class BaseActionTests
         public override Task RunAsync() => Task.CompletedTask;
 
         public static string Patch(string oldText, string newText, string fileName) => CreatePatch(oldText, newText, fileName);
+
+        public static string? List(IEnumerable<string>? items) => FormatList(items);
     }
 
     private static (SendingAction Action, Mock<IDiscordClient> Discord, Mock<IMessageCacheService> Cache) Create()
@@ -48,6 +50,42 @@ public class BaseActionTests
     }
 
     [Fact]
+    public void FormatList_NullOrEmpty_ReturnsNull()
+    {
+        Assert.Null(PatchingAction.List(null));
+        Assert.Null(PatchingAction.List([]));
+    }
+
+    [Fact]
+    public void FormatList_SingleItem_ReturnsItem()
+    {
+        Assert.Equal("a", PatchingAction.List(["a"]));
+    }
+
+    [Fact]
+    public void FormatList_SeveralItems_JoinsWithCommaAndSpace()
+    {
+        Assert.Equal("a, b", PatchingAction.List(["a", "b"]));
+    }
+
+    [Fact]
+    public void FormatList_JoinedValueOver1024Characters_TruncatesToExactly1024EndingWithEllipsis()
+    {
+        var result = PatchingAction.List([new string('x', 1100)]);
+
+        Assert.Equal(new string('x', 1021) + "...", result);
+        Assert.Equal(1024, result!.Length);
+    }
+
+    [Fact]
+    public void FormatList_JoinedValueOfExactly1024Characters_IsNotTruncated()
+    {
+        var value = new string('x', 1024);
+
+        Assert.Equal(value, PatchingAction.List([value]));
+    }
+
+    [Fact]
     public async Task SendMessageAsync_RateLimitedEdit_PropagatesWithoutDeletingCacheOrSending()
     {
         (SendingAction action, Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache) = Create();
@@ -59,6 +97,45 @@ public class BaseActionTests
         Assert.Same(rateLimit, thrown);
         cache.Verify(c => c.DeleteAsync(It.IsAny<Uri>(), It.IsAny<string>()), Times.Never);
         discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_CacheReadFails_StillSendsANewMessage()
+    {
+        (SendingAction action, Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache) = Create();
+        cache.Setup(c => c.GetAsync(_webhookUri, "key")).ThrowsAsync(new InvalidOperationException("Table Storage unavailable"));
+        discord.Setup(d => d.SendMessageAsync(_webhookUri, It.IsAny<DiscordMessage>())).ReturnsAsync("new-id");
+
+        await action.RunAsync();
+
+        discord.Verify(d => d.EditMessageAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<DiscordMessage>()), Times.Never);
+        discord.Verify(d => d.SendMessageAsync(_webhookUri, It.IsAny<DiscordMessage>()), Times.Once);
+        cache.Verify(c => c.SetAsync(_webhookUri, "key", "new-id"), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_SuccessfulEdit_RefreshesTheCacheEntryWithoutSending()
+    {
+        (SendingAction action, Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache) = Create();
+
+        await action.RunAsync();
+
+        discord.Verify(d => d.EditMessageAsync(_webhookUri, "existing-id", It.IsAny<DiscordMessage>()), Times.Once);
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+        cache.Verify(c => c.SetAsync(_webhookUri, "key", "existing-id"), Times.Once);
+        cache.Verify(c => c.DeleteAsync(It.IsAny<Uri>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_CacheRefreshFailsAfterEdit_DoesNotSendADuplicate()
+    {
+        (SendingAction action, Mock<IDiscordClient> discord, Mock<IMessageCacheService> cache) = Create();
+        cache.Setup(c => c.SetAsync(_webhookUri, "key", "existing-id")).ThrowsAsync(new InvalidOperationException("Table Storage unavailable"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(action.RunAsync);
+
+        discord.Verify(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()), Times.Never);
+        cache.Verify(c => c.DeleteAsync(It.IsAny<Uri>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

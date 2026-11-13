@@ -34,10 +34,10 @@ public abstract class BaseManager<TData>(
     /// <summary>Gets the loaded data. Valid after <see cref="EnsureLoadedAsync"/> has been called.</summary>
     protected TData Data { get; private set; } = default!;
 
-    private static readonly TimeSpan CooldownDuration = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
 
-    private volatile bool _loaded;
-    private DateTimeOffset _retryNotBefore = DateTimeOffset.MinValue;
+    private volatile bool _hasData;
+    private long _nextAttemptTicks;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
@@ -54,30 +54,41 @@ public abstract class BaseManager<TData>(
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
     /// <summary>
-    /// Loads the data only on the first successful call (prevents double initialization).
-    /// When retrieval fails (HTTP, timeout, Blob, I/O or malformed JSON), a warning is logged, the manager
-    /// continues with empty data, and retrieval is not attempted again for five minutes.
+    /// Loads the data on the first call and re-reads the source every five minutes afterwards, so edits take
+    /// effect without a restart. The refresh is lazy: it runs inside the first call made after the interval.
+    /// A call that overlaps an in-progress refresh does not wait and serves the previous data.
+    /// When retrieval fails (HTTP, timeout, Blob, I/O or malformed JSON), a warning is logged and retrieval is
+    /// not attempted again for five minutes. Before the first successful load the manager continues with empty
+    /// data; afterwards it keeps the previously loaded data.
     /// Misconfiguration (non-HTTPS URL, invalid Blob path, missing storage connection string) still throws.
     /// </summary>
     public async Task EnsureLoadedAsync()
     {
-        if (_loaded) return;
-        await _lock.WaitAsync();
+        if (!IsAttemptDue()) return;
+        if (_hasData)
+        {
+            if (!await _lock.WaitAsync(0)) return;
+        }
+        else
+        {
+            await _lock.WaitAsync();
+        }
+
         try
         {
-            if (_loaded) return;
-            if (_clock.GetUtcNow() < _retryNotBefore) return;
+            if (!IsAttemptDue()) return;
             try
             {
                 var json = await LoadJsonAsync();
                 Data = Deserialize(json)
-                    ?? throw new InvalidOperationException($"Failed to deserialize {GetType().Name} data");
-                _loaded = true;
+                    ?? throw new JsonException($"{GetType().Name} data is null");
+                _hasData = true;
+                ScheduleNextAttempt();
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException
                 or RequestFailedException or IOException or JsonException)
             {
-                EnterDegradedMode(ex);
+                HandleRetrievalFailure(ex);
             }
         }
         finally
@@ -86,20 +97,36 @@ public abstract class BaseManager<TData>(
         }
     }
 
-    private void EnterDegradedMode(Exception ex)
+    private bool IsAttemptDue()
+        => _clock.GetUtcNow().UtcTicks >= Volatile.Read(ref _nextAttemptTicks);
+
+    private DateTimeOffset ScheduleNextAttempt()
     {
-        Data = Deserialize(GetDefaultContent())
-            ?? throw new InvalidOperationException($"Failed to deserialize default {GetType().Name} data");
-        _retryNotBefore = _clock.GetUtcNow() + CooldownDuration;
+        DateTimeOffset next = _clock.GetUtcNow() + RefreshInterval;
+        Volatile.Write(ref _nextAttemptTicks, next.UtcTicks);
+        return next;
+    }
+
+    private void HandleRetrievalFailure(Exception ex)
+    {
+        var keepPrevious = _hasData;
+        if (!keepPrevious)
+        {
+            Data = Deserialize(GetDefaultContent())
+                ?? throw new InvalidOperationException($"Failed to deserialize default {GetType().Name} data");
+        }
+
+        DateTimeOffset retryNotBefore = ScheduleNextAttempt();
 
         // The exception object is not passed on: its message may contain a URL that embeds a token.
         _logger.LogWarning(
-            "{Manager} could not load its configuration from {Source} ({ExceptionType}, HTTP status {StatusCode}); continuing with empty data and retrying after {RetryNotBefore:O}",
+            "{Manager} could not load its configuration from {Source} ({ExceptionType}, HTTP status {StatusCode}); {Fallback} and retrying after {RetryNotBefore:O}",
             GetType().Name,
             SourceKind,
             ex.GetType().Name,
             (ex as HttpRequestException)?.StatusCode?.ToString() ?? "none",
-            _retryNotBefore);
+            keepPrevious ? "keeping the previously loaded data" : "continuing with empty data",
+            retryNotBefore);
     }
 
     private string SourceKind => BlobPath is not null ? "blob" : FileUrl is not null ? "url" : "file";
@@ -177,7 +204,8 @@ public abstract class BaseManager<TData>(
     internal void SetDataForTest(TData data)
     {
         Data = data;
-        _loaded = true;
+        _hasData = true;
+        Volatile.Write(ref _nextAttemptTicks, long.MaxValue);
     }
 
     /// <summary>Releases managed resources.</summary>

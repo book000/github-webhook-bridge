@@ -39,7 +39,9 @@ public class IssuesActionTests
         string? milestoneTitle = null,
         string issueBody = "",
         string? changedTitleFrom = null,
-        string? changedBodyFrom = null)
+        string? changedBodyFrom = null,
+        string labelsJson = "[]",
+        string assigneesJson = "[]")
     {
         var changeFields = new List<string>();
         if (changedTitleFrom is not null)
@@ -49,7 +51,7 @@ public class IssuesActionTests
         var changesJson = changeFields.Count > 0 ? ",\"changes\":{" + string.Join(",", changeFields) + "}" : string.Empty;
 
         return JsonSerializer.Deserialize<IssuesEvent>(
-            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7, "Fix bug", action == "closed" ? "closed" : "open", body: issueBody.Length > 0 ? issueBody : null, userLogin: "opener", userId: 1)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender", 2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin, 3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}{{changesJson}}}""",
+            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(7, "Fix bug", action == "closed" ? "closed" : "open", body: issueBody.Length > 0 ? issueBody : null, userLogin: "opener", userId: 1, labelsJson: labelsJson, assigneesJson: assigneesJson)}},"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("sender", 2)}}{{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : "")}}{{(assigneeLogin is not null ? $",\"assignee\":{TestFixtures.UserJson(assigneeLogin, 3)}" : "")}}{{(milestoneTitle is not null ? $",\"milestone\":{TestFixtures.MilestoneJson(milestoneTitle)}" : "")}}{{changesJson}}}""",
             OctokitJsonOptions.Value)!;
     }
 
@@ -115,6 +117,60 @@ public class IssuesActionTests
         await action.RunAsync();
 
         Assert.Equal(EmbedColors.IssueClosed, capturedColor);
+    }
+
+    private static async Task<IReadOnlyList<DiscordEmbedField>> RunAndCaptureFieldsAsync(IssuesEvent issuesEvent)
+    {
+        (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
+
+        IReadOnlyList<DiscordEmbedField> captured = [];
+        discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
+               .Callback<Uri, DiscordMessage>((_, msg) => captured = [.. msg.Embeds![0].Fields ?? []])
+               .ReturnsAsync("msg-id");
+
+        IssuesAction action = new(
+            discord.Object, cache.Object, userMap.Object,
+            Mock.Of<ILogger<IssuesAction>>(),
+            _webhookUri, "issues", issuesEvent);
+
+        await action.RunAsync();
+
+        return captured;
+    }
+
+    private static readonly string _twoLabelsJson = $"[{TestFixtures.LabelJson("bug")},{TestFixtures.LabelJson("docs")}]";
+
+    private static readonly string _twoAssigneesJson = $"[{TestFixtures.UserJson("alice", 11)},{TestFixtures.UserJson("bob", 12)}]";
+
+    /// <summary>The opened event renders the issue's current labels and assignees.</summary>
+    [Fact]
+    public async Task RunAsyncOpenedWithLabelsAndAssigneesIncludesListFields()
+    {
+        IReadOnlyList<DiscordEmbedField> fields = await RunAndCaptureFieldsAsync(
+            MakeEvent("opened", labelsJson: _twoLabelsJson, assigneesJson: _twoAssigneesJson));
+
+        Assert.Equal("bug, docs", Assert.Single(fields, f => f.Name == "Labels").Value);
+        Assert.Equal("alice, bob", Assert.Single(fields, f => f.Name == "Assignees").Value);
+    }
+
+    /// <summary>The opened event adds no list fields when the issue has no labels or assignees.</summary>
+    [Fact]
+    public async Task RunAsyncOpenedWithoutListsOmitsListFields()
+    {
+        IReadOnlyList<DiscordEmbedField> fields = await RunAndCaptureFieldsAsync(MakeEvent("opened"));
+
+        Assert.DoesNotContain(fields, f => f.Name is "Labels" or "Assignees");
+    }
+
+    /// <summary>Only the opened event renders the lists; labeled keeps the single Label field.</summary>
+    [Fact]
+    public async Task RunAsyncLabeledWithIssueListsOmitsListFields()
+    {
+        IReadOnlyList<DiscordEmbedField> fields = await RunAndCaptureFieldsAsync(
+            MakeEvent("labeled", labelName: "bug", labelsJson: _twoLabelsJson, assigneesJson: _twoAssigneesJson));
+
+        Assert.DoesNotContain(fields, f => f.Name is "Labels" or "Assignees");
+        Assert.Equal("bug", Assert.Single(fields, f => f.Name == "Label").Value);
     }
 
     /// <summary>The labeled event includes the label name in an embed field.</summary>

@@ -25,6 +25,7 @@ public class HostConfigurationTests
 
         Assert.Equal("base64", queues.GetProperty("messageEncoding").GetString());
         Assert.Equal(WebhookEventProcessor.MaxDequeueCount, queues.GetProperty("maxDequeueCount").GetInt32());
+        // The retry delay after a failed delivery, not a processing lease: raising it does not prevent duplicate execution.
         Assert.Equal("00:00:30", queues.GetProperty("visibilityTimeout").GetString());
         Assert.Equal(1, queues.GetProperty("batchSize").GetInt32());
         Assert.Equal(0, queues.GetProperty("newBatchThreshold").GetInt32());
