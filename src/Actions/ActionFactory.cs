@@ -71,8 +71,16 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
                       ?? throw new InvalidOperationException(
                           $"Deserialization returned null for event '{eventName}' ({entry.Payload.Name}).");
 
-        return (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, webhookUrl, eventName, payload);
+        // ActivatorUtilities rejects arguments that no constructor consumes, so RawPayload is passed only to actions that declare it.
+        object[] args = AcceptsRawPayload(entry.Action)
+            ? [webhookUrl, eventName, payload, new RawPayload(rawJson)]
+            : [webhookUrl, eventName, payload];
+
+        return (IAction)ActivatorUtilities.CreateInstance(_sp, entry.Action, args);
     }
+
+    private static bool AcceptsRawPayload(Type actionType) =>
+        actionType.GetConstructors().Any(c => c.GetParameters().Any(p => p.ParameterType == typeof(RawPayload)));
 
     /// <summary>Gets the registry (for tests and ActionRegistryValidator).</summary>
     internal IReadOnlyDictionary<string, (Type Action, Type Payload)> Registry => _registry;
