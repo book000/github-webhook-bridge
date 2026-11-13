@@ -236,4 +236,13 @@ public static class EmbedColors
 
     /// <summary>Color for a discussion unlocked (dark gray)</summary>
     public const int DiscussionUnlocked = 0x7f8c8d;
+
+    /// <summary>Color for a secret scanning alert that is open (created, publicly leaked, validated) (red)</summary>
+    public const int SecretScanningAlertOpen = 0xe74c3c;
+
+    /// <summary>Color for a secret scanning alert that was reopened (orange)</summary>
+    public const int SecretScanningAlertReopened = 0xe67e22;
+
+    /// <summary>Color for a secret scanning alert that was resolved or revoked (green)</summary>
+    public const int SecretScanningAlertResolved = 0x2ecc71;
 }

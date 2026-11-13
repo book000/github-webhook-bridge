@@ -81,7 +81,7 @@ Endpoint: `http://localhost:7071/`
 
 ## Supported events
 
-### Implemented (12 types)
+### Implemented (14 types)
 
 | Event | Description |
 |---------|------|
@@ -98,6 +98,7 @@ Endpoint: `http://localhost:7071/`
 | `fork` | Fork |
 | `public` | Repository made public |
 | `star` | Star |
+| `secret_scanning_alert` | Secret scanning alert (created / publicly leaked / reopened / validated / resolved / revoked; assigned / unassigned are ignored) |
 
 Any other event returns HTTP 406.
 
