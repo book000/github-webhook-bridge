@@ -37,7 +37,7 @@ public sealed class SecretScanningAlertAction(
             return;
         }
 
-        (string verb, string state, int color)? mapped = Event.Action switch
+        (string Verb, string State, int Color)? mapped = Event.Action switch
         {
             "created" => ("created", "open", EmbedColors.SecretScanningAlertOpen),
             "publicly_leaked" => ("publicly leaked", "open", EmbedColors.SecretScanningAlertOpen),
@@ -55,7 +55,7 @@ public sealed class SecretScanningAlertAction(
             return;
         }
 
-        var alert = Event.Alert;
+        Octokit.Webhooks.Models.SecretScanningAlertEvent.Alert alert = Event.Alert;
         var secretType = Truncate(alert.SecretType, MaxFieldValueLength);
         var title = Truncate($"Secret scanning alert {verb}: #{alert.Number} ({secretType}) in {repo.FullName}", MaxTitleLength);
 
