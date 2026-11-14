@@ -40,7 +40,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="11.0.0" />
     <PackageReference Include="Octokit.Webhooks" Version="4.2.3" />
     <!-- StyleCop: build-time only (not part of the output) -->
-    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
+    <PackageReference Include="StyleCop.Analyzers" Version="1.3.180">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
