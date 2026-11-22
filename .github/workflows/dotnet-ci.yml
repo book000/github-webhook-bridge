@@ -99,6 +99,24 @@ jobs:
       - name: 🧬 Run Stryker mutation tests
         run: dotnet dotnet-stryker --config-file stryker-config.json
 
+      # Stryker exits 0 when it tests no mutants or cannot calculate a score, so thresholds.break alone is not a gate.
+      - name: 👀 Verify mutants were tested
+        shell: pwsh
+        run: |
+          $report = Get-ChildItem -Path StrykerOutput -Filter stryker-report.json -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Directory.Name -eq 'reports' } |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $report) { Write-Output "::error::Stryker report not found"; exit 1 }
+          try { $json = Get-Content -Raw $report.FullName | ConvertFrom-Json }
+          catch { Write-Output "::error::Stryker report unparsable"; exit 1 }
+          $tested = @('Killed', 'Survived', 'Timeout', 'NoCoverage')
+          $count = 0
+          foreach ($f in $json.files.PSObject.Properties) {
+            $count += @($f.Value.mutants | Where-Object { $tested -contains $_.status }).Count
+          }
+          Write-Output "Tested mutants: $count"
+          if ($count -eq 0) { Write-Output "::error::Stryker tested 0 mutants; check the mutate globs"; exit 1 }
+
       - name: 📊 Upload Stryker report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
