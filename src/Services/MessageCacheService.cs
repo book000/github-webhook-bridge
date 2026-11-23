@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Azure;
@@ -35,6 +36,8 @@ public class MessageCacheService : IMessageCacheService, IDisposable
 {
     private const string TableName = "MessageCache";
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan PurgeRetention = TimeSpan.FromHours(1);
+    private const int MaxTransactionSize = 100;
 
     private readonly TableClient _tableClient;
     private readonly ILogger<MessageCacheService> _logger;
@@ -49,6 +52,12 @@ public class MessageCacheService : IMessageCacheService, IDisposable
             ?? throw new InvalidOperationException("AzureWebJobsStorage is not set");
         var serviceClient = new TableServiceClient(connStr);
         _tableClient = serviceClient.GetTableClient(TableName);
+    }
+
+    internal MessageCacheService(TableClient tableClient, ILogger<MessageCacheService> logger)
+    {
+        _tableClient = tableClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -139,6 +148,60 @@ public class MessageCacheService : IMessageCacheService, IDisposable
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
             // Ignore if the entry no longer exists
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> DeleteExpiredAsync(CancellationToken cancellationToken)
+    {
+        var filter = BuildExpiredFilter(DateTimeOffset.UtcNow - PurgeRetention);
+        var deleted = 0;
+        await foreach (Page<TableEntity> page in _tableClient
+            .QueryAsync<TableEntity>(filter, select: ["PartitionKey", "RowKey"], cancellationToken: cancellationToken)
+            .AsPages()
+            .WithCancellation(cancellationToken))
+        {
+            foreach (IGrouping<string, TableEntity> partition in page.Values.GroupBy(e => e.PartitionKey))
+            {
+                foreach (TableEntity[] chunk in partition.Chunk(MaxTransactionSize))
+                    deleted += await DeleteChunkAsync(chunk, cancellationToken);
+            }
+        }
+
+        return deleted;
+    }
+
+    internal static string BuildExpiredFilter(DateTimeOffset cutoff)
+        => $"Timestamp lt datetime'{cutoff.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}'";
+
+    private async Task<int> DeleteChunkAsync(TableEntity[] chunk, CancellationToken cancellationToken)
+    {
+        IEnumerable<TableTransactionAction> actions = chunk.Select(e => new TableTransactionAction(
+            TableTransactionActionType.Delete,
+            new TableEntity(e.PartitionKey, e.RowKey) { ETag = ETag.All }));
+        try
+        {
+            await _tableClient.SubmitTransactionAsync(actions, cancellationToken);
+            return chunk.Length;
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            // A row vanished (concurrent lazy deletion in GetAsync) and the transaction is atomic, so nothing was deleted: retry row by row.
+            var deleted = 0;
+            foreach (TableEntity entity in chunk)
+            {
+                try
+                {
+                    await _tableClient.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, ETag.All, cancellationToken);
+                    deleted++;
+                }
+                catch (RequestFailedException inner) when (inner.Status == 404)
+                {
+                    // Already deleted by someone else
+                }
+            }
+
+            return deleted;
         }
     }
 

@@ -21,6 +21,14 @@ public interface IMessageCacheService
     /// <param name="key">Key string to delete</param>
     /// <returns>A <see cref="Task"/> representing completion of the operation</returns>
     Task DeleteAsync(Uri webhookUrl, string key);
+
+    /// <summary>
+    /// Deletes every entry that was last written more than the purge retention (1 hour, well beyond the 5-minute TTL) ago.
+    /// Entries are otherwise only removed when the same key is read again.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The number of entries actually deleted</returns>
+    Task<int> DeleteExpiredAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>Record representing cached message information</summary>

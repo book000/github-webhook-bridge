@@ -18,6 +18,8 @@ Receiving a webhook and delivering it to Discord are decoupled, so a Discord out
 
 Delivery is at-least-once. Duplicate posts are controlled by the existing 5-minute message cache: a replay of an event whose Discord message already exists edits that message instead of posting a new one. There is no per-delivery dedupe store, to avoid a storage read and write for every event.
 
+The message cache table has no native expiry and a row is only deleted when the same key is read again, so a timer-triggered function (`PurgeMessageCache`) runs daily at 18:00 UTC (03:00 JST) and deletes every `MessageCache` row last written more than 1 hour ago (well beyond the 5-minute window). A failed run appears as a failed invocation in Application Insights and the next run retries; each successful run logs `Purged <n> expired message cache entities`.
+
 The queues, the payload container (with a 7-day deletion rule), and a single-instance scale-out cap (`WEBSITE_MAX_DYNAMIC_APPLICATION_SCALE_OUT=1`, so one worker sends to Discord at a time) are provisioned by `infra/main.bicep`; the application does not create them.
 
 ## Setup
