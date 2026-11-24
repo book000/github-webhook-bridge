@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GitHubWebhookBridge.Actions;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
@@ -124,5 +125,46 @@ public class ActionFactoryTests
         var factory = new ActionFactory(BuildServiceProvider());
         var action = factory.GetAction(eventName, json, _webhookUri);
         Assert.IsType(expectedType, action);
+    }
+
+    [Fact]
+    public void GetAction_IssuesStatusChanged_ReturnsIgnoredActionWithoutDeserializing()
+    {
+        var factory = new ActionFactory(BuildServiceProvider());
+
+        var action = factory.GetAction("issues", """{"action":"status_changed"}""", _webhookUri);
+
+        Assert.IsType<IgnoredAction>(action);
+    }
+
+    [Fact]
+    public void GetAction_IssuesOpened_StillReturnsIssuesAction()
+    {
+        var factory = new ActionFactory(BuildServiceProvider());
+        var json = $$$"""{"action":"opened","issue":{{{TestFixtures.IssueJson()}}},"repository":{{{TestFixtures.RepoJson()}}},"sender":{{{TestFixtures.UserJson()}}}}""";
+
+        var action = factory.GetAction("issues", json, _webhookUri);
+
+        Assert.IsType<IssuesAction>(action);
+    }
+
+    [Theory]
+    [InlineData("future_action")]
+    [InlineData("Status_Changed")]
+    public void GetAction_IssuesWithAnotherUnknownAction_StillThrowsJsonException(string unknownAction)
+    {
+        var factory = new ActionFactory(BuildServiceProvider());
+        var json = $$$"""{"action":"{{{unknownAction}}}","issue":{{{TestFixtures.IssueJson()}}},"repository":{{{TestFixtures.RepoJson()}}},"sender":{{{TestFixtures.UserJson()}}}}""";
+
+        Assert.Throws<JsonException>(() => factory.GetAction("issues", json, _webhookUri));
+    }
+
+    [Fact]
+    public void GetAction_StatusChangedOnAnotherEvent_IsNotIgnoredAndStillThrowsJsonException()
+    {
+        var factory = new ActionFactory(BuildServiceProvider());
+        var json = $$$"""{"action":"status_changed","repository":{{{TestFixtures.RepoJson()}}},"sender":{{{TestFixtures.UserJson()}}}}""";
+
+        Assert.Throws<JsonException>(() => factory.GetAction("star", json, _webhookUri));
     }
 }

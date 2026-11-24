@@ -4,6 +4,7 @@ using System.Text.Json;
 using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PullRequestEditedEvent = Octokit.Webhooks.Events.PullRequest.PullRequestEditedEvent;
 
 namespace GitHubWebhookBridge.Actions;
@@ -14,6 +15,11 @@ namespace GitHubWebhookBridge.Actions;
 /// </summary>
 public class ActionFactory(IServiceProvider sp) : IActionFactory
 {
+    private const string IssuesEventName = "issues";
+
+    // Octokit.Webhooks has no model for this action and cannot deserialize the payload.
+    private const string IgnoredIssuesAction = "status_changed";
+
     private readonly IServiceProvider _sp = sp;
 
     private readonly FrozenDictionary<string, (Type Action, Type Payload)> _registry =
@@ -69,6 +75,9 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
         if (!_registry.TryGetValue(eventName, out (Type Action, Type Payload) entry))
             return new UnhandledAction(eventName);
 
+        if (eventName == IssuesEventName && ReadAction(rawJson) == IgnoredIssuesAction)
+            return new IgnoredAction(_sp.GetRequiredService<ILogger<IgnoredAction>>(), eventName, IgnoredIssuesAction);
+
         var payload = JsonSerializer.Deserialize(rawJson, entry.Payload, OctokitJsonOptions.Value)
                       ?? throw new InvalidOperationException(
                           $"Deserialization returned null for event '{eventName}' ({entry.Payload.Name}).");
@@ -84,6 +93,21 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
             pullRequestAction.PreviousBaseRef = ReadPreviousBaseRef(rawJson);
 
         return action;
+    }
+
+    /// <summary>
+    /// Reads the root <c>action</c> string of a payload.
+    /// Returns null when the root is not an object or <c>action</c> is missing or not a string.
+    /// </summary>
+    private static string? ReadAction(string rawJson)
+    {
+        using var doc = JsonDocument.Parse(rawJson);
+        JsonElement root = doc.RootElement;
+        return root.ValueKind == JsonValueKind.Object
+               && root.TryGetProperty("action", out JsonElement action)
+               && action.ValueKind == JsonValueKind.String
+            ? action.GetString()
+            : null;
     }
 
     private static bool AcceptsRawPayload(Type actionType) =>

@@ -4,6 +4,7 @@ using GitHubWebhookBridge.Functions;
 using GitHubWebhookBridge.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace GitHubWebhookBridge.Tests;
@@ -23,7 +24,7 @@ public class ProcessWebhookEventTests
 
     private sealed class ListLogger : ILogger<WebhookEventProcessor>
     {
-        public List<(LogLevel Level, string Text)> Entries { get; } = [];
+        public List<(LogLevel Level, string Text, Exception? Exception)> Entries { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull => null;
@@ -31,7 +32,7 @@ public class ProcessWebhookEventTests
         public bool IsEnabled(LogLevel logLevel) => true;
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-            => Entries.Add((logLevel, formatter(state, exception)));
+            => Entries.Add((logLevel, formatter(state, exception), exception));
     }
 
     private sealed class Fixture
@@ -116,7 +117,7 @@ public class ProcessWebhookEventTests
 
         Assert.Equal(message, reEnqueued);
         Assert.InRange(delay!.Value.TotalSeconds, minSeconds, maxSecondsExclusive - 1e-9);
-        (LogLevel level, var text) = Assert.Single(fx.Logger.Entries);
+        (LogLevel level, var text, _) = Assert.Single(fx.Logger.Entries);
         Assert.Equal(LogLevel.Warning, level);
         Assert.StartsWith("Discord rate limit: retrying in ", text, StringComparison.Ordinal);
         Assert.EndsWith("s (scope=user, global=False, DeliveryId=delivery-1)", text, StringComparison.Ordinal);
@@ -162,7 +163,7 @@ public class ProcessWebhookEventTests
         await fx.Processor.ProcessAsync(message, 1);
 
         fx.Queue.Verify(q => q.DeadLetterAsync(message, It.IsAny<CancellationToken>()), Times.Once);
-        (LogLevel level, var text) = Assert.Single(fx.Logger.Entries);
+        (LogLevel level, var text, _) = Assert.Single(fx.Logger.Entries);
         Assert.Equal(LogLevel.Error, level);
         Assert.Equal("Webhook event dead-lettered: rate limited for more than 6 hours (DeliveryId=delivery-1, EventName=push)", text);
     }
@@ -204,7 +205,7 @@ public class ProcessWebhookEventTests
 
         await Assert.ThrowsAsync<HttpRequestException>(() => fx.Processor.ProcessAsync(message, WebhookEventProcessor.MaxDequeueCount));
 
-        (LogLevel level, var text) = Assert.Single(fx.Logger.Entries);
+        (LogLevel level, var text, _) = Assert.Single(fx.Logger.Entries);
         Assert.Equal(LogLevel.Error, level);
         Assert.Equal("Webhook event dead-lettered: delivery failed 10 times (DeliveryId=delivery-1, EventName=push)", text);
     }
@@ -241,23 +242,57 @@ public class ProcessWebhookEventTests
             Assert.Single(fx.Logger.Entries).Text);
     }
 
-    [Theory]
-    [InlineData(typeof(JsonException))]
-    [InlineData(typeof(InvalidOperationException))]
-    public async Task ProcessAsync_UndeserializablePayload_IsDeadLetteredImmediately(Type exceptionType)
+    [Fact]
+    public async Task ProcessAsync_JsonExceptionFromFactory_IsDeadLetteredWithAWarningAndNoException()
     {
         var fx = new Fixture();
         WebhookQueueMessage message = Message();
         fx.SetupPayload(message);
-        fx.Factory.Setup(f => f.GetAction("push", RawJson, _defaultUrl)).Throws((Exception)Activator.CreateInstance(exceptionType, "bad")!);
+        fx.Factory.Setup(f => f.GetAction("push", RawJson, _defaultUrl)).Throws(new JsonException("bad"));
         fx.SetupDeadLetter();
 
         await fx.Processor.ProcessAsync(message, 1);
 
         fx.Queue.Verify(q => q.DeadLetterAsync(message, It.IsAny<CancellationToken>()), Times.Once);
-        Assert.Equal(
-            "Webhook event dead-lettered: payload cannot be deserialized (DeliveryId=delivery-1, EventName=push)",
-            Assert.Single(fx.Logger.Entries).Text);
+        (LogLevel level, var text, Exception? exception) = Assert.Single(fx.Logger.Entries);
+        Assert.Equal(LogLevel.Warning, level);
+        Assert.Equal("Webhook event dead-lettered: payload cannot be deserialized (DeliveryId=delivery-1, EventName=push): bad", text);
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_InvalidOperationExceptionFromFactory_IsDeadLetteredAsAnErrorWithTheException()
+    {
+        var fx = new Fixture();
+        WebhookQueueMessage message = Message();
+        fx.SetupPayload(message);
+        var thrown = new InvalidOperationException("bad");
+        fx.Factory.Setup(f => f.GetAction("push", RawJson, _defaultUrl)).Throws(thrown);
+        fx.SetupDeadLetter();
+
+        await fx.Processor.ProcessAsync(message, 1);
+
+        fx.Queue.Verify(q => q.DeadLetterAsync(message, It.IsAny<CancellationToken>()), Times.Once);
+        (LogLevel level, var text, Exception? exception) = Assert.Single(fx.Logger.Entries);
+        Assert.Equal(LogLevel.Error, level);
+        Assert.Equal("Webhook event dead-lettered: payload cannot be deserialized (DeliveryId=delivery-1, EventName=push)", text);
+        Assert.Same(thrown, exception);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_IgnoredAction_CompletesWithoutDeadLetteringOrReEnqueueing()
+    {
+        var fx = new Fixture();
+        WebhookQueueMessage message = Message();
+        fx.SetupPayload(message);
+        fx.Factory.Setup(f => f.GetAction("push", RawJson, _defaultUrl))
+            .Returns(new IgnoredAction(NullLogger<IgnoredAction>.Instance, "issues", "status_changed"));
+
+        await fx.Processor.ProcessAsync(message, 1);
+
+        fx.Queue.Verify(q => q.DeadLetterAsync(It.IsAny<WebhookQueueMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+        fx.Queue.Verify(q => q.EnqueueAsync(It.IsAny<WebhookQueueMessage>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Empty(fx.Logger.Entries);
     }
 
     [Fact]
