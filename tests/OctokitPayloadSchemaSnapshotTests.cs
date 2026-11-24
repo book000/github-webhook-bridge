@@ -19,7 +19,7 @@ public class OctokitPayloadSchemaSnapshotTests
         "Snapshots",
         "octokit-payload-schema.json");
 
-    private static readonly JsonSerializerOptions PrettyOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions PrettyOptions = new() { WriteIndented = true, NewLine = "\n" };
 
     [Fact]
     public void ImplementedPayloadTypes_MustMatchSnapshot()
