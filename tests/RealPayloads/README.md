@@ -1,6 +1,6 @@
 # Real GitHub Webhook Payloads
 
-This directory vendors **real GitHub webhook example payloads** — covering every implemented event type (14 event types in 19 files: one base action per event plus five action-specific subtypes) — sourced from [octokit/webhooks `payload-examples/api.github.com`](https://github.com/octokit/webhooks/tree/main/payload-examples/api.github.com). These are the same machine-readable examples GitHub's own webhook documentation pages are generated from, so they reflect the actual field names GitHub sends on the wire.
+This directory vendors **real GitHub webhook example payloads** — covering every implemented event type (14 event types in 20 files: one base action per event plus six action-specific subtypes) — sourced from [octokit/webhooks `payload-examples/api.github.com`](https://github.com/octokit/webhooks/tree/main/payload-examples/api.github.com). These are the same machine-readable examples GitHub's own webhook documentation pages are generated from, so they reflect the actual field names GitHub sends on the wire.
 
 ## Why this exists
 
@@ -21,6 +21,7 @@ One base example per implemented event, plus action-specific subtypes that carry
 | `issues.labeled.json` | `issues` | `installation` key stripped where present upstream; carries `label` |
 | `pull_request.review_requested.json` | `pull_request` | `installation` key stripped where present upstream; carries `requested_reviewer` |
 | `pull_request.edited.json` | `pull_request` | **Derived, not vendored verbatim**: upstream publishes no `edited` example, so this is `pull_request.opened.json` with `action` set to `edited` and a `changes` object (`title.from`, `body.from`) added per GitHub's documented schema |
+| `issues.status_changed.json` | `issues` | **Derived, not vendored verbatim**: upstream publishes no `status_changed` example and Octokit.Webhooks cannot deserialize it, so this is `issues.labeled.json` with `action` set to `status_changed`, `label` removed, `issue.status` added, and `changes.status.from` added per the shape reported in [#2784](https://github.com/book000/github-webhook-bridge/issues/2784); it is only asserted to be ignored, not mapped to a Discord message |
 | `fork.json` | `fork` | |
 | `issue_comment.created.json` | `issue_comment` | |
 | `issues.opened.json` | `issues` | |
@@ -59,6 +60,6 @@ Then update the file list in `tests/RealPayloadIntegrationTests.cs` if the event
 
 `OctokitPayloadSchemaSnapshotTests` / `OctokitWebhooksCompatibilityTests` catch *structural* changes in Octokit.Webhooks (renamed C# properties, added/removed event types, enum changes) but cannot catch Octokit shipping a `[JsonPropertyName]` that was wrong on day one for a property it didn't change. When reviewing a Renovate PR that bumps `Octokit.Webhooks`:
 
-1. Run `dotnet test -c Release` — `RealPayloadIntegrationTests` re-validates all 19 vendored real payloads against the new version; a mapping regression fails loudly here.
+1. Run `dotnet test -c Release` — `RealPayloadIntegrationTests` re-validates all 20 vendored real payloads against the new version; a mapping regression fails loudly here.
 2. If the changelog mentions new/renamed properties on any of the 14 implemented event types, cross-check the new `[JsonPropertyName]` against the corresponding file in this directory (or the GitHub webhook docs) before merging.
 3. If a new event type is added upstream, `OctokitWebhooksCompatibilityTests` will fail first — decide whether to implement it (add a fixture here) or record it as intentionally unimplemented.

@@ -118,6 +118,21 @@ public class RealPayloadIntegrationTests
         Assert.Contains(previousBody, description, StringComparison.Ordinal);
     }
 
+    /// <summary>An issues status_changed payload, which Octokit.Webhooks cannot deserialize, is acknowledged without a notification.</summary>
+    [Fact]
+    public async Task IssuesStatusChangedRealPayloadIsIgnored()
+    {
+        var rawJson = await File.ReadAllTextAsync(Path.Combine(PayloadsDir, "issues.status_changed.json"));
+        var services = new ServiceCollection();
+        services.AddLogging();
+        using ServiceProvider sp = services.BuildServiceProvider();
+
+        IAction action = new ActionFactory(sp).GetAction("issues", rawJson, _webhookUri);
+
+        Assert.IsType<IgnoredAction>(action);
+        await action.RunAsync();
+    }
+
     private static string ReadString(JsonElement root, string dottedPath)
     {
         JsonElement current = root;

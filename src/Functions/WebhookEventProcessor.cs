@@ -105,7 +105,12 @@ public sealed class WebhookEventProcessor(
         {
             action = _actionFactory.GetAction(message.EventName, rawJson, webhookUrl);
         }
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        catch (JsonException ex)
+        {
+            await DeadLetterAsync(message, "payload cannot be deserialized", ex, ct, LogLevel.Warning).ConfigureAwait(false);
+            return;
+        }
+        catch (InvalidOperationException ex)
         {
             await DeadLetterAsync(message, "payload cannot be deserialized", ex, ct).ConfigureAwait(false);
             return;
@@ -145,9 +150,21 @@ public sealed class WebhookEventProcessor(
         await _queue.EnqueueAsync(message, delay, ct).ConfigureAwait(false);
     }
 
-    private async Task DeadLetterAsync(WebhookQueueMessage message, string reason, Exception? cause, CancellationToken ct)
+    /// <summary>Moves the event to the poison queue; a Warning entry carries the cause's message instead of the exception so that it does not count as an exception in telemetry.</summary>
+    private async Task DeadLetterAsync(WebhookQueueMessage message, string reason, Exception? cause, CancellationToken ct, LogLevel level = LogLevel.Error)
     {
         await _queue.DeadLetterAsync(message, ct).ConfigureAwait(false);
+        if (level == LogLevel.Warning)
+        {
+            _logger.LogWarning(
+                "Webhook event dead-lettered: {Reason} (DeliveryId={DeliveryId}, EventName={EventName}): {Error}",
+                reason,
+                message.DeliveryId,
+                message.EventName,
+                cause?.Message);
+            return;
+        }
+
         _logger.LogError(
             cause,
             "Webhook event dead-lettered: {Reason} (DeliveryId={DeliveryId}, EventName={EventName})",

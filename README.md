@@ -94,7 +94,7 @@ Endpoint: `http://localhost:7071/`
 | `pull_request_review` | Pull request review |
 | `pull_request_review_comment` | Review comment |
 | `pull_request_review_thread` | Review thread resolve/reopen |
-| `issues` | Issue operations |
+| `issues` | Issue operations (the `status_changed` action is acknowledged without a notification because Octokit.Webhooks cannot deserialize it) |
 | `issue_comment` | Issue / PR comment |
 | `discussion` | Discussion |
 | `discussion_comment` | Discussion comment |
@@ -166,7 +166,7 @@ Misconfiguration still fails fast: a non-HTTPS URL, a Blob path without a contai
 
 ### Finding events that were not delivered
 
-Events that cannot be delivered end up in the storage queue `webhook-events-poison` (storage account `stgithubwebhookbridge`). The worker logs an Error `Webhook event dead-lettered` for events it gives up on, and the exception from a failing delivery also appears in Application Insights, so the existing exception alerts fire.
+Events that cannot be delivered end up in the storage queue `webhook-events-poison` (storage account `stgithubwebhookbridge`). The worker logs an Error `Webhook event dead-lettered` for events it gives up on, and the exception from a failing delivery also appears in Application Insights, so the existing exception alerts fire. A payload that Octokit.Webhooks cannot deserialize (for example a GitHub action it does not know yet) is dead-lettered with a Warning `Webhook event dead-lettered: payload cannot be deserialized` that carries the error message but no exception, so it appears in the `traces` table and does not fire the exception alerts.
 
 ```bash
 az storage message peek --queue-name webhook-events-poison --account-name stgithubwebhookbridge --auth-mode login --num-messages 32
