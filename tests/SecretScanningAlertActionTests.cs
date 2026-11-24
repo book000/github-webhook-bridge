@@ -73,7 +73,7 @@ public class SecretScanningAlertActionTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
             .Callback(new InvocationAction(i =>
             {
-                var formatter = Assert.IsAssignableFrom<Delegate>(i.Arguments[4]);
+                Delegate formatter = Assert.IsAssignableFrom<Delegate>(i.Arguments[4]);
                 logs.Add(Assert.IsType<string>(formatter.DynamicInvoke(i.Arguments[2], i.Arguments[3])));
             }));
 

@@ -18,7 +18,7 @@ public class OctokitJsonOptionsTests
     public void Value_UnknownFieldsAreIgnored()
     {
         var json = """{"known":"hello","unknown_field":42}""";
-        var result = JsonSerializer.Deserialize<KnownOnly>(json, OctokitJsonOptions.Value);
+        KnownOnly? result = JsonSerializer.Deserialize<KnownOnly>(json, OctokitJsonOptions.Value);
         Assert.Equal("hello", result!.Known);
     }
 

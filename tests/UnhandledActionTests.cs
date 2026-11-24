@@ -8,14 +8,14 @@ public class UnhandledActionTests
     public async Task RunAsync_ThrowsNotImplementedException()
     {
         var action = new UnhandledAction("workflow_run");
-        await Assert.ThrowsAsync<NotImplementedException>(() => action.RunAsync());
+        await Assert.ThrowsAsync<NotImplementedException>(action.RunAsync);
     }
 
     [Fact]
     public async Task RunAsync_ExceptionMessageContainsEventName()
     {
         var action = new UnhandledAction("some_event");
-        var ex = await Assert.ThrowsAsync<NotImplementedException>(() => action.RunAsync());
+        NotImplementedException ex = await Assert.ThrowsAsync<NotImplementedException>(action.RunAsync);
         Assert.Contains("some_event", ex.Message, StringComparison.Ordinal);
     }
 

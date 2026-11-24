@@ -14,7 +14,7 @@ public class GitHubEventAttributeTests
     [Fact]
     public void Attribute_TargetsClassOnly()
     {
-        var usage = typeof(GitHubEventAttribute)
+        AttributeUsageAttribute usage = typeof(GitHubEventAttribute)
             .GetCustomAttributes(typeof(AttributeUsageAttribute), inherit: false)
             .Cast<AttributeUsageAttribute>()
             .Single();

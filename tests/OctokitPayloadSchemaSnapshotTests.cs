@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using GitHubWebhookBridge.Actions;
-using Octokit.Webhooks;
 
 namespace GitHubWebhookBridge.Tests;
 
@@ -25,7 +24,7 @@ public class OctokitPayloadSchemaSnapshotTests
     [Fact]
     public void ImplementedPayloadTypes_MustMatchSnapshot()
     {
-        var schema = BuildSchema();
+        SortedDictionary<string, object> schema = BuildSchema();
         var actual = JsonSerializer.Serialize(schema, PrettyOptions);
 
         if (Environment.GetEnvironmentVariable("UPDATE_SNAPSHOTS") == "1")
@@ -47,15 +46,15 @@ public class OctokitPayloadSchemaSnapshotTests
 
     private static SortedDictionary<string, object> BuildSchema()
     {
-        var payloadTypes = typeof(GitHubEventAttribute).Assembly.GetTypes()
+        IOrderedEnumerable<Type> payloadTypes = typeof(GitHubEventAttribute).Assembly.GetTypes()
             .Where(t => t.GetCustomAttribute<GitHubEventAttribute>() != null && !t.IsAbstract)
             .Select(GetPayloadType)
             .Distinct()
             .OrderBy(t => t.Name);
 
         var schema = new SortedDictionary<string, object>(StringComparer.Ordinal);
-        foreach (var type in payloadTypes)
-            schema[type.Name] = BuildTypeSchema(type, new HashSet<Type>());
+        foreach (Type? type in payloadTypes)
+            schema[type.Name] = BuildTypeSchema(type, []);
 
         return schema;
     }
@@ -66,11 +65,11 @@ public class OctokitPayloadSchemaSnapshotTests
             return "«circular»";
 
         var props = new SortedDictionary<string, object>(StringComparer.Ordinal);
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        foreach (PropertyInfo? prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                                  .OrderBy(p => p.Name))
         {
             var jsonName = prop.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? prop.Name;
-            var propType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+            Type propType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
 
             if (propType.IsEnum)
             {
@@ -93,21 +92,17 @@ public class OctokitPayloadSchemaSnapshotTests
                      && propType.Namespace?.StartsWith("Octokit", StringComparison.Ordinal) == true)
             {
                 // Nested Octokit type: build the schema recursively
-                props[jsonName] = BuildTypeSchema(propType, new HashSet<Type>(visited));
+                props[jsonName] = BuildTypeSchema(propType, [.. visited]);
             }
             else if (propType.IsGenericType
                      && typeof(IEnumerable).IsAssignableFrom(propType))
             {
-                var elemType = propType.GetGenericArguments().FirstOrDefault();
+                Type? elemType = propType.GetGenericArguments().FirstOrDefault();
                 props[jsonName] = "array:" + (elemType?.Name ?? "object");
-            }
-            else if (propType.IsArray)
-            {
-                props[jsonName] = "array:" + (propType.GetElementType()?.Name ?? "object");
             }
             else
             {
-                props[jsonName] = propType.Name;
+                props[jsonName] = propType.IsArray ? "array:" + (propType.GetElementType()?.Name ?? "object") : propType.Name;
             }
         }
 
@@ -116,7 +111,7 @@ public class OctokitPayloadSchemaSnapshotTests
 
     private static Type GetPayloadType(Type actionType)
     {
-        var b = actionType.BaseType;
+        Type? b = actionType.BaseType;
         while (b != null && !(b.IsGenericType && b.GetGenericTypeDefinition() == typeof(BaseAction<>)))
             b = b.BaseType;
         return b?.GetGenericArguments()[0]

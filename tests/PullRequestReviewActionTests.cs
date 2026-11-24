@@ -68,7 +68,7 @@ public class PullRequestReviewActionTests
                     "https://github.com/owner/repo/pull/1",
                     "pr-author", 2)}},
                 "repository":{{TestFixtures.RepoJson("owner/repo")}},
-                "sender":{{TestFixtures.UserJson("reviewer",1)}}
+                "sender":{{TestFixtures.UserJson("reviewer", 1)}}
             }
             """,
             OctokitJsonOptions.Value)!;

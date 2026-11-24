@@ -43,7 +43,7 @@ public class BaseManagerResilienceTests
     private static Mock<IConfiguration> CreateConfig(params (string Key, string Value)[] values)
     {
         var config = new Mock<IConfiguration>();
-        foreach ((string key, string value) in values)
+        foreach ((var key, var value) in values)
         {
             config.Setup(c => c[key]).Returns(value);
         }
@@ -134,10 +134,10 @@ public class BaseManagerResilienceTests
     [Fact]
     public async Task FileSourceIoExceptionDegradesToNotMuted()
     {
-        string parentFile = Path.GetTempFileName();
+        var parentFile = Path.GetTempFileName();
         try
         {
-            var config = CreateConfig(("MUTES_FILE_PATH", Path.Combine(parentFile, "mutes.json")));
+            Mock<IConfiguration> config = CreateConfig(("MUTES_FILE_PATH", Path.Combine(parentFile, "mutes.json")));
             var mgr = new MuteManager(config.Object, new Mock<IHttpClientFactory>().Object);
 
             await mgr.EnsureLoadedAsync();
@@ -231,7 +231,7 @@ public class BaseManagerResilienceTests
 
         Assert.Equal(2, handler.CallCount);
         Assert.True(mgr.IsMuted(1, "push", null));
-        (LogLevel level, string message) = Assert.Single(logger.Entries);
+        (LogLevel level, var message) = Assert.Single(logger.Entries);
         Assert.Equal(LogLevel.Warning, level);
         Assert.Contains("keeping the previously loaded data", message, StringComparison.Ordinal);
 
@@ -313,7 +313,7 @@ public class BaseManagerResilienceTests
 
         await mgr.EnsureLoadedAsync();
         clock.Advance(TimeSpan.FromMinutes(5));
-        Task reload = Task.Run(mgr.EnsureLoadedAsync);
+        var reload = Task.Run(mgr.EnsureLoadedAsync);
         Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
 
         await mgr.EnsureLoadedAsync().WaitAsync(TimeSpan.FromSeconds(5));
@@ -386,7 +386,7 @@ public class BaseManagerResilienceTests
         await mgr.EnsureLoadedAsync();
         await mgr.EnsureLoadedAsync();
 
-        (LogLevel level, string message) = Assert.Single(logger.Entries);
+        (LogLevel level, var message) = Assert.Single(logger.Entries);
         Assert.Equal(LogLevel.Warning, level);
         Assert.Contains("MuteManager", message, StringComparison.Ordinal);
         Assert.Contains("url", message, StringComparison.Ordinal);

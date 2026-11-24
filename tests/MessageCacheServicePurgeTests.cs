@@ -28,7 +28,7 @@ public class MessageCacheServicePurgeTests
     public async Task DeleteExpiredChunksAPartitionIntoTransactionsOf100()
     {
         var sizes = new List<int>();
-        var table = TableReturning(Page(Rows("p1", 250)));
+        Mock<TableClient> table = TableReturning(Page(Rows("p1", 250)));
         table.Setup(t => t.SubmitTransactionAsync(It.IsAny<IEnumerable<TableTransactionAction>>(), It.IsAny<CancellationToken>()))
             .Callback<IEnumerable<TableTransactionAction>, CancellationToken>((actions, _) => sizes.Add(actions.Count()))
             .ReturnsAsync(Mock.Of<Response<IReadOnlyList<Response>>>());
@@ -44,7 +44,7 @@ public class MessageCacheServicePurgeTests
     public async Task DeleteExpiredUsesOneTransactionPerPartition()
     {
         var partitions = new List<string[]>();
-        var table = TableReturning(Page([.. Rows("p1", 2), .. Rows("p2", 3)]), Page(Rows("p1", 1)));
+        Mock<TableClient> table = TableReturning(Page([.. Rows("p1", 2), .. Rows("p2", 3)]), Page(Rows("p1", 1)));
         table.Setup(t => t.SubmitTransactionAsync(It.IsAny<IEnumerable<TableTransactionAction>>(), It.IsAny<CancellationToken>()))
             .Callback<IEnumerable<TableTransactionAction>, CancellationToken>(
                 (actions, _) => partitions.Add([.. actions.Select(a => a.Entity.PartitionKey).Distinct()]))
@@ -61,7 +61,7 @@ public class MessageCacheServicePurgeTests
     [Fact]
     public async Task DeleteExpiredFallsBackToSingleDeletesOnNotFound()
     {
-        var table = TableReturning(Page(Rows("p1", 3)));
+        Mock<TableClient> table = TableReturning(Page(Rows("p1", 3)));
         table.Setup(t => t.SubmitTransactionAsync(It.IsAny<IEnumerable<TableTransactionAction>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new RequestFailedException(404, "gone"));
         table.Setup(t => t.DeleteEntityAsync("p1", "r0", ETag.All, It.IsAny<CancellationToken>()))
@@ -80,11 +80,11 @@ public class MessageCacheServicePurgeTests
     [Fact]
     public async Task DeleteExpiredPropagatesOtherFailures()
     {
-        var table = TableReturning(Page(Rows("p1", 1)));
+        Mock<TableClient> table = TableReturning(Page(Rows("p1", 1)));
         table.Setup(t => t.SubmitTransactionAsync(It.IsAny<IEnumerable<TableTransactionAction>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new RequestFailedException(503, "busy"));
 
-        var ex = await Assert.ThrowsAsync<RequestFailedException>(
+        RequestFailedException ex = await Assert.ThrowsAsync<RequestFailedException>(
             () => CreateService(table).DeleteExpiredAsync(CancellationToken.None));
 
         Assert.Equal(503, ex.Status);
@@ -97,7 +97,7 @@ public class MessageCacheServicePurgeTests
         => [.. Enumerable.Range(0, count).Select(i => new TableEntity(partition, $"r{i}"))];
 
     private static Page<TableEntity> Page(List<TableEntity> rows)
-        => Azure.Page<TableEntity>.FromValues(rows, null, Mock.Of<Response>());
+        => Page<TableEntity>.FromValues(rows, null, Mock.Of<Response>());
 
     private static Mock<TableClient> TableReturning(params Page<TableEntity>[] pages)
     {

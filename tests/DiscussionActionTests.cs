@@ -33,7 +33,7 @@ public class DiscussionActionTests
     }
 
     private static string AnswerJson(long id, string body) =>
-        $$"""{"id":{{id}},"node_id":"DC_{{id}}","html_url":"https://github.com/test/repo/discussions/5#discussioncomment-{{id}}","parent_id":null,"child_comment_count":0,"repository_url":"","discussion_id":5,"author_association":"NONE","user":{{TestFixtures.UserJson("answerer",2)}},"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","body":"{{body}}"}""";
+        $$"""{"id":{{id}},"node_id":"DC_{{id}}","html_url":"https://github.com/test/repo/discussions/5#discussioncomment-{{id}}","parent_id":null,"child_comment_count":0,"repository_url":"","discussion_id":5,"author_association":"NONE","user":{{TestFixtures.UserJson("answerer", 2)}},"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","body":"{{body}}"}""";
 
     private static string CategoryJson(string name) =>
         $$"""{"id":1,"repository_id":1,"emoji":":speech_balloon:","name":"{{name}}","description":"","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","slug":"{{name.ToLowerInvariant().Replace(" ", "-")}}","is_answerable":false}""";
@@ -47,9 +47,9 @@ public class DiscussionActionTests
             $$"""
             {
                 "action":"{{action}}",
-                "discussion":{{TestFixtures.DiscussionJson(5,"Great discussion","https://github.com/test/repo/discussions/5","body","author",1)}},
-                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
-                "sender":{{TestFixtures.UserJson("author",1)}}
+                "discussion":{{TestFixtures.DiscussionJson(5, "Great discussion", "https://github.com/test/repo/discussions/5", "body", "author", 1)}},
+                "repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("author", 1)}}
                 {{(labelName is not null ? $",\"label\":{TestFixtures.LabelJson(labelName)}" : string.Empty)}}
                 {{(answerBody is not null ? $",\"answer\":{AnswerJson(999, answerBody)}" : string.Empty)}}
                 {{(changedFromCategory is not null ? $",\"changes\":{{\"category\":{{\"from\":{CategoryJson(changedFromCategory)}}}}}" : string.Empty)}}
@@ -105,7 +105,7 @@ public class DiscussionActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        int capturedColor = -1;
+        var capturedColor = -1;
         discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .Callback<Uri, DiscordMessage>((_, msg) => capturedColor = msg.Embeds?.FirstOrDefault()?.Color ?? -1)
                .ReturnsAsync("msg-id");

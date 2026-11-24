@@ -34,7 +34,7 @@ public abstract class BaseManager<TData>(
     /// <summary>Gets the loaded data. Valid after <see cref="EnsureLoadedAsync"/> has been called.</summary>
     protected TData Data { get; private set; } = default!;
 
-    private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan _refreshInterval = TimeSpan.FromMinutes(5);
 
     private volatile bool _hasData;
     private long _nextAttemptTicks;
@@ -102,7 +102,7 @@ public abstract class BaseManager<TData>(
 
     private DateTimeOffset ScheduleNextAttempt()
     {
-        DateTimeOffset next = _clock.GetUtcNow() + RefreshInterval;
+        DateTimeOffset next = _clock.GetUtcNow() + _refreshInterval;
         Volatile.Write(ref _nextAttemptTicks, next.UtcTicks);
         return next;
     }

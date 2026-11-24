@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.Net;
 using System.Text;
 using GitHubWebhookBridge.Functions;
@@ -21,7 +20,7 @@ public class RootFunctionTests
     public async Task RunGetRequestReturns200WithMessage()
     {
         var context = new FakeFunctionContext();
-        HttpRequestData req = new FakeHttpRequestData(context, new MemoryStream(), [], new NameValueCollection(), "GET");
+        HttpRequestData req = new FakeHttpRequestData(context, new MemoryStream(), [], [], "GET");
 
         HttpResponseData result = await RootFunction.RunAsync(req);
 

@@ -33,7 +33,7 @@ public class PublicActionTests
     }
 
     private static PublicEvent MakeEvent() => JsonSerializer.Deserialize<PublicEvent>(
-        $$"""{"repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("publisher",1)}}}""",
+        $$"""{"repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("publisher", 1)}}}""",
         OctokitJsonOptions.Value)!;
 
     /// <summary>The title contains "Published", the repository name, and the sender login.</summary>

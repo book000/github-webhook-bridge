@@ -20,7 +20,7 @@ public class HostConfigurationTests
     [Fact]
     public void HostJson_QueueSettingsMatchTheWorkerContract()
     {
-        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(RepoFile("src", "host.json")));
+        using var doc = JsonDocument.Parse(File.ReadAllText(RepoFile("src", "host.json")));
         JsonElement queues = doc.RootElement.GetProperty("extensions").GetProperty("queues");
 
         Assert.Equal("base64", queues.GetProperty("messageEncoding").GetString());
@@ -34,7 +34,7 @@ public class HostConfigurationTests
     [Fact]
     public void HostJson_KeepsTheEmptyHttpRoutePrefix()
     {
-        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(RepoFile("src", "host.json")));
+        using var doc = JsonDocument.Parse(File.ReadAllText(RepoFile("src", "host.json")));
 
         Assert.Equal(string.Empty, doc.RootElement.GetProperty("extensions").GetProperty("http").GetProperty("routePrefix").GetString());
     }

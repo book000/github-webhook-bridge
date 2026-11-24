@@ -227,7 +227,7 @@ public class PushActionTests
         // Create a PushEvent with an empty commit list
         var repoJson = TestFixtures.RepoJson("test/repo", "https://github.com/test/repo");
         var senderJson = TestFixtures.UserJson();
-        var emptyPush = JsonSerializer.Deserialize<PushEvent>(
+        PushEvent emptyPush = JsonSerializer.Deserialize<PushEvent>(
             $$$"""{"ref":"refs/heads/main","before":"aaa","after":"bbb","compare":"https://github.com","commits":[],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":""}}""",
             OctokitJsonOptions.Value)!;
 
@@ -251,7 +251,7 @@ public class PushActionTests
         var commitJson = MakeCommitJson("abc1", "test");
         var repoJson = TestFixtures.RepoJson("test/repo");
         var senderJson = TestFixtures.UserJson();
-        var push = JsonSerializer.Deserialize<PushEvent>(
+        PushEvent push = JsonSerializer.Deserialize<PushEvent>(
             $$$"""{"ref":"refs/heads/feature/my-branch","before":"aaa","after":"bbb","compare":"https://github.com","commits":[{{{commitJson}}}],"repository":{{{repoJson}}},"sender":{{{senderJson}}},"pusher":{"name":"octocat","email":""}}""",
             OctokitJsonOptions.Value)!;
 

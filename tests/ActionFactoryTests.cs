@@ -4,7 +4,6 @@ using GitHubWebhookBridge.Actions.Impl;
 using GitHubWebhookBridge.Managers;
 using GitHubWebhookBridge.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace GitHubWebhookBridge.Tests;
@@ -39,7 +38,7 @@ public class ActionFactoryTests
     public void GetAction_UnknownEvent_ReturnsUnhandledAction()
     {
         var factory = new ActionFactory(BuildServiceProvider());
-        var action = factory.GetAction("completely_unknown_event", "{}", _webhookUri);
+        IAction action = factory.GetAction("completely_unknown_event", "{}", _webhookUri);
         Assert.IsType<UnhandledAction>(action);
     }
 
@@ -59,19 +58,19 @@ public class ActionFactoryTests
     public async Task GetAction_UnknownEvent_ThrowsNotImplementedException()
     {
         var factory = new ActionFactory(BuildServiceProvider());
-        var action = factory.GetAction("unknown_event", "{}", _webhookUri);
-        await Assert.ThrowsAsync<NotImplementedException>(() => action.RunAsync());
+        IAction action = factory.GetAction("unknown_event", "{}", _webhookUri);
+        await Assert.ThrowsAsync<NotImplementedException>(action.RunAsync);
     }
 
     [Fact]
     public void ActionRegistryValidator_ValidateAll_DoesNotThrow()
     {
-        var sp = BuildServiceProvider();
+        IServiceProvider sp = BuildServiceProvider();
         var factory = new ActionFactory(sp);
         var validator = new ActionRegistryValidator(factory, sp);
 
         // Octokit types have required members, so payload generation is skipped, but no exception is thrown
-        var ex = Record.Exception(() => validator.ValidateAll());
+        Exception ex = Record.Exception(validator.ValidateAll);
         Assert.Null(ex);
     }
 
@@ -123,7 +122,7 @@ public class ActionFactoryTests
     public void GetAction_KnownEvent_ReturnsCorrectType(string eventName, string json, Type expectedType)
     {
         var factory = new ActionFactory(BuildServiceProvider());
-        var action = factory.GetAction(eventName, json, _webhookUri);
+        IAction action = factory.GetAction(eventName, json, _webhookUri);
         Assert.IsType(expectedType, action);
     }
 
@@ -132,7 +131,7 @@ public class ActionFactoryTests
     {
         var factory = new ActionFactory(BuildServiceProvider());
 
-        var action = factory.GetAction("issues", """{"action":"status_changed"}""", _webhookUri);
+        IAction action = factory.GetAction("issues", """{"action":"status_changed"}""", _webhookUri);
 
         Assert.IsType<IgnoredAction>(action);
     }
@@ -143,7 +142,7 @@ public class ActionFactoryTests
         var factory = new ActionFactory(BuildServiceProvider());
         var json = $$$"""{"action":"opened","issue":{{{TestFixtures.IssueJson()}}},"repository":{{{TestFixtures.RepoJson()}}},"sender":{{{TestFixtures.UserJson()}}}}""";
 
-        var action = factory.GetAction("issues", json, _webhookUri);
+        IAction action = factory.GetAction("issues", json, _webhookUri);
 
         Assert.IsType<IssuesAction>(action);
     }
