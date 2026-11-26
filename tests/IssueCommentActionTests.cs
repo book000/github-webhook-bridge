@@ -43,7 +43,7 @@ public class IssueCommentActionTests
             ? $$""","changes":{"body":{{(changedBodyFrom is not null ? $$"""{"from":"{{changedBodyFrom}}"}""" : "null")}}}"""
             : "";
         return JsonSerializer.Deserialize<IssueCommentEvent>(
-            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(3,"Test issue",isPr:isPullRequest,userLogin:"issue-author",userId:10)}},"comment":{{TestFixtures.IssueCommentJson(commentId,commentBody)}},"repository":{{TestFixtures.RepoJson("test/repo")}},"sender":{{TestFixtures.UserJson("commenter",20)}}{{changesJson}}}""",
+            $$"""{"action":"{{action}}","issue":{{TestFixtures.IssueJson(3, "Test issue", isPr: isPullRequest, userLogin: "issue-author", userId: 10)}},"comment":{{TestFixtures.IssueCommentJson(commentId, commentBody)}},"repository":{{TestFixtures.RepoJson("test/repo")}},"sender":{{TestFixtures.UserJson("commenter", 20)}}{{changesJson}}}""",
             OctokitJsonOptions.Value)!;
     }
 
@@ -118,7 +118,7 @@ public class IssueCommentActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        int capturedColor = -1;
+        var capturedColor = -1;
         discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .Callback<Uri, DiscordMessage>((_, msg) => capturedColor = msg.Embeds?.FirstOrDefault()?.Color ?? -1)
                .ReturnsAsync("msg-id");
@@ -259,7 +259,9 @@ public class IssueCommentActionTests
         if (description is null ||
             !description.StartsWith("```diff", StringComparison.Ordinal) ||
             !description.EndsWith("```", StringComparison.Ordinal))
+        {
             return false;
+        }
 
         var inner = description.Substring("```diff\n".Length, description.Length - "```diff\n".Length - "```".Length);
         return !inner.Contains("```", StringComparison.Ordinal);

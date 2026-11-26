@@ -78,7 +78,7 @@ internal sealed class QueueHttpMessageHandler : HttpMessageHandler
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        int index = Interlocked.Increment(ref _callCount) - 1;
+        var index = Interlocked.Increment(ref _callCount) - 1;
         Func<HttpRequestMessage, HttpResponseMessage> responder = _responders[Math.Min(index, _responders.Length - 1)];
         return Task.FromResult(responder(request));
     }

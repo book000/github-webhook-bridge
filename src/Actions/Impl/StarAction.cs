@@ -31,7 +31,7 @@ public sealed class StarAction(
         }
 
         // Unknown (future) actions get a neutral wording instead of being mislabeled as "Unstarred".
-        (string titlePrefix, int color) = Event.Action switch
+        (var titlePrefix, var color) = Event.Action switch
         {
             "created" => ("Starred", EmbedColors.Star),
             "deleted" => ("Unstarred", EmbedColors.Unstar),

@@ -19,22 +19,21 @@ public class ActionCoverageTests
     {
         // Collect concrete classes annotated with [GitHubEvent] from the main assembly
         Assembly mainAssembly = typeof(IAction).Assembly;
-        Type[] implementedActions = mainAssembly.GetTypes()
+        Type[] implementedActions = [.. mainAssembly.GetTypes()
             .Where(t =>
                 t.GetCustomAttribute<GitHubEventAttribute>() != null &&
                 t.IsClass &&
-                !t.IsAbstract)
-            .ToArray();
+                !t.IsAbstract)];
 
         // Collect *Tests classes from the test assembly
         Assembly testAssembly = typeof(ActionCoverageTests).Assembly;
-        HashSet<string> testClassNames = testAssembly.GetTypes()
+        var testClassNames = testAssembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract && t.Name.EndsWith("Tests", StringComparison.Ordinal))
             .Select(t => t.Name)
             .ToHashSet();
 
         // Enumerate actions that have no test class
-        List<string> uncovered = implementedActions
+        var uncovered = implementedActions
             .Where(a => !testClassNames.Contains($"{a.Name}Tests"))
             .Select(a => a.Name)
             .OrderBy(n => n)

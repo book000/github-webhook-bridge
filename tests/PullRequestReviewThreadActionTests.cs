@@ -46,8 +46,8 @@ public class PullRequestReviewThreadActionTests
                     12, "Feature branch",
                     "https://github.com/test/repo/pull/12",
                     "pr-author", 50)}},
-                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
-                "sender":{{TestFixtures.UserJson("reviewer",60)}}
+                "repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer", 60)}}
             }
             """,
             OctokitJsonOptions.Value)!;
@@ -103,7 +103,7 @@ public class PullRequestReviewThreadActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        int capturedColor = -1;
+        var capturedColor = -1;
         discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .Callback<Uri, DiscordMessage>((_, msg) => capturedColor = msg.Embeds?.FirstOrDefault()?.Color ?? -1)
                .ReturnsAsync("msg-id");
@@ -124,7 +124,7 @@ public class PullRequestReviewThreadActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        int capturedColor = -1;
+        var capturedColor = -1;
         discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .Callback<Uri, DiscordMessage>((_, msg) => capturedColor = msg.Embeds?.FirstOrDefault()?.Color ?? -1)
                .ReturnsAsync("msg-id");
@@ -293,8 +293,8 @@ public class PullRequestReviewThreadActionTests
                     12, "Feature branch",
                     "https://github.com/test/repo/pull/12",
                     "pr-author", 50)}},
-                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
-                "sender":{{TestFixtures.UserJson("reviewer",60)}}
+                "repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer", 60)}}
             }
             """,
             OctokitJsonOptions.Value)!;
@@ -329,8 +329,8 @@ public class PullRequestReviewThreadActionTests
                     12, "Feature branch",
                     "https://github.com/test/repo/pull/12",
                     "pr-author", 50)}},
-                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
-                "sender":{{TestFixtures.UserJson("reviewer",60)}}
+                "repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer", 60)}}
             }
             """,
             OctokitJsonOptions.Value)!;

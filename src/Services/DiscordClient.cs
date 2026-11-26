@@ -102,11 +102,6 @@ public class DiscordClient(IHttpClientFactory httpClientFactory) : IDiscordClien
     private static TimeSpan ParseRetryAfter(HttpResponseMessage response)
     {
         var maxSeconds = TimeSpan.FromDays(1).TotalSeconds;
-        return response.Headers.TryGetValues("Retry-After", out IEnumerable<string>? values)
-            && double.TryParse(values.FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)
-            && double.IsFinite(seconds)
-            && seconds > 0
-            ? TimeSpan.FromSeconds(Math.Min(seconds, maxSeconds))
-            : DiscordRateLimitException.DefaultRetryAfter;
+        return response.Headers.TryGetValues("Retry-After", out IEnumerable<string>? values) && double.TryParse(values.FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) && double.IsFinite(seconds) && seconds > 0 ? TimeSpan.FromSeconds(Math.Min(seconds, maxSeconds)) : DiscordRateLimitException.DefaultRetryAfter;
     }
 }

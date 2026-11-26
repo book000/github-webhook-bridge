@@ -103,11 +103,7 @@ public class ActionFactory(IServiceProvider sp) : IActionFactory
     {
         using var doc = JsonDocument.Parse(rawJson);
         JsonElement root = doc.RootElement;
-        return root.ValueKind == JsonValueKind.Object
-               && root.TryGetProperty("action", out JsonElement action)
-               && action.ValueKind == JsonValueKind.String
-            ? action.GetString()
-            : null;
+        return root.ValueKind == JsonValueKind.Object && root.TryGetProperty("action", out JsonElement action) && action.ValueKind == JsonValueKind.String ? action.GetString() : null;
     }
 
     private static bool AcceptsRawPayload(Type actionType) =>

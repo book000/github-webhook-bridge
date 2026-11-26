@@ -33,7 +33,7 @@ public class ForkActionTests
     }
 
     private static ForkEvent MakeEvent() => JsonSerializer.Deserialize<ForkEvent>(
-        $$"""{"repository":{{TestFixtures.RepoJson("original/repo","https://github.com/original/repo")}},"forkee":{{TestFixtures.RepoJson("forker/repo","https://github.com/forker/repo")}},"sender":{{TestFixtures.UserJson("forker",1)}}}""",
+        $$"""{"repository":{{TestFixtures.RepoJson("original/repo", "https://github.com/original/repo")}},"forkee":{{TestFixtures.RepoJson("forker/repo", "https://github.com/forker/repo")}},"sender":{{TestFixtures.UserJson("forker", 1)}}}""",
         OctokitJsonOptions.Value)!;
 
     /// <summary>A payload without the forkee object is skipped with a warning instead of throwing.</summary>

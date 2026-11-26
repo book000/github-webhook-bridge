@@ -33,7 +33,7 @@ public class StarActionTests
     }
 
     private static StarEvent MakeEvent(string action) => JsonSerializer.Deserialize<StarEvent>(
-        $$"""{"action":"{{action}}","repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("stargazer",1)}}}""",
+        $$"""{"action":"{{action}}","repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},"sender":{{TestFixtures.UserJson("stargazer", 1)}}}""",
         OctokitJsonOptions.Value)!;
 
     /// <summary>Octokit only deserializes known actions, so an unknown action is simulated with a derived event.</summary>
@@ -94,7 +94,7 @@ public class StarActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        int capturedColor = -1;
+        var capturedColor = -1;
         discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .Callback<Uri, DiscordMessage>((_, msg) => capturedColor = msg.Embeds?.FirstOrDefault()?.Color ?? -1)
                .ReturnsAsync("msg-id");
@@ -115,7 +115,7 @@ public class StarActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        int capturedColor = -1;
+        var capturedColor = -1;
         discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .Callback<Uri, DiscordMessage>((_, msg) => capturedColor = msg.Embeds?.FirstOrDefault()?.Color ?? -1)
                .ReturnsAsync("msg-id");

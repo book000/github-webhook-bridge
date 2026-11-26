@@ -220,7 +220,7 @@ public class MonkeyTests
     {
         var action = new UnhandledAction("check_run");
 
-        await Assert.ThrowsAsync<NotImplementedException>(() => action.RunAsync());
+        await Assert.ThrowsAsync<NotImplementedException>(action.RunAsync);
     }
 
     // ---- PullRequestAction boundary-value tests ----
@@ -266,7 +266,7 @@ public class MonkeyTests
             Mock.Of<ILogger<PullRequestAction>>(),
             _actionWebhookUri, "pull_request", MakePrEvent("opened", body: null));
 
-        Exception? ex = await Record.ExceptionAsync(() => action.RunAsync());
+        Exception? ex = await Record.ExceptionAsync(action.RunAsync);
 
         Assert.Null(ex);
     }

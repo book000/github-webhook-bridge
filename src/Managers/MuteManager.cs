@@ -80,7 +80,7 @@ public class MuteManager(
 
         List<string> normalized = [.. actions
             .Where(action => !string.IsNullOrWhiteSpace(action))
-            .Select(action => action.Trim())];
+            .Select(action => action.Trim()),];
         if (normalized.Count != actions.Count)
         {
             logger?.LogWarning("Dropping blank action entries in the mute record for userId {UserId}", userId);

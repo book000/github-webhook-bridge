@@ -54,8 +54,8 @@ public class PullRequestReviewCommentActionTests
                     10, "My PR",
                     "https://github.com/test/repo/pull/10",
                     "pr-author", 20)}},
-                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
-                "sender":{{TestFixtures.UserJson("reviewer",30)}}{{changesJson}}
+                "repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("reviewer", 30)}}{{changesJson}}
             }
             """,
             OctokitJsonOptions.Value)!;
@@ -112,7 +112,7 @@ public class PullRequestReviewCommentActionTests
     {
         (Mock<IDiscordClient>? discord, Mock<IMessageCacheService>? cache, Mock<IGitHubUserMapManager>? userMap) = CreateMocks();
 
-        int capturedColor = -1;
+        var capturedColor = -1;
         discord.Setup(d => d.SendMessageAsync(It.IsAny<Uri>(), It.IsAny<DiscordMessage>()))
                .Callback<Uri, DiscordMessage>((_, msg) => capturedColor = msg.Embeds?.FirstOrDefault()?.Color ?? -1)
                .ReturnsAsync("msg-id");
@@ -259,7 +259,9 @@ public class PullRequestReviewCommentActionTests
         if (description is null ||
             !description.StartsWith("```diff", StringComparison.Ordinal) ||
             !description.EndsWith("```", StringComparison.Ordinal))
+        {
             return false;
+        }
 
         var inner = description.Substring("```diff\n".Length, description.Length - "```diff\n".Length - "```".Length);
         return !inner.Contains("```", StringComparison.Ordinal);

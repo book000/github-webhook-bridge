@@ -45,10 +45,7 @@ public class WebhookQueueTests
         => new("delivery-1", "push", rawJson, null, webhookUrl is null ? null : new Uri(webhookUrl), ReceivedAt);
 
     [Fact]
-    public void QueueOptionsUseBase64Encoding()
-    {
-        Assert.Equal(QueueMessageEncoding.Base64, WebhookQueue.QueueOptions.MessageEncoding);
-    }
+    public void QueueOptionsUseBase64Encoding() => Assert.Equal(QueueMessageEncoding.Base64, WebhookQueue.QueueOptions.MessageEncoding);
 
     [Fact]
     public async Task EnqueueAsync_PayloadAtLimit_IsStoredInlineWithoutBlobAccess()

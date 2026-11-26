@@ -75,10 +75,7 @@ public sealed class PushAction(
             Url: Uri.TryCreate(sender.HtmlUrl, UriKind.Absolute, out Uri? senderUrl) ? senderUrl : null,
             IconUrl: Uri.TryCreate(sender.AvatarUrl, UriKind.Absolute, out Uri? avatarUrl) ? avatarUrl : null);
 
-        Uri? compareUrl = Uri.TryCreate(Event.Compare, UriKind.Absolute, out Uri? parsed)
-            && parsed.Scheme is "http" or "https"
-            ? parsed
-            : null;
+        Uri? compareUrl = Uri.TryCreate(Event.Compare, UriKind.Absolute, out Uri? parsed) && parsed.Scheme is "http" or "https" ? parsed : null;
 
         DiscordEmbed embed = EmbedHelper.CreateEmbed(
             eventName: EventName,

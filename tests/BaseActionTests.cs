@@ -57,16 +57,10 @@ public class BaseActionTests
     }
 
     [Fact]
-    public void FormatList_SingleItem_ReturnsItem()
-    {
-        Assert.Equal("a", PatchingAction.List(["a"]));
-    }
+    public void FormatList_SingleItem_ReturnsItem() => Assert.Equal("a", PatchingAction.List(["a"]));
 
     [Fact]
-    public void FormatList_SeveralItems_JoinsWithCommaAndSpace()
-    {
-        Assert.Equal("a, b", PatchingAction.List(["a", "b"]));
-    }
+    public void FormatList_SeveralItems_JoinsWithCommaAndSpace() => Assert.Equal("a, b", PatchingAction.List(["a", "b"]));
 
     [Fact]
     public void FormatList_JoinedValueOver1024Characters_TruncatesToExactly1024EndingWithEllipsis()
@@ -92,7 +86,7 @@ public class BaseActionTests
         DiscordRateLimitException rateLimit = new(TimeSpan.FromSeconds(3), isGlobal: false, scope: "user");
         discord.Setup(d => d.EditMessageAsync(_webhookUri, "existing-id", It.IsAny<DiscordMessage>())).ThrowsAsync(rateLimit);
 
-        DiscordRateLimitException thrown = await Assert.ThrowsAsync<DiscordRateLimitException>(() => action.RunAsync());
+        DiscordRateLimitException thrown = await Assert.ThrowsAsync<DiscordRateLimitException>(action.RunAsync);
 
         Assert.Same(rateLimit, thrown);
         cache.Verify(c => c.DeleteAsync(It.IsAny<Uri>(), It.IsAny<string>()), Times.Never);

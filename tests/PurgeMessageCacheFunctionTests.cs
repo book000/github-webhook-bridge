@@ -27,7 +27,7 @@ public class PurgeMessageCacheFunctionTests
             l => l.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) => string.Equals(state.ToString(), "Purged 3 expired message cache entities", StringComparison.Ordinal)),
+                It.Is<It.IsAnyType>((state, _) => string.Equals(state!.ToString(), "Purged 3 expired message cache entities", StringComparison.Ordinal)),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);

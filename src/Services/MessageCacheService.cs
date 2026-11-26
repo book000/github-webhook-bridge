@@ -36,7 +36,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
 {
     private const string TableName = "MessageCache";
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan PurgeRetention = TimeSpan.FromHours(1);
+    private static readonly TimeSpan _purgeRetention = TimeSpan.FromHours(1);
     private const int MaxTransactionSize = 100;
 
     private readonly TableClient _tableClient;
@@ -154,7 +154,7 @@ public class MessageCacheService : IMessageCacheService, IDisposable
     /// <inheritdoc/>
     public async Task<int> DeleteExpiredAsync(CancellationToken cancellationToken)
     {
-        var filter = BuildExpiredFilter(DateTimeOffset.UtcNow - PurgeRetention);
+        var filter = BuildExpiredFilter(DateTimeOffset.UtcNow - _purgeRetention);
         var deleted = 0;
         await foreach (Page<TableEntity> page in _tableClient
             .QueryAsync<TableEntity>(filter, select: ["PartitionKey", "RowKey"], cancellationToken: cancellationToken)

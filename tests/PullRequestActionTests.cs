@@ -58,8 +58,8 @@ public class PullRequestActionTests
                     labelsJson: labelsJson, assigneesJson: assigneesJson,
                     requestedReviewersJson: requestedReviewersJson,
                     requestedTeamsJson: requestedTeamsJson)}},
-                "repository":{{TestFixtures.RepoJson("test/repo","https://github.com/test/repo")}},
-                "sender":{{TestFixtures.UserJson("sender",200,"https://github.com/sender")}}
+                "repository":{{TestFixtures.RepoJson("test/repo", "https://github.com/test/repo")}},
+                "sender":{{TestFixtures.UserJson("sender", 200, "https://github.com/sender")}}
                 {{(requestedReviewerLogin is not null
                     ? $",\"requested_reviewer\":{TestFixtures.UserJson(requestedReviewerLogin, requestedReviewerId ?? 300)}"
                     : string.Empty)}}

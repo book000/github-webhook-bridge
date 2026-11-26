@@ -34,10 +34,7 @@ public class SignatureValidatorTests
 
     /// <summary>Returns false when the signature header is not set (null).</summary>
     [Fact]
-    public void ValidateMissingHeaderReturnsFalse()
-    {
-        Assert.False(SignatureValidator.Validate([], null, "secret"));
-    }
+    public void ValidateMissingHeaderReturnsFalse() => Assert.False(SignatureValidator.Validate([], null, "secret"));
 
     /// <summary>Validation succeeds even with an uppercase HEX signature, absorbing client implementation differences.</summary>
     [Fact]
